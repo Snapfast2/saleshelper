@@ -9,36 +9,24 @@ import PropCard from "@/components/PropCard";
 import type { Inmueble } from "@/types";
 import { generarMensajeWS, generarLinkWS } from "@/lib/mensajes";
 import { AGENTE_PATRICIA } from "@/lib/agente";
+import { useInmuebles } from "@/hooks/useInmuebles";
+import LoadingState from "@/components/LoadingState";
+import EmptyState from "@/components/EmptyState";
 
 function WhatsAppContent() {
   const searchParams = useSearchParams();
   const preselectedId = searchParams.get("inmueble");
   
-  const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
+  const { inmuebles, isLoading } = useInmuebles();
   const [selectedId, setSelectedId] = useState<string | null>(preselectedId);
   const [nombreCliente, setNombreCliente] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetchInmuebles();
-  }, []);
-
-  const fetchInmuebles = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/inmuebles");
-      const data = await res.json();
-      setInmuebles(data.inmuebles || []);
-      if (!selectedId && data.inmuebles && data.inmuebles.length > 0) {
-        setSelectedId(data.inmuebles[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
+    if (!selectedId && inmuebles && inmuebles.length > 0) {
+      setSelectedId(inmuebles[0].id);
     }
-  };
+  }, [inmuebles, selectedId]);
 
   const selectedInmueble = inmuebles.find((i) => i.id === selectedId);
 
@@ -78,10 +66,7 @@ function WhatsAppContent() {
       </div>
 
       {isLoading ? (
-        <div style={{ padding: 20, textAlign: "center" }}>
-          <RefreshCw size={24} className="spinner-icon" style={{ margin: "0 auto" }} />
-          <p style={{ marginTop: 10, color: "var(--text-secondary)" }}>Cargando inmuebles...</p>
-        </div>
+        <LoadingState text="Cargando inmuebles..." />
       ) : inmuebles.length > 0 ? (
         <>
           {/* Selector de Inmueble (Scroll Horizontal) */}
@@ -172,7 +157,10 @@ function WhatsAppContent() {
           </div>
         </>
       ) : (
-        <div className="empty-state">No hay inmuebles disponibles.</div>
+        <EmptyState 
+          title="Sin inmuebles"
+          description="No hay inmuebles disponibles para generar fichas."
+        />
       )}
 
       {/* Toast */}

@@ -8,34 +8,22 @@ import { Share, Image as ImageIcon, Copy, CheckCircle, RefreshCw } from "lucide-
 import type { Inmueble } from "@/types";
 import { generarPostRedes } from "@/lib/mensajes";
 import { AGENTE_PATRICIA } from "@/lib/agente";
+import { useInmuebles } from "@/hooks/useInmuebles";
+import LoadingState from "@/components/LoadingState";
+import EmptyState from "@/components/EmptyState";
 
 export default function RedesPage() {
   const router = useRouter();
-  const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
+  const { inmuebles, isLoading } = useInmuebles();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [red, setRed] = useState<"facebook" | "instagram">("facebook");
-  const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetchInmuebles();
-  }, []);
-
-  const fetchInmuebles = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/inmuebles");
-      const data = await res.json();
-      setInmuebles(data.inmuebles || []);
-      if (data.inmuebles && data.inmuebles.length > 0) {
-        setSelectedId(data.inmuebles[0].id);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
+    if (!selectedId && inmuebles && inmuebles.length > 0) {
+      setSelectedId(inmuebles[0].id);
     }
-  };
+  }, [inmuebles, selectedId]);
 
   const selectedInmueble = inmuebles.find((i) => i.id === selectedId);
 
@@ -74,10 +62,7 @@ export default function RedesPage() {
       </div>
 
       {isLoading ? (
-        <div style={{ padding: 20, textAlign: "center" }}>
-          <RefreshCw size={24} className="spinner-icon" style={{ margin: "0 auto" }} />
-          <p style={{ marginTop: 10, color: "var(--text-secondary)" }}>Cargando inmuebles...</p>
-        </div>
+        <LoadingState text="Cargando inmuebles..." />
       ) : inmuebles.length > 0 ? (
         <>
           <div style={{ padding: "0 20px" }}>
@@ -181,7 +166,10 @@ export default function RedesPage() {
           </div>
         </>
       ) : (
-        <div className="empty-state">No hay inmuebles disponibles.</div>
+        <EmptyState 
+          title="Sin inmuebles"
+          description="No hay inmuebles disponibles para generar posts."
+        />
       )}
 
       {/* Toast */}

@@ -7,37 +7,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Filter, RefreshCw } from "lucide-react";
 import PropCard from "@/components/PropCard";
 import type { Inmueble } from "@/types";
+import { useInmuebles } from "@/hooks/useInmuebles";
+import LoadingState from "@/components/LoadingState";
+import EmptyState from "@/components/EmptyState";
 
 export default function InmueblesPage() {
   const router = useRouter();
-  const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
+  const { inmuebles, isLoading, mutate } = useInmuebles();
   const [filtered, setFiltered] = useState<Inmueble[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   
   // Filtros
   const [search, setSearch] = useState("");
   const [filtroGestion, setFiltroGestion] = useState<"todos" | "venta" | "arriendo">("todos");
 
   useEffect(() => {
-    fetchInmuebles();
-  }, []);
-
-  useEffect(() => {
     aplicarFiltros();
   }, [inmuebles, search, filtroGestion]);
-
-  const fetchInmuebles = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/inmuebles");
-      const data = await res.json();
-      setInmuebles(data.inmuebles || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const aplicarFiltros = () => {
     let result = inmuebles;
@@ -70,7 +55,7 @@ export default function InmueblesPage() {
           </p>
         </div>
         <button 
-          onClick={fetchInmuebles}
+          onClick={() => mutate()}
           style={{ 
             width: 40, height: 40, borderRadius: 20, 
             background: "var(--bg-card)", display: "flex", 
@@ -119,9 +104,7 @@ export default function InmueblesPage() {
 
       <div className="grid-1">
         {isLoading ? (
-          [1, 2, 3, 4].map(i => (
-            <div key={i} className="card" style={{ height: 280, animation: "pulse 1.5s infinite" }} />
-          ))
+          <LoadingState text="Cargando catálogo..." />
         ) : filtered.length > 0 ? (
           filtered.map(inmueble => (
             <PropCard 
@@ -131,11 +114,11 @@ export default function InmueblesPage() {
             />
           ))
         ) : (
-          <div className="empty-state">
-            <Filter size={48} color="var(--text-muted)" />
-            <div className="empty-title">No hay resultados</div>
-            <div className="empty-sub">Intenta cambiar los filtros o el término de búsqueda.</div>
-          </div>
+          <EmptyState 
+            icon={<Filter size={48} />}
+            title="No hay resultados"
+            description="Intenta cambiar los filtros o el término de búsqueda."
+          />
         )}
       </div>
 

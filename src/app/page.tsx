@@ -1,7 +1,6 @@
 'use client';
 // src/app/page.tsx
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, Smartphone } from "lucide-react";
@@ -9,28 +8,13 @@ import { QRCodeSVG } from "qrcode.react";
 import PropCard from "@/components/PropCard";
 import { AGENTE_PATRICIA } from "@/lib/agente";
 import type { Inmueble } from "@/types";
+import { useInmuebles } from "@/hooks/useInmuebles";
+import LoadingState from "@/components/LoadingState";
+import EmptyState from "@/components/EmptyState";
 
 export default function Home() {
   const router = useRouter();
-  const [inmuebles, setInmuebles] = useState<Inmueble[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchInmuebles();
-  }, []);
-
-  const fetchInmuebles = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/inmuebles");
-      const data = await res.json();
-      setInmuebles(data.inmuebles || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { inmuebles, isLoading, mutate } = useInmuebles();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -142,7 +126,7 @@ export default function Home() {
         <div className="section-header">
           <h2 className="section-title">Añadidos recientemente</h2>
           <button
-            onClick={fetchInmuebles}
+            onClick={() => mutate()}
             className="section-link"
             style={{ display: "flex", alignItems: "center", gap: 4 }}
           >
@@ -152,21 +136,7 @@ export default function Home() {
         </div>
 
         {isLoading ? (
-          <div className="h-scroll">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="card"
-                style={{
-                  width: 240,
-                  height: 250,
-                  flexShrink: 0,
-                  animation: "pulse 1.5s infinite",
-                  background: "var(--bg-card-hover)",
-                }}
-              />
-            ))}
-          </div>
+          <LoadingState text="Cargando inmuebles..." />
         ) : inmuebles.length > 0 ? (
           <motion.div
             className="h-scroll"
@@ -217,13 +187,11 @@ export default function Home() {
             </div>
           </motion.div>
         ) : (
-          <div className="empty-state">
-            <div className="empty-icon">🏠</div>
-            <div className="empty-title">Sin inmuebles</div>
-            <div className="empty-sub">
-              No se encontraron inmuebles en tu perfil de L2L.
-            </div>
-          </div>
+          <EmptyState 
+            icon={<Building2 size={48} />}
+            title="Sin inmuebles"
+            description="No se encontraron inmuebles en tu perfil de L2L."
+          />
         )}
       </section>
 
