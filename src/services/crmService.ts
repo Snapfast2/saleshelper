@@ -3,7 +3,18 @@ import fetch from "node-fetch";
 
 const cachedClientesByStatus: Record<string, Cliente[]> = {};
 const cacheTimestampsByStatus: Record<string, number> = {};
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+
+// TTL aleatorio entre 25 y 38 minutos — evita patrón de login perfectamente periódico
+function randomTTL() {
+  const min = 25 * 60 * 1000;
+  const max = 38 * 60 * 1000;
+  return min + Math.random() * (max - min);
+}
+
+// Delay aleatorio que simula tiempo de navegación humana (ms)
+function humanDelay(minMs = 600, maxMs = 2200): Promise<void> {
+  return new Promise(r => setTimeout(r, minMs + Math.random() * (maxMs - minMs)));
+}
 
 // User-Agent realista de Android Chrome — indistinguible de un navegador real
 const UA = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
@@ -31,7 +42,7 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
   const now = Date.now();
   const cacheKey = String(statusType);
   
-  if (cachedClientesByStatus[cacheKey] && (now - cacheTimestampsByStatus[cacheKey] < CACHE_TTL)) {
+  if (cachedClientesByStatus[cacheKey] && (now - cacheTimestampsByStatus[cacheKey] < (cacheTimestampsByStatus[`ttl_${cacheKey}`] || randomTTL()))) {
     console.log(`Returning CRM clients for status ${statusType} from cache`);
     return cachedClientesByStatus[cacheKey];
   }
@@ -60,8 +71,9 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
     const csrfMatch = homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/);
     const csrfToken = csrfMatch ? csrfMatch[1] : "";
     const sessionCookie = extractCookies(homeRes.headers);
-    console.log("DEBUG: CSRF Token:", csrfToken);
-    console.log("DEBUG: Session Cookie:", sessionCookie);
+
+    // Delay 1: simula tiempo de carga de la página inicial antes del login
+    await humanDelay(800, 1800);
 
     const loginRes = await fetch("https://v2.domus.la/auth-login", {
       method: "POST",
@@ -94,7 +106,9 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
     if (loginData.mensaje === "Login exitoso" || loginData.camb_clave !== undefined) {
         const authCookies = extractCookies(loginRes.headers);
         const finalCookies = sessionCookie + "; " + authCookies;
-        console.log("DEBUG: Final Cookies:", finalCookies);
+
+        // Delay 2: simula tiempo entre login exitoso y navegar al CRM
+        await humanDelay(600, 1500);
 
         // 2. Fetch CRM SSO link
         const crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
@@ -115,6 +129,9 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
             console.log("DEBUG: CRM Redirect URL:", redirectUrl);
             if (!redirectUrl) throw new Error("No redirect URL found for CRM SSO");
 
+            // Delay 3: simula tiempo de redirección SSO
+            await humanDelay(500, 1200);
+
             // 3. Trade token for CRM session cookies
             const crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
                 headers: {
@@ -128,6 +145,9 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
             } as any);
 
             const crmSessionCookie = extractCookies(crmRes.headers, "session");
+
+            // Delay 4: simula tiempo de carga del CRM antes de llamar la API
+            await humanDelay(700, 2200);
 
             // 4. Fetch the actual contacts via the CRM API Proxy
             const targetUrl = statusType === "todos" || statusType === ""
@@ -176,6 +196,8 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
                 
                 cachedClientesByStatus[cacheKey] = clients;
                 cacheTimestampsByStatus[cacheKey] = now;
+                // TTL aleatorio para el siguiente refresh
+                cacheTimestampsByStatus[`ttl_${cacheKey}`] = randomTTL();
                 
                 return clients;
             }
