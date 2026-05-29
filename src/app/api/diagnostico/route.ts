@@ -1,6 +1,11 @@
 const UA = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const diagKey = process.env.DIAG_KEY;
+  if (diagKey && searchParams.get("key") !== diagKey) {
+    return new Response(null, { status: 404 });
+  }
   const results: Record<string, any> = {};
 
   // 1. IP de salida real del servidor de Vercel
