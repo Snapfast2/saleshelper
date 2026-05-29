@@ -150,34 +150,30 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: "1px solid var(--border)" }}>
-        {/* Avatar */}
-        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14, fontWeight: 800, color: "var(--red)" }}>
-          {nombreCap.charAt(0)}
+        {/* Avatar + badge Nuevo */}
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: "50%", background: esNuevo ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))" : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: esNuevo ? "#16a34a" : "var(--red)" }}>
+            {nombreCap.charAt(0)}
+          </div>
+          {esNuevo && (
+            <div style={{
+              position: "absolute", top: -3, right: -3,
+              width: 16, height: 16, borderRadius: "50%",
+              background: "#16a34a",
+              border: "2px solid var(--bg-card)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 8, fontWeight: 900, color: "#fff",
+              animation: "pulse-nuevo 2s ease-in-out infinite",
+            }}>
+              N
+            </div>
+          )}
         </div>
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {cliente.nombre.toLowerCase()}
-            </div>
-            {esNuevo && (
-              <span style={{
-                flexShrink: 0,
-                fontSize: 9,
-                fontWeight: 800,
-                color: "#16a34a",
-                background: "rgba(34,197,94,0.12)",
-                border: "1px solid rgba(34,197,94,0.3)",
-                padding: "2px 6px",
-                borderRadius: 20,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                animation: "pulse-nuevo 2s ease-in-out infinite",
-              }}>
-                ● Nuevo
-              </span>
-            )}
+          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {cliente.nombre.toLowerCase()}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
             <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
