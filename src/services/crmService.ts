@@ -3,7 +3,10 @@ import fetch from "node-fetch";
 
 const cachedClientesByStatus: Record<string, Cliente[]> = {};
 const cacheTimestampsByStatus: Record<string, number> = {};
-const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos
+
+// User-Agent realista de Android Chrome — indistinguible de un navegador real
+const UA = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 
 function extractCookies(resHeaders: any, filterPrefix?: string): string {
   let cookies: string[] = [];
@@ -44,7 +47,11 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
     const ts = Date.now();
     // 1. Initial Login to get session
     const homeRes = await fetch(`https://v2.domus.la?t=${ts}`, { 
-      headers: { "User-Agent": "Mozilla/5.0" },
+      headers: {
+        "User-Agent": UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-CO,es;q=0.9",
+      },
       cache: 'no-store',
       next: { revalidate: 0 }
     } as any);
@@ -62,7 +69,10 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
         "Content-Type": "application/json",
         "X-CSRF-TOKEN": csrfToken,
         "Cookie": sessionCookie,
-        "User-Agent": "Mozilla/5.0"
+        "User-Agent": UA,
+        "Accept": "application/json",
+        "Accept-Language": "es-CO,es;q=0.9",
+        "Referer": "https://v2.domus.la/",
       },
       body: JSON.stringify({ user: username, password: password }),
       cache: 'no-store',
@@ -88,7 +98,12 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
 
         // 2. Fetch CRM SSO link
         const crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
-            headers: { "Cookie": finalCookies, "User-Agent": "Mozilla/5.0" },
+            headers: {
+              "Cookie": finalCookies,
+              "User-Agent": UA,
+              "Referer": "https://v2.domus.la/",
+              "Accept-Language": "es-CO,es;q=0.9",
+            },
             redirect: "manual",
             cache: 'no-store',
             next: { revalidate: 0 }
@@ -102,7 +117,11 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
 
             // 3. Trade token for CRM session cookies
             const crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
-                headers: { "User-Agent": "Mozilla/5.0" },
+                headers: {
+                  "User-Agent": UA,
+                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                  "Accept-Language": "es-CO,es;q=0.9",
+                },
                 redirect: "manual",
                 cache: 'no-store',
                 next: { revalidate: 0 }
@@ -119,9 +138,11 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
                 method: "POST",
                 headers: { 
                     "Cookie": crmSessionCookie, 
-                    "User-Agent": "Mozilla/5.0",
+                    "User-Agent": UA,
                     "Content-Type": "application/json",
-                    "Accept": "application/json"
+                    "Accept": "application/json",
+                    "Accept-Language": "es-CO,es;q=0.9",
+                    "Referer": "https://crm.domusweb.co/",
                 },
                 body: JSON.stringify({ url: targetUrl }),
                 cache: 'no-store',
