@@ -125,6 +125,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   const primerNombre = cliente.nombre.toLowerCase().split(" ")[0];
   const nombreCap = primerNombre.charAt(0).toUpperCase() + primerNombre.slice(1);
   const seg = showSeguimiento ? diasSeguimientoInfo(cliente.diasSeguimiento) : null;
+  const esNuevo = (Date.now() - new Date(cliente.fecha).getTime()) < 5 * 60 * 60 * 1000; // < 5 horas
 
   const hrefFicha = `/whatsapp?inmueble=${encodeURIComponent(cliente.inmuebleInteres)}&cliente=${encodeURIComponent(cliente.nombre)}${tel ? `&telefono=${tel}` : ""}`;
   const hrefOb = `/respuestas?cliente=${encodeURIComponent(nombreCap)}${tel ? `&telefono=${tel}` : ""}`;
@@ -156,8 +157,27 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {cliente.nombre.toLowerCase()}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {cliente.nombre.toLowerCase()}
+            </div>
+            {esNuevo && (
+              <span style={{
+                flexShrink: 0,
+                fontSize: 9,
+                fontWeight: 800,
+                color: "#16a34a",
+                background: "rgba(34,197,94,0.12)",
+                border: "1px solid rgba(34,197,94,0.3)",
+                padding: "2px 6px",
+                borderRadius: 20,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                animation: "pulse-nuevo 2s ease-in-out infinite",
+              }}>
+                ● Nuevo
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
             <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
