@@ -1,5 +1,4 @@
 import { Cliente } from "../types";
-import fetch from "node-fetch";
 
 const cachedClientesByStatus: Record<string, Cliente[]> = {};
 const cacheTimestampsByStatus: Record<string, number> = {};
@@ -19,17 +18,14 @@ function humanDelay(minMs = 600, maxMs = 2200): Promise<void> {
 // User-Agent realista de Android Chrome — indistinguible de un navegador real
 const UA = "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 
-function extractCookies(resHeaders: any, filterPrefix?: string): string {
+function extractCookies(resHeaders: Headers, filterPrefix?: string): string {
   let cookies: string[] = [];
-  if (typeof resHeaders.raw === "function") {
-    cookies = resHeaders.raw()["set-cookie"] || [];
-  } else if (typeof resHeaders.getSetCookie === "function") {
-    cookies = resHeaders.getSetCookie();
+
+  if (typeof (resHeaders as any).getSetCookie === "function") {
+    cookies = (resHeaders as any).getSetCookie();
   } else {
     const raw = resHeaders.get("set-cookie");
-    if (raw) {
-      cookies.push(...raw.split(","));
-    }
+    if (raw) cookies.push(...raw.split(","));
   }
 
   return cookies
@@ -41,9 +37,11 @@ function extractCookies(resHeaders: any, filterPrefix?: string): string {
 export async function fetchCrmClients(statusType: number | string = 1): Promise<Cliente[]> {
   const now = Date.now();
   const cacheKey = String(statusType);
-  
-  if (cachedClientesByStatus[cacheKey] && (now - cacheTimestampsByStatus[cacheKey] < (cacheTimestampsByStatus[`ttl_${cacheKey}`] || randomTTL()))) {
-    console.log(`Returning CRM clients for status ${statusType} from cache`);
+
+  if (
+    cachedClientesByStatus[cacheKey] &&
+    (now - cacheTimestampsByStatus[cacheKey] < (cacheTimestampsByStatus[`ttl_${cacheKey}`] || randomTTL()))
+  ) {
     return cachedClientesByStatus[cacheKey];
   }
 
@@ -56,25 +54,26 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
 
   try {
     const ts = Date.now();
-    // 1. Initial Login to get session
-    const homeRes = await fetch(`https://v2.domus.la?t=${ts}`, { 
+
+    // 1. Obtener CSRF token y sesión inicial
+    const homeRes = await fetch(`https://v2.domus.la?t=${ts}`, {
       headers: {
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "es-CO,es;q=0.9",
       },
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    } as any);
-    
+      cache: "no-store",
+    });
+
     const homeText = await homeRes.text();
     const csrfMatch = homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/);
     const csrfToken = csrfMatch ? csrfMatch[1] : "";
     const sessionCookie = extractCookies(homeRes.headers);
 
-    // Delay 1: simula tiempo de carga de la página inicial antes del login
+    // Delay 1: simula tiempo de carga antes del login
     await humanDelay(800, 1800);
 
+    // 2. Login
     const loginRes = await fetch("https://v2.domus.la/auth-login", {
       method: "POST",
       headers: {
@@ -87,128 +86,116 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
         "Referer": "https://v2.domus.la/",
       },
       body: JSON.stringify({ user: username, password: password }),
-      cache: 'no-store',
-      next: { revalidate: 0 }
-    } as any);
+      cache: "no-store",
+    });
 
     const loginText = await loginRes.text();
-    console.log("DEBUG: Login Response Status:", loginRes.status);
-    console.log("DEBUG: Login Headers:", Array.from(loginRes.headers.entries()));
-    console.log("DEBUG: Login Response text preview (150 chars):", loginText.substring(0, 150));
-    
     let loginData: any = {};
     try {
       loginData = JSON.parse(loginText);
-    } catch (e) {
-      console.log("DEBUG: Failed to parse login response as JSON");
-    }
-    
+    } catch (_) {}
+
     if (loginData.mensaje === "Login exitoso" || loginData.camb_clave !== undefined) {
-        const authCookies = extractCookies(loginRes.headers);
-        const finalCookies = sessionCookie + "; " + authCookies;
+      const authCookies = extractCookies(loginRes.headers);
+      const finalCookies = sessionCookie + "; " + authCookies;
 
-        // Delay 2: simula tiempo entre login exitoso y navegar al CRM
-        await humanDelay(600, 1500);
+      // Delay 2: simula navegación al CRM tras login
+      await humanDelay(600, 1500);
 
-        // 2. Fetch CRM SSO link
-        const crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
+      // 3. Obtener link SSO del CRM
+      const crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
+        headers: {
+          "Cookie": finalCookies,
+          "User-Agent": UA,
+          "Referer": "https://v2.domus.la/",
+          "Accept-Language": "es-CO,es;q=0.9",
+        },
+        redirect: "manual",
+        cache: "no-store",
+      });
+
+      if (crmAuthRes.status === 302 || crmAuthRes.status === 301) {
+        const redirectUrl = crmAuthRes.headers.get("location");
+        if (!redirectUrl) throw new Error("No redirect URL found for CRM SSO");
+
+        // Delay 3: simula tiempo de redirección SSO
+        await humanDelay(500, 1200);
+
+        // 4. Canjear token por sesión del CRM
+        const crmRes = await fetch(
+          redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`,
+          {
             headers: {
-              "Cookie": finalCookies,
               "User-Agent": UA,
-              "Referer": "https://v2.domus.la/",
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
               "Accept-Language": "es-CO,es;q=0.9",
             },
             redirect: "manual",
-            cache: 'no-store',
-            next: { revalidate: 0 }
-        } as any);
-        console.log("DEBUG: CRM Auth Status:", crmAuthRes.status);
+            cache: "no-store",
+          }
+        );
 
-        if (crmAuthRes.status === 302 || crmAuthRes.status === 301) {
-            const redirectUrl = crmAuthRes.headers.get("location");
-            console.log("DEBUG: CRM Redirect URL:", redirectUrl);
-            if (!redirectUrl) throw new Error("No redirect URL found for CRM SSO");
+        const crmSessionCookie = extractCookies(crmRes.headers, "session");
 
-            // Delay 3: simula tiempo de redirección SSO
-            await humanDelay(500, 1200);
+        // Delay 4: simula carga del CRM antes de llamar la API
+        await humanDelay(700, 2200);
 
-            // 3. Trade token for CRM session cookies
-            const crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
-                headers: {
-                  "User-Agent": UA,
-                  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                  "Accept-Language": "es-CO,es;q=0.9",
-                },
-                redirect: "manual",
-                cache: 'no-store',
-                next: { revalidate: 0 }
-            } as any);
+        // 5. Obtener contactos
+        const targetUrl =
+          statusType === "todos" || statusType === ""
+            ? "contacts?page=1&order=created_at_new"
+            : `contacts?page=1&contact_status_type=${statusType}&order=created_at_new`;
 
-            const crmSessionCookie = extractCookies(crmRes.headers, "session");
+        const apiRes = await fetch("https://crm.domusweb.co/api/get", {
+          method: "POST",
+          headers: {
+            "Cookie": crmSessionCookie,
+            "User-Agent": UA,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Accept-Language": "es-CO,es;q=0.9",
+            "Referer": "https://crm.domusweb.co/",
+          },
+          body: JSON.stringify({ url: targetUrl }),
+          cache: "no-store",
+        });
 
-            // Delay 4: simula tiempo de carga del CRM antes de llamar la API
-            await humanDelay(700, 2200);
+        const apiData = await apiRes.json();
 
-            // 4. Fetch the actual contacts via the CRM API Proxy
-            const targetUrl = statusType === "todos" || statusType === ""
-                ? "contacts?page=1&order=created_at_new"
-                : `contacts?page=1&contact_status_type=${statusType}&order=created_at_new`;
+        if (apiData && Array.isArray(apiData.data)) {
+          const clients: Cliente[] = apiData.data.map((c: any) => {
+            let origin = "Portal Web";
+            if (c.source === 2) origin = "Finca Raíz";
+            if (c.source === 6) origin = "Metro Cuadrado";
+            if (c.source === 5) origin = "Ciencuadras";
+            if (c.source === 3) origin = "Sitio Web Propio";
 
-            const apiRes = await fetch("https://crm.domusweb.co/api/get", {
-                method: "POST",
-                headers: { 
-                    "Cookie": crmSessionCookie, 
-                    "User-Agent": UA,
-                    "Content-Type": "application/json",
-                    "Accept": "application/json",
-                    "Accept-Language": "es-CO,es;q=0.9",
-                    "Referer": "https://crm.domusweb.co/",
-                },
-                body: JSON.stringify({ url: targetUrl }),
-                cache: 'no-store',
-                next: { revalidate: 0 }
-            } as any);
+            return {
+              id: c.code,
+              nombre: c.full_name || "Sin nombre",
+              email: c.email || "",
+              telefono: c.phones && c.phones.length > 0 ? c.phones[0].phone : "",
+              telefonoIndicativo: c.phones && c.phones.length > 0 ? c.phones[0].phone_indicative : "+57",
+              estado: c.status ? c.status.name : "Desconocido",
+              inmuebleInteres: c.entities && c.entities.length > 0 ? c.entities[0].property_code : "N/A",
+              origen: origin,
+              fecha: c.created_at || new Date().toISOString(),
+              diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined,
+            };
+          });
 
-            const apiData = await apiRes.json();
-            
-            if (apiData && Array.isArray(apiData.data)) {
-                // 5. Map the results
-                const clients: Cliente[] = apiData.data.map((c: any) => {
-                    let origin = "Portal Web";
-                    if (c.source === 2) origin = "Finca Raíz";
-                    if (c.source === 6) origin = "Metro Cuadrado";
-                    if (c.source === 5) origin = "Ciencuadras";
-                    if (c.source === 3) origin = "Sitio Web Propio";
+          cachedClientesByStatus[cacheKey] = clients;
+          cacheTimestampsByStatus[cacheKey] = now;
+          cacheTimestampsByStatus[`ttl_${cacheKey}`] = randomTTL();
 
-                    return {
-                        id: c.code,
-                        nombre: c.full_name || "Sin nombre",
-                        email: c.email || "",
-                        telefono: c.phones && c.phones.length > 0 ? c.phones[0].phone : "",
-                        telefonoIndicativo: c.phones && c.phones.length > 0 ? c.phones[0].phone_indicative : "+57",
-                        estado: c.status ? c.status.name : "Desconocido",
-                        inmuebleInteres: c.entities && c.entities.length > 0 ? c.entities[0].property_code : "N/A",
-                        origen: origin,
-                        fecha: c.created_at || new Date().toISOString(),
-                        diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined
-                    };
-                });
-                
-                cachedClientesByStatus[cacheKey] = clients;
-                cacheTimestampsByStatus[cacheKey] = now;
-                // TTL aleatorio para el siguiente refresh
-                cacheTimestampsByStatus[`ttl_${cacheKey}`] = randomTTL();
-                
-                return clients;
-            }
+          return clients;
         }
+      }
     }
-    
+
     throw new Error("No se pudo extraer la lista de clientes del CRM");
-    
   } catch (error) {
-    console.error("CRM Fetch Error:", error);
-    // Return empty or cached fallback in case of failure
+    console.error("CRM fetch error:", error instanceof Error ? error.message : "Unknown error");
     if (cachedClientesByStatus[cacheKey]) return cachedClientesByStatus[cacheKey];
     return [];
   }
