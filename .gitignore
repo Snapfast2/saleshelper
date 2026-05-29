@@ -54,3 +54,5 @@ domus-properties.html
 domus-sample-data.json
 test-crm.js
 test-login.js
+
+.vercel

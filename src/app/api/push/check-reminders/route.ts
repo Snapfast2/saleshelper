@@ -4,9 +4,9 @@ import webpush from "web-push";
 import { readJSON, writeJSON, deleteFile } from "@/lib/serverStorage";
 
 webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
+  process.env.VAPID_EMAIL || "mailto:placeholder@example.com",
+  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "placeholder",
+  process.env.VAPID_PRIVATE_KEY || "placeholder"
 );
 
 interface ServerReminder {
@@ -35,6 +35,12 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
+    // Re-inicializar con valores reales en tiempo de ejecución
+    webpush.setVapidDetails(
+      process.env.VAPID_EMAIL!,
+      process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+      process.env.VAPID_PRIVATE_KEY!
+    );
     const subscription = readJSON<any>("push-subscription.json", null);
     if (!subscription?.endpoint) {
       return NextResponse.json({ checked: 0, sent: 0, reason: "Sin suscripción" });

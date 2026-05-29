@@ -3,14 +3,17 @@ import { NextResponse } from "next/server";
 import webpush from "web-push";
 import { readJSON, deleteFile } from "@/lib/serverStorage";
 
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+function initWebPush() {
+  webpush.setVapidDetails(
+    process.env.VAPID_EMAIL!,
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+}
 
 export async function POST(req: Request) {
   try {
+    initWebPush();
     const { title, body, url, tag } = await req.json();
     const subscription = readJSON<any>("push-subscription.json", null);
 
