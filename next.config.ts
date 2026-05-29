@@ -1,11 +1,4 @@
 import type { NextConfig } from "next";
-const withPWA = require("next-pwa")({
-  dest: "public",
-  disable: false, // Habilitado en todos los entornos para soportar push notifications
-  register: true,
-  skipWaiting: true,
-  customWorkerDir: "worker", // next-pwa inyecta worker/index.js en el SW generado
-});
 
 const nextConfig: NextConfig = {
   images: {
@@ -15,8 +8,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "s3.amazonaws.com" },
     ],
   },
-  turbopack: {},
   allowedDevOrigins: ['192.168.1.3'],
 };
 
-module.exports = withPWA(nextConfig);
+export default nextConfig;

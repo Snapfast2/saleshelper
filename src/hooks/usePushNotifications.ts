@@ -1,6 +1,6 @@
-'use client';
+"use client";
 // src/hooks/usePushNotifications.ts
-// Hook para solicitar permiso, suscribirse a push y verificar el estado
+// Gestiona suscripción a Web Push Notifications usando /sw.js en public/
 
 import { useState, useEffect, useCallback } from "react";
 
@@ -21,89 +21,103 @@ export function usePushNotifications() {
   const [permissionState, setPermissionState] = useState<PermissionState>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
-  // Verificar el estado actual de permisos y suscripción
+  // Registrar el SW al montar
   useEffect(() => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+    if (typeof window === "undefined") return;
+    if (!("serviceWorker" in navigator)) {
       setPermissionState("unsupported");
       return;
     }
+    if (!("Notification" in window)) {
+      setPermissionState("unsupported");
+      return;
+    }
+
     setPermissionState(Notification.permission as PermissionState);
 
-    // Verificar si ya estamos suscritos
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.pushManager.getSubscription().then((sub) => {
-        setIsSubscribed(!!sub);
+    // Registrar /sw.js (sirve directamente desde public/)
+    navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .then((reg) => {
+        setSwRegistration(reg);
+        console.log("[SW] Registrado:", reg.scope);
+        // Verificar si ya existe suscripción activa
+        return reg.pushManager.getSubscription();
+      })
+      .then((sub) => {
+        if (sub) {
+          setIsSubscribed(true);
+          setPermissionState("granted");
+        }
+      })
+      .catch((err) => {
+        console.error("[SW] Error al registrar:", err);
       });
-    }).catch(() => {});
   }, []);
 
-  // Solicitar permiso y suscribirse
-  const subscribe = useCallback(async (): Promise<boolean> => {
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return false;
+  const subscribe = useCallback(async () => {
+    if (!swRegistration) {
+      console.error("[Push] SW no registrado aún");
+      return;
+    }
 
     setIsLoading(true);
     try {
-      // 1. Pedir permiso al usuario
+      // 1. Pedir permiso
       const permission = await Notification.requestPermission();
       setPermissionState(permission as PermissionState);
+
       if (permission !== "granted") {
         setIsLoading(false);
-        return false;
+        return;
       }
 
-      // 2. Esperar el service worker y suscribirse
-      const reg = await navigator.serviceWorker.ready;
+      // 2. Suscribir al push manager
       const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
-      const subscription = await reg.pushManager.subscribe({
+      const subscription = await swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey),
       });
 
-      // 3. Enviar la suscripción al servidor
+      // 3. Guardar suscripción en el servidor
       const res = await fetch("/api/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subscription }),
       });
 
-      if (res.ok) {
-        setIsSubscribed(true);
-        setIsLoading(false);
-        return true;
-      }
-    } catch (err) {
-      console.error("[usePushNotifications] Error al suscribirse:", err);
-    }
+      if (!res.ok) throw new Error("Error al guardar suscripción");
 
-    setIsLoading(false);
-    return false;
-  }, []);
+      setIsSubscribed(true);
+      console.log("[Push] Suscripción guardada ✅");
 
-  // Verificar recordatorios pendientes en el servidor (llamar al abrir la app)
-  const checkReminders = useCallback(async () => {
-    try {
-      await fetch("/api/push/check-reminders");
-    } catch (_) {}
-  }, []);
-
-  // Enviar una notificación de prueba
-  const sendTest = useCallback(async () => {
-    try {
+      // 4. Enviar notificación de prueba inmediata
       await fetch("/api/push/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "🏠 SalesHelper funciona!",
-          body: "Las notificaciones push están activas en tu celular ✅",
+          title: "¡SalesHelper activado! 🔔",
+          body: "Recibirás recordatorios de seguimiento aquí.",
           url: "/",
           tag: "test",
         }),
       });
     } catch (err) {
-      console.error("[usePushNotifications] Error en prueba:", err);
+      console.error("[Push] Error al suscribir:", err);
+    } finally {
+      setIsLoading(false);
     }
-  }, []);
+  }, [swRegistration]);
+
+  // Revisar recordatorios pendientes al cargar
+  const checkReminders = useCallback(async () => {
+    if (!isSubscribed) return;
+    try {
+      await fetch("/api/push/check-reminders");
+    } catch (_) {}
+  }, [isSubscribed]);
 
   return {
     permissionState,
@@ -111,7 +125,5 @@ export function usePushNotifications() {
     isLoading,
     subscribe,
     checkReminders,
-    sendTest,
-    isSupported: permissionState !== "unsupported",
   };
 }

@@ -4,28 +4,16 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, CheckCircle, X } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function NotificationBanner() {
-  const { permissionState, isSubscribed, isLoading, subscribe, sendTest, isSupported } = usePushNotifications();
+  const { permissionState, isSubscribed, isLoading, subscribe } = usePushNotifications();
   const [dismissed, setDismissed] = useState(false);
-  const [testSent, setTestSent] = useState(false);
 
-  // No mostrar si ya está activo, si el navegador no lo soporta, o si fue descartado
-  if (!isSupported || isSubscribed || dismissed) return null;
-  if (permissionState === "denied") return null;
-
-  const handleActivar = async () => {
-    const ok = await subscribe();
-    if (ok) {
-      // Enviar notificación de prueba
-      setTimeout(async () => {
-        await sendTest();
-        setTestSent(true);
-      }, 1000);
-    }
-  };
+  // No mostrar si ya está suscrito, si el permiso fue negado, o si descartaron el banner
+  if (isSubscribed || dismissed) return null;
+  if (permissionState === "denied" || permissionState === "unsupported") return null;
 
   return (
     <AnimatePresence>
@@ -62,7 +50,7 @@ export default function NotificationBanner() {
                 Te avisaremos cuando sea hora de hacer seguimiento a un cliente, aunque tengas la app cerrada.
               </div>
               <button
-                onClick={handleActivar}
+                onClick={subscribe}
                 disabled={isLoading}
                 style={{
                   display: "inline-flex",
