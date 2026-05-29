@@ -2,10 +2,10 @@ name: Detectar clientes nuevos — SalesHelper
 
 on:
   schedule:
-    # Cada 15 min, lunes a sábado, 8am-8pm hora Bogotá (UTC-5 = 13:00-01:00 UTC)
-    - cron: "0,15,30,45 13-23 * * 1-6"
-    - cron: "0,15,30,45 0 * * 2-7"
-  workflow_dispatch: # También se puede correr manualmente desde GitHub
+    # Cada 15 min, lunes a sábado, 8am-11pm Bogotá (UTC-5 = 13:00-04:00 UTC)
+    - cron: "*/15 13-23 * * 1-6"
+    - cron: "*/15 0-4 * * 2-6,0"
+  workflow_dispatch:
 
 jobs:
   check-new-clients:
