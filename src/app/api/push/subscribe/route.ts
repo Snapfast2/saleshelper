@@ -1,27 +1,26 @@
 // src/app/api/push/subscribe/route.ts
-import { NextResponse } from "next/server";
-import { readJSON, writeJSON } from "@/lib/serverStorage";
+import { Redis } from "@upstash/redis";
 
-const FILE = "push-subscription.json";
+const redis = Redis.fromEnv();
+const KEY = "push_subscription";
 
 export async function POST(req: Request) {
   try {
     const { subscription } = await req.json();
     if (!subscription?.endpoint) {
-      return NextResponse.json({ error: "Suscripción inválida" }, { status: 400 });
+      return Response.json({ error: "Suscripción inválida" }, { status: 400 });
     }
-    writeJSON(FILE, subscription);
-    console.log("[Push] Suscripción guardada:", subscription.endpoint.slice(-30));
-    return NextResponse.json({ ok: true });
+    await redis.set(KEY, subscription);
+    return Response.json({ ok: true });
   } catch (err) {
-    console.error("[Push Subscribe] Error:", err);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    console.error("[Push Subscribe]", err);
+    return Response.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
 export async function GET() {
-  const sub = readJSON<{ endpoint?: string } | null>(FILE, null);
-  return NextResponse.json({
+  const sub = await redis.get<{ endpoint?: string }>(KEY);
+  return Response.json({
     subscribed: !!sub?.endpoint,
     endpoint: sub?.endpoint?.slice(-30) ?? null,
   });

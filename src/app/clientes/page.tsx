@@ -3,6 +3,7 @@ import { fetchDomusProperties } from "@/services/domusService";
 import { scrapeL2L } from "@/services/l2lService";
 import EmptyState from "@/components/EmptyState";
 import InmuebleGroup from "@/components/InmuebleGroup";
+import NotifBanner from "@/components/NotifBanner";
 import Link from "next/link";
 import type { Inmueble, Cliente } from "@/types";
 
@@ -84,6 +85,10 @@ export default async function ClientesPage({ searchParams }: PageProps) {
             );
           })}
         </div>
+      </div>
+
+      <div style={{ padding: "0 20px" }}>
+        <NotifBanner />
       </div>
 
       {clientes.length === 0 ? (

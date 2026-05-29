@@ -20,7 +20,7 @@ export default function PinPage() {
         body: JSON.stringify({ pin: fullPin }),
       });
       if (res.ok) {
-        router.replace("/");
+        window.location.href = "/";
       } else {
         setError(true);
         setShake(true);
