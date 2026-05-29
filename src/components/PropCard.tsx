@@ -34,6 +34,8 @@ export default function PropCard({ inmueble, onClick, compact }: Props) {
           alt={inmueble.titulo}
           className="prop-card-img"
           style={{ height: compact ? 140 : 180 }}
+          loading="lazy"
+          decoding="async"
           onError={(e) => {
             (e.target as HTMLImageElement).src =
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23111120' width='400' height='200'/%3E%3Ctext fill='%23444' font-family='Arial' font-size='14' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ESin imagen%3C/text%3E%3C/svg%3E";

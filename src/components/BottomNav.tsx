@@ -4,11 +4,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { Home, Building2, MessageCircle, Share2 } from "lucide-react";
+import { Home, Building2, MessageCircle, Share2, Users } from "lucide-react";
 
 const TABS = [
   { href: "/", icon: Home, label: "Inicio" },
   { href: "/inmuebles", icon: Building2, label: "Inmuebles" },
+  { href: "/clientes", icon: Users, label: "Clientes" },
   { href: "/whatsapp", icon: MessageCircle, label: "WhatsApp" },
   { href: "/redes", icon: Share2, label: "Redes" },
 ];

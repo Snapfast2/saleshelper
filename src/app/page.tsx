@@ -2,19 +2,36 @@
 // src/app/page.tsx
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, Smartphone } from "lucide-react";
+import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, Smartphone, MessageSquareQuote, Bell, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import PropCard from "@/components/PropCard";
 import { AGENTE_PATRICIA } from "@/lib/agente";
-import type { Inmueble } from "@/types";
 import { useInmuebles } from "@/hooks/useInmuebles";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
+import { getRecordatoriosPendientes, marcarCompletado, generarMensajeSeguimiento, type Recordatorio } from "@/lib/recordatorios";
+import NotificationBanner from "@/components/NotificationBanner";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function Home() {
   const router = useRouter();
   const { inmuebles, isLoading, mutate } = useInmuebles();
+  const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
+  const { checkReminders } = usePushNotifications();
+
+  // Cargar recordatorios pendientes y verificar push al abrir la app
+  useEffect(() => {
+    setRecordatorios(getRecordatoriosPendientes());
+    // Silently check if any server-side reminders need to fire
+    checkReminders();
+  }, []);
+
+  const handleCompletarRecordatorio = (id: string) => {
+    marcarCompletado(id);
+    setRecordatorios(getRecordatoriosPendientes());
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -34,6 +51,9 @@ export default function Home() {
           <p className="header-sub">¿Qué vamos a vender hoy?</p>
         </div>
       </header>
+
+      {/* Banner activar notificaciones */}
+      <NotificationBanner />
 
       {/* Hero / Perfil */}
       <motion.div
@@ -56,6 +76,67 @@ export default function Home() {
         </div>
         <ExternalLink size={20} color="var(--text-secondary)" />
       </motion.div>
+
+      {/* ─ Seguimientos para hoy ─ */}
+      {recordatorios.length > 0 && (
+        <section>
+          <div className="section-header">
+            <h2 className="section-title" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Bell size={18} color="var(--red)" />
+              Seguimientos para hoy
+            </h2>
+            <span style={{ fontSize: "12px", fontWeight: "700", color: "var(--red)", background: "var(--red-glow)", padding: "2px 8px", borderRadius: "20px" }}>
+              {recordatorios.length}
+            </span>
+          </div>
+          <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+            {recordatorios.map((rec) => {
+              const mensajePre = generarMensajeSeguimiento(rec.nombre);
+              const telefonoCompleto = `${rec.telefonoIndicativo.replace(/\D/g, "")}${rec.telefono.replace(/\D/g, "")}`;
+              const hrefWA = `/whatsapp?cliente=${encodeURIComponent(rec.nombre)}&telefono=${telefonoCompleto}&inmueble=${encodeURIComponent(rec.inmuebleInteres)}`;
+
+              return (
+                <motion.div
+                  key={rec.id}
+                  layout
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  className="card"
+                  style={{ padding: "14px 16px" }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: "15px", fontWeight: "700", color: "var(--text-primary)", textTransform: "capitalize" }}>
+                        {rec.nombre.toLowerCase()}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--text-secondary)", marginTop: 2 }}>
+                        Ref: {rec.inmuebleInteres} · Seguimiento pendiente
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCompletarRecordatorio(rec.id)}
+                      style={{ fontSize: "11px", color: "var(--text-muted)", background: "var(--bg-base)", border: "1px solid var(--border)", borderRadius: "20px", padding: "4px 10px", cursor: "pointer", whiteSpace: "nowrap" }}
+                    >
+                      ✓ Hecho
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button
+                      onClick={() => router.push(hrefWA)}
+                      className="btn-ws"
+                      style={{ flex: 1, fontSize: "12px", padding: "9px 12px" }}
+                    >
+                      <MessageCircle size={14} />
+                      Contactar a {rec.nombre.split(" ")[0]}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Acciones Rápidas */}
       <motion.section
@@ -109,14 +190,14 @@ export default function Home() {
         <motion.div
           className="qa-btn"
           variants={itemVariants}
-          onClick={() => window.open(AGENTE_PATRICIA.urlPerfil, "_blank")}
+          onClick={() => router.push("/respuestas")}
         >
-          <div className="qa-icon perfil">
-            <ExternalLink size={24} />
+          <div className="qa-icon" style={{ background: "rgba(124,58,237,0.1)", color: "#7C3AED" }}>
+            <MessageSquareQuote size={24} />
           </div>
           <div>
-            <div className="qa-label">Mi Vitrina</div>
-            <div className="qa-sub">Página web L2L</div>
+            <div className="qa-label">Objeciones</div>
+            <div className="qa-sub">Respuestas listas</div>
           </div>
         </motion.div>
       </motion.section>
@@ -187,7 +268,7 @@ export default function Home() {
             </div>
           </motion.div>
         ) : (
-          <EmptyState 
+          <EmptyState
             icon={<Building2 size={48} />}
             title="Sin inmuebles"
             description="No se encontraron inmuebles en tu perfil de L2L."
