@@ -1,0 +1,24 @@
+name: Detectar clientes nuevos — SalesHelper
+
+on:
+  schedule:
+    # Cada 15 min, lunes a sábado, 8am-8pm hora Bogotá (UTC-5 = 13:00-01:00 UTC)
+    - cron: "0,15,30,45 13-23 * * 1-6"
+    - cron: "0,15,30,45 0 * * 2-7"
+  workflow_dispatch: # También se puede correr manualmente desde GitHub
+
+jobs:
+  check-new-clients:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar al endpoint de detección
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://saleshelper-patricia.vercel.app/api/push/check-new-clients")
+          echo "HTTP status: $response"
+          if [ "$response" != "200" ]; then
+            echo "⚠️ Endpoint retornó $response"
+            exit 1
+          fi
+          echo "✅ Check completado"
