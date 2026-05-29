@@ -1,24 +1,40 @@
 {
-  "name": "saleshelper-patricia",
+  "name": "SalesHelper — Patricia Vásquez",
   "short_name": "SalesHelper",
   "description": "Asistente de ventas inmobiliarias para Patricia Vásquez - L2L Bienes Raíces",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0a0f",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#F9FAFB",
   "theme_color": "#C41E3A",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ]
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "es"
 }

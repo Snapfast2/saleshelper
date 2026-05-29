@@ -22,22 +22,21 @@ export default function BottomNav() {
       {TABS.map(({ href, icon: Icon, label }) => {
         const isActive = pathname === href;
         return (
-          <Link key={href} href={href} style={{ textDecoration: 'none' }}>
-            <motion.div 
+          <Link key={href} href={href} style={{ textDecoration: "none", flex: 1 }}>
+            <motion.div
               className={`nav-item ${isActive ? "active" : ""}`}
               whileTap={{ scale: 0.85 }}
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
-              <div style={{ position: "relative" }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center", width: 44, height: 32 }}>
                 {isActive && (
                   <motion.div
                     layoutId="nav-indicator"
                     style={{
                       position: "absolute",
-                      inset: "-8px -10px",
+                      inset: 0,
                       borderRadius: "10px",
                       background: "rgba(196,30,58,0.12)",
-                      border: "1px solid rgba(196,30,58,0.2)",
                     }}
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
