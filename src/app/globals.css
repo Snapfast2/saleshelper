@@ -1,7 +1,7 @@
 /* src/app/globals.css */
 /* SalesHelper — Design System */
+/* Fuente: cargada vía next/font/google en layout.tsx (sin @import externo) */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 /* ─── CSS Variables ───────────────────────────────────── */
 :root {
@@ -41,7 +41,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-inter, 'Inter', system-ui, sans-serif);
   background: var(--bg-base);
   color: var(--text-primary);
   min-height: 100dvh;

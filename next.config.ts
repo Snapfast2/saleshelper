@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 const withPWA = require("next-pwa")({
   dest: "public",
-  disable: process.env.NODE_ENV === "development",
+  disable: false, // Habilitado en todos los entornos para soportar push notifications
   register: true,
   skipWaiting: true,
+  customWorkerDir: "worker", // next-pwa inyecta worker/index.js en el SW generado
 });
 
 const nextConfig: NextConfig = {
@@ -14,7 +15,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "s3.amazonaws.com" },
     ],
   },
-  // Disable turbopack warnings for next-pwa webpack config
   turbopack: {},
   allowedDevOrigins: ['192.168.1.3'],
 };

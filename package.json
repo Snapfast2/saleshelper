@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@types/web-push": "^3.6.4",
     "cheerio": "^1.2.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
@@ -16,12 +17,15 @@
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "swr": "^2.4.1"
+    "swr": "^2.4.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/node-fetch": "^2.6.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "node-fetch": "^2.7.0",
     "typescript": "^5"
   }
 }
