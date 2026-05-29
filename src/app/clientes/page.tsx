@@ -2,18 +2,18 @@ import { fetchCrmClients } from "@/services/crmService";
 import { fetchDomusProperties } from "@/services/domusService";
 import { scrapeL2L } from "@/services/l2lService";
 import EmptyState from "@/components/EmptyState";
-import ClienteCard from "@/components/ClienteCard";
+import InmuebleGroup from "@/components/InmuebleGroup";
 import Link from "next/link";
-import type { Inmueble } from "@/types";
+import type { Inmueble, Cliente } from "@/types";
 
 async function fetchInmueblesServer(): Promise<Inmueble[]> {
   try {
-    const domusData = await fetchDomusProperties();
-    if (domusData?.inmuebles?.length > 0) return domusData.inmuebles;
+    const d = await fetchDomusProperties();
+    if (d?.inmuebles?.length > 0) return d.inmuebles;
   } catch {}
   try {
-    const l2lData = await scrapeL2L();
-    if (l2lData?.inmuebles?.length > 0) return l2lData.inmuebles;
+    const l = await scrapeL2L();
+    if (l?.inmuebles?.length > 0) return l.inmuebles;
   } catch {}
   return [];
 }
@@ -25,6 +25,8 @@ interface PageProps {
 export default async function ClientesPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
   const currentStatus = resolvedParams.status || "1";
+  const isNuevos = currentStatus === "1";
+
   const [clientes, inmuebles] = await Promise.all([
     fetchCrmClients(currentStatus),
     fetchInmueblesServer(),
@@ -34,12 +36,25 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   const inmuebleMap = new Map<string, Inmueble>();
   inmuebles.forEach((i) => inmuebleMap.set(i.id, i));
 
+  // Agrupar clientes por inmuebleInteres
+  const grupos = new Map<string, Cliente[]>();
+  clientes.forEach((c) => {
+    const key = c.inmuebleInteres ? String(c.inmuebleInteres) : "sin-inmueble";
+    if (!grupos.has(key)) grupos.set(key, []);
+    grupos.get(key)!.push(c);
+  });
+
+  // Ordenar: grupos con más clientes primero, "sin-inmueble" al final
+  const gruposOrdenados = Array.from(grupos.entries()).sort(([keyA, a], [keyB, b]) => {
+    if (keyA === "sin-inmueble") return 1;
+    if (keyB === "sin-inmueble") return -1;
+    return b.length - a.length;
+  });
+
   const tabsList = [
     { label: "Nuevos", value: "1" },
     { label: "Seguimiento", value: "2" },
   ];
-
-  const isNuevos = currentStatus === "1";
 
   return (
     <div className="page" style={{ paddingBottom: "100px" }}>
@@ -48,7 +63,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           <h1 className="header-title">Clientes CRM</h1>
           <p className="header-sub">
             {clientes.length > 0
-              ? `${clientes.length} contacto${clientes.length !== 1 ? "s" : ""} encontrado${clientes.length !== 1 ? "s" : ""}`
+              ? `${clientes.length} contacto${clientes.length !== 1 ? "s" : ""} · ${gruposOrdenados.length} inmueble${gruposOrdenados.length !== 1 ? "s" : ""}`
               : "Leads y contactos de portales inmobiliarios."}
           </p>
         </div>
@@ -80,11 +95,12 @@ export default async function ClientesPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <div className="grid-1">
-          {clientes.map((cliente) => (
-            <ClienteCard
-              key={cliente.id}
-              cliente={cliente}
-              inmueble={inmuebleMap.get(String(cliente.inmuebleInteres))}
+          {gruposOrdenados.map(([codigo, grupoClientes]) => (
+            <InmuebleGroup
+              key={codigo}
+              codigoRef={codigo}
+              inmueble={inmuebleMap.get(codigo)}
+              clientes={grupoClientes}
               showSeguimiento={!isNuevos}
             />
           ))}
