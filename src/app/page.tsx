@@ -12,7 +12,7 @@ import { useInmuebles } from "@/hooks/useInmuebles";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
 import { getRecordatoriosPendientes, marcarCompletado, generarMensajeSeguimiento, type Recordatorio } from "@/lib/recordatorios";
-import NotificationBanner from "@/components/NotificationBanner";
+import NotificationBanner, { NotificationHeaderButton } from "@/components/NotificationBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function Home() {
@@ -50,6 +50,7 @@ export default function Home() {
           <h1 className="header-title">¡Hola, Patricia!</h1>
           <p className="header-sub">¿Qué vamos a vender hoy?</p>
         </div>
+        <NotificationHeaderButton />
       </header>
 
       {/* Banner activar notificaciones */}
