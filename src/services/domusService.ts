@@ -2,12 +2,31 @@
 // Servicio para autenticarse y extraer inmuebles desde la API interna de Domus CRM (v2.domus.la)
 
 import type { Inmueble } from "@/types";
+import { Redis } from "@upstash/redis";
 
 const DOMUS_LOGIN_URL = "https://v2.domus.la/auth-login";
 const DOMUS_HOME_URL = "https://v2.domus.la";
 const DOMUS_FILTER_API_URL = "https://v2.domus.la/properties/filter";
+const INMUEBLES_REDIS_KEY = "inmuebles_domus";
+const INMUEBLES_TTL = 60 * 60; // 1 hora
+
+function getRedis(): Redis | null {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  if (!url || !token) return null;
+  try { return new Redis({ url, token }); } catch { return null; }
+}
 
 export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[], fuente: string, total: number }> {
+  // ── Redis cache — evita login completo en cada visita ─────────────────────
+  const kv = getRedis();
+  if (kv) {
+    try {
+      const cached = await kv.get<{ inmuebles: Inmueble[], fuente: string, total: number }>(INMUEBLES_REDIS_KEY);
+      if (cached && cached.inmuebles?.length > 0) return cached;
+    } catch { /* continuar si Redis falla */ }
+  }
+
   try {
     const username = process.env.DOMUS_USERNAME;
     const password = process.env.DOMUS_PASSWORD;
@@ -168,15 +187,13 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[], f
         };
     });
 
-    return { 
-        inmuebles, 
-        fuente: "domus", 
-        total: inmuebles.length 
-    };
+    const result = { inmuebles, fuente: "domus", total: inmuebles.length };
+    // Guardar en Redis — válido 1 hora, los inmuebles cambian poco
+    if (kv) kv.set(INMUEBLES_REDIS_KEY, result, { ex: INMUEBLES_TTL }).catch(() => {});
+    return result;
 
   } catch (error) {
     console.error("[Domus Service] Error:", error);
-    // Lanzamos el error para que la ruta API lo atrape y haga fallback a L2L o Demo
     throw error;
   }
 }
