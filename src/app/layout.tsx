@@ -13,10 +13,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SalesHelper | Patricia Vásquez - L2L Bienes Raíces",
-  description:
-    "Asistente de ventas inmobiliarias para Patricia Vásquez, asesora de L2L Bienes Raíces. Comparte fichas de inmuebles por WhatsApp y publica en redes sociales.",
+  title: "SalesHelper",
+  description: "Herramienta de uso privado.",
   manifest: "/manifest.json",
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",

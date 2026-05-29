@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /
+
+# Esta herramienta es de uso privado — no indexar
