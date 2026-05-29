@@ -1,7 +1,22 @@
 import { fetchCrmClients } from "@/services/crmService";
+import { fetchDomusProperties } from "@/services/domusService";
+import { scrapeL2L } from "@/services/l2lService";
 import EmptyState from "@/components/EmptyState";
 import ClienteCard from "@/components/ClienteCard";
 import Link from "next/link";
+import type { Inmueble } from "@/types";
+
+async function fetchInmueblesServer(): Promise<Inmueble[]> {
+  try {
+    const domusData = await fetchDomusProperties();
+    if (domusData?.inmuebles?.length > 0) return domusData.inmuebles;
+  } catch {}
+  try {
+    const l2lData = await scrapeL2L();
+    if (l2lData?.inmuebles?.length > 0) return l2lData.inmuebles;
+  } catch {}
+  return [];
+}
 
 interface PageProps {
   searchParams: Promise<{ status?: string }>;
@@ -9,8 +24,15 @@ interface PageProps {
 
 export default async function ClientesPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
-  const currentStatus = resolvedParams.status || "1"; // Default a "1" (Nuevos)
-  const clientes = await fetchCrmClients(currentStatus);
+  const currentStatus = resolvedParams.status || "1";
+  const [clientes, inmuebles] = await Promise.all([
+    fetchCrmClients(currentStatus),
+    fetchInmueblesServer(),
+  ]);
+
+  // Lookup map: codigo -> Inmueble
+  const inmuebleMap = new Map<string, Inmueble>();
+  inmuebles.forEach((i) => inmuebleMap.set(i.id, i));
 
   const tabsList = [
     { label: "Nuevos", value: "1" },
@@ -62,6 +84,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
             <ClienteCard
               key={cliente.id}
               cliente={cliente}
+              inmueble={inmuebleMap.get(String(cliente.inmuebleInteres))}
               showSeguimiento={!isNuevos}
             />
           ))}
