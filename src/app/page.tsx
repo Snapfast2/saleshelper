@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, Smartphone, MessageSquareQuote, Bell, ChevronRight } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+
 import PropCard from "@/components/PropCard";
 import { AGENTE_PATRICIA } from "@/lib/agente";
 import { useInmuebles } from "@/hooks/useInmuebles";
@@ -276,24 +276,6 @@ export default function Home() {
         )}
       </section>
 
-      {/* QR Code Section for Mobile Access */}
-      <section style={{ padding: "20px 20px 40px", textAlign: "center" }}>
-        <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-primary)", fontWeight: 600 }}>
-            <Smartphone size={20} />
-            Abre la app en tu celular
-          </div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 280, margin: "0 auto" }}>
-            Conéctate al mismo WiFi y escanea este código con la cámara de tu celular.
-          </p>
-          <div style={{ background: "white", padding: 12, borderRadius: 12, display: "inline-block" }}>
-            <QRCodeSVG value="http://192.168.1.3:3005" size={160} />
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-            http://192.168.1.3:3005
-          </div>
-        </div>
-      </section>
 
       <style dangerouslySetInnerHTML={{ __html: `
         .spinner-icon { animation: spin 1s linear infinite; }
