@@ -35,8 +35,9 @@ export async function GET(req: Request) {
       return Response.json({ skipped: true, reason: "Sin suscripción push" });
     }
 
-    // 2. Obtener clientes nuevos de Domus (estado 1 = nuevos sin gestionar)
-    const clients = await fetchCrmClients(1);
+    // 2. Obtener clientes nuevos de Domus — siempre frescos, nunca del caché
+    // noCache:true garantiza que detectamos clientes que llegaron en los últimos 15 min
+    const clients = await fetchCrmClients(1, { noCache: true });
     if (!clients.length) {
       return Response.json({ checked: 0, new: 0 });
     }

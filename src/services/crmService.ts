@@ -153,19 +153,23 @@ async function getSession(): Promise<StoredSession> {
 }
 
 // ── Fetch principal de clientes ───────────────────────────────────────────
-export async function fetchCrmClients(statusType: number | string = 1): Promise<Cliente[]> {
+export async function fetchCrmClients(
+  statusType: number | string = 1,
+  options: { noCache?: boolean } = {}
+): Promise<Cliente[]> {
+  const { noCache = false } = options;
   const now = Date.now();
   const cacheKey = String(statusType);
   const redisDataKey = `clients_${cacheKey}`;
 
-  // 1. Cache en memoria — instancia caliente (gratis, instantáneo)
-  if (memCache[cacheKey] && (now - memCacheTs[cacheKey]) < randomTTL()) {
+  // 1. Cache en memoria — instancia caliente (solo si no se pide datos frescos)
+  if (!noCache && memCache[cacheKey] && (now - memCacheTs[cacheKey]) < randomTTL()) {
     return memCache[cacheKey];
   }
 
-  // 2. Redis data cache — persiste entre instancias y cold starts
+  // 2. Redis data cache — persiste entre instancias y cold starts (skip si noCache)
   const kv = getRedis();
-  if (kv) {
+  if (!noCache && kv) {
     try {
       const cached = await kv.get<Cliente[]>(redisDataKey);
       if (cached && cached.length > 0) {
@@ -176,7 +180,7 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
     } catch { /* Redis no disponible — continuar */ }
   }
 
-  // 3. Fetch desde Domus (solo cuando el caché está vacío o expirado)
+  // 3. Fetch desde Domus (directo cuando noCache=true, o cache miss)
   try {
     let session = await getSession();
 
