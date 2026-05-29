@@ -15,6 +15,7 @@ function getRedis(): Redis | null {
 
 const SESSION_KEY = "domus_session";
 const SESSION_TTL = 5 * 24 * 60 * 60; // 5 días en segundos
+const CLIENTS_TTL = 20 * 60;           // 20 min en segundos
 
 interface StoredSession {
   sessionCookie: string;
@@ -155,12 +156,27 @@ async function getSession(): Promise<StoredSession> {
 export async function fetchCrmClients(statusType: number | string = 1): Promise<Cliente[]> {
   const now = Date.now();
   const cacheKey = String(statusType);
+  const redisDataKey = `clients_${cacheKey}`;
 
-  // Cache en memoria todavía válido
+  // 1. Cache en memoria — instancia caliente (gratis, instantáneo)
   if (memCache[cacheKey] && (now - memCacheTs[cacheKey]) < randomTTL()) {
     return memCache[cacheKey];
   }
 
+  // 2. Redis data cache — persiste entre instancias y cold starts
+  const kv = getRedis();
+  if (kv) {
+    try {
+      const cached = await kv.get<Cliente[]>(redisDataKey);
+      if (cached && cached.length > 0) {
+        memCache[cacheKey] = cached;
+        memCacheTs[cacheKey] = now;
+        return cached;
+      }
+    } catch { /* Redis no disponible — continuar */ }
+  }
+
+  // 3. Fetch desde Domus (solo cuando el caché está vacío o expirado)
   try {
     let session = await getSession();
 
@@ -184,8 +200,7 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
 
     // Si la sesión caducó, limpiar KV y reintentar una vez
     if (apiRes.status === 401 || apiRes.status === 403) {
-      const kv = getRedis();
-      if (kv) await kv.del(SESSION_KEY);
+      if (kv) { await kv.del(SESSION_KEY); await kv.del(redisDataKey); }
       session = await getSession();
 
       const retry = await fetch("https://crm.domusweb.co/api/get", {
@@ -204,8 +219,8 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
       const retryData = await retry.json();
       if (retryData?.data) {
         const clients = mapClients(retryData.data);
-        memCache[cacheKey] = clients;
-        memCacheTs[cacheKey] = now;
+        memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
+        if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
         return clients;
       }
     }
@@ -213,8 +228,9 @@ export async function fetchCrmClients(statusType: number | string = 1): Promise<
     const apiData = await apiRes.json();
     if (apiData?.data) {
       const clients = mapClients(apiData.data);
-      memCache[cacheKey] = clients;
-      memCacheTs[cacheKey] = now;
+      memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
+      // Guardar en Redis — el cron lo mantiene fresco cada 15 min
+      if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
       return clients;
     }
 
