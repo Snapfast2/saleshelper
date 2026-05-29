@@ -13,7 +13,7 @@ import EmptyState from "@/components/EmptyState";
 
 export default function InmueblesPage() {
   const router = useRouter();
-  const { inmuebles, isLoading, mutate } = useInmuebles();
+  const { inmuebles, isLoading, isOffline, mutate } = useInmuebles();
   const [filtered, setFiltered] = useState<Inmueble[]>([]);
   
   // Filtros
@@ -53,6 +53,12 @@ export default function InmueblesPage() {
           <p className="header-sub">
             {isLoading ? "Cargando..." : `${filtered.length} inmuebles encontrados`}
           </p>
+          {!isLoading && (
+            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", marginTop: "6px", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "20px", background: isOffline ? "rgba(217,119,6,0.1)" : "rgba(22,163,74,0.1)", color: isOffline ? "#D97706" : "#16a34a" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOffline ? "#D97706" : "#16a34a", display: "inline-block" }} />
+              {isOffline ? "Modo offline (catálogo guardado)" : "Catálogo sincronizado"}
+            </div>
+          )}
         </div>
         <button 
           onClick={() => mutate()}

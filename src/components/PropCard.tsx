@@ -2,7 +2,7 @@
 // src/components/PropCard.tsx
 
 import { motion } from "framer-motion";
-import { BedDouble, Bath, Car, MapPin, Maximize2 } from "lucide-react";
+import { BedDouble, Bath, Car, MapPin, Maximize2, Clock } from "lucide-react";
 import type { Inmueble } from "@/types";
 
 interface Props {
@@ -39,15 +39,37 @@ export default function PropCard({ inmueble, onClick, compact }: Props) {
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23111120' width='400' height='200'/%3E%3Ctext fill='%23444' font-family='Arial' font-size='14' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ESin imagen%3C/text%3E%3C/svg%3E";
           }}
         />
+        
+        {/* Badge Venta/Arriendo (Top Left) */}
         <span className={`prop-card-badge ${inmueble.gestion}`}>
           {inmueble.gestion === "venta" ? "Venta" : "Arriendo"}
         </span>
+
+        {/* Badge En Proceso (Top Right) */}
+        {inmueble.estado === "En proceso" && (
+          <span 
+            className="prop-card-badge" 
+            style={{ 
+              right: 12, 
+              left: 'auto', 
+              backgroundColor: '#F59E0B', // Amber/Orange
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+          >
+            <Clock size={12} />
+            En Proceso
+          </span>
+        )}
+
         <span className="prop-card-price">{formatPrecio(inmueble.precio)}</span>
       </div>
 
       {/* Body */}
       <div className="prop-card-body">
-        <div className="prop-card-tipo">{inmueble.tipo}</div>
+        <div className="prop-card-tipo">{inmueble.tipo} • Cód: {inmueble.codigoDomus}</div>
         <div className="prop-card-titulo">{inmueble.barrio}</div>
         <div className="prop-card-ciudad">
           <MapPin size={12} />

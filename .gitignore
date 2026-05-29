@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# dev / test scratch files
+check-states.js
+crm-contacts.html
+domus-Contact.js
+domus-Request.js
+domus-contacts-data.json
+domus-contacts.html
+domus-dashboard.html
+domus-full-data.json
+domus-list.js
+domus-properties.html
+domus-sample-data.json
+test-crm.js
+test-login.js

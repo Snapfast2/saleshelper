@@ -21,6 +21,7 @@ export interface Inmueble {
   urlDomus?: string; // link card.domus.la
   codigoDomus?: string;
   descripcion?: string;
+  estado?: string;
 }
 
 export interface MensajeWS {
@@ -41,4 +42,17 @@ export interface Agente {
   cargo: string;
   inmobiliaria: string;
   urlPerfil: string;
+}
+
+export interface Cliente {
+  id: string | number;
+  nombre: string;
+  email: string;
+  telefono: string;
+  telefonoIndicativo: string;
+  estado: string; // Ej: Nuevo, No responde
+  inmuebleInteres: string; // Codigo del inmueble
+  origen: string; // Ej: Portal Web
+  fecha: string;
+  diasSeguimiento?: number;
 }
