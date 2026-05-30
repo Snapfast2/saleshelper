@@ -1,7 +1,7 @@
 'use client';
 // src/app/whatsapp/page.tsx
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, CheckCircle, Copy, Link as LinkIcon, User } from "lucide-react";
@@ -33,12 +33,22 @@ function WhatsAppContent() {
   const [selectedId, setSelectedId] = useState<string | null>(preselectedId);
   const [nombreCliente, setNombreCliente] = useState(clienteParam);
   const [copied, setCopied] = useState(false);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (!selectedId && inmuebles && inmuebles.length > 0) {
       setSelectedId(inmuebles[0].id);
     }
   }, [inmuebles, selectedId]);
+
+  // Auto-scroll la card seleccionada al centro cuando cambia selectedId
+  useEffect(() => {
+    if (!selectedId) return;
+    const el = cardRefs.current[selectedId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+  }, [selectedId, inmuebles]);
 
   // Pre-carry client name from params
   useEffect(() => {
@@ -116,6 +126,7 @@ function WhatsAppContent() {
               {inmuebles.map((inm) => (
                 <div
                   key={inm.id}
+                  ref={(el) => { cardRefs.current[inm.id] = el; }}
                   style={{
                     position: "relative",
                     opacity: selectedId === inm.id || (selectedId && inm.codigoDomus === selectedId) ? 1 : 0.5,
