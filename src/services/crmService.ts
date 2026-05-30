@@ -249,11 +249,21 @@ export async function fetchCrmClients(
 
 function mapClients(data: any[]): Cliente[] {
   return data.map((c: any) => {
+    // Si vino por Autoleads (integración con portales externos como Metrocuadrado),
+    // el portal específico solo está en el detalle individual del contacto.
+    // Mostramos "Autoleads" que coincide con lo que el CRM de Domus muestra.
     let origin = "Portal Web";
-    if (c.source === 2) origin = "Finca Raíz";
-    if (c.source === 6) origin = "Metro Cuadrado";
-    if (c.source === 5) origin = "Ciencuadras";
-    if (c.source === 3) origin = "Sitio Web Propio";
+    if (c.autoleads === 1) {
+      origin = "Autoleads";
+    } else if (c.source === 2) {
+      origin = "Finca Raíz";
+    } else if (c.source === 6) {
+      origin = "Metrocuadrado";
+    } else if (c.source === 5) {
+      origin = "Ciencuadras";
+    } else if (c.source === 3) {
+      origin = "Sitio Web Propio";
+    }
     return {
       id: c.code,
       nombre: c.full_name || "Sin nombre",
