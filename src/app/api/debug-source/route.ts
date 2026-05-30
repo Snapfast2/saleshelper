@@ -30,13 +30,14 @@ export async function GET(_req: NextRequest) {
     });
 
     const json = await res.json();
-    const primeros = (json?.data ?? []).slice(0, 3).map((c: any) => ({
+    const primeros = (json?.data ?? []).slice(0, 2).map((c: any) => ({
       code: c.code,
       full_name: c.full_name,
       source: c.source,
-      autoleads: c.autoleads ?? "__undefined__",
-      autoleads_raw: JSON.stringify(c.autoleads),
-      _keys: Object.keys(c),
+      autoleads: c.autoleads,
+      profiles: c.profiles,
+      searches: c.searches,
+      tags: c.tags,
     }));
 
     return NextResponse.json({ primeros });
