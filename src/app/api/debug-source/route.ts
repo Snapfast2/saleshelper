@@ -34,8 +34,8 @@ export async function GET(_req: NextRequest) {
       code: c.code,
       full_name: c.full_name,
       source: c.source,
-      // El campo clave — aquí debería estar Metrocuadrado
-      autoleads: c.autoleads,
+      autoleads: c.autoleads ?? "__undefined__",
+      autoleads_raw: JSON.stringify(c.autoleads),
       _keys: Object.keys(c),
     }));
 
