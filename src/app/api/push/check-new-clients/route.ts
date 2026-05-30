@@ -29,6 +29,10 @@ export async function GET(req: Request) {
   try {
     initWebPush();
 
+    // Jitter aleatorio 0-180 s para que el patrón no sea exactamente cada 15 min
+    const jitterMs = Math.floor(Math.random() * 3 * 60 * 1000);
+    await new Promise((r) => setTimeout(r, jitterMs));
+
     // 1. Buscar suscripción push
     const subscription = await redis.get<any>(SUBSCRIPTION_KEY);
     if (!subscription?.endpoint) {
