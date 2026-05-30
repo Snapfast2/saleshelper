@@ -29,6 +29,13 @@ export async function GET(req: Request) {
   try {
     initWebPush();
 
+    // Ventana horaria: solo operar entre 7am y 7pm hora Colombia (UTC-5)
+    // Fuera de ese horario, un humano no estaría revisando el CRM
+    const horaCol = (new Date().getUTCHours() - 5 + 24) % 24;
+    if (horaCol < 7 || horaCol >= 19) {
+      return Response.json({ skipped: true, reason: "Fuera de horario laboral (7am-7pm Col)" });
+    }
+
     // Jitter aleatorio 0-180 s para que el patrón no sea exactamente cada 15 min
     const jitterMs = Math.floor(Math.random() * 3 * 60 * 1000);
     await new Promise((r) => setTimeout(r, jitterMs));
