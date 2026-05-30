@@ -122,12 +122,13 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[], f
     }
 
     // 5. Mapear los datos de Domus a nuestra interfaz Inmueble
-    // Filtramos solo por captador para garantizar que son los inmuebles de Olga Patricia (ID: 29214).
-    // NO filtramos por estado: incluimos Disponible, Vendido, Arrendado, etc.
-    // Esto es necesario para mostrar la foto correcta en las tarjetas de clientes,
-    // incluso cuando el inmueble ya fue cerrado.
+    // Filtramos por captador (solo Olga Patricia, ID 29214) Y por estado activo.
+    // El filtro es LOCAL — Domus ya nos envió todos los datos, solo descartamos los cerrados.
+    // No genera ninguna llamada extra al API.
     const rawProperties = allRawProperties.filter((p: any) => {
-        return p.captador && p.captador.id === 29214;
+        if (!p.captador || p.captador.id !== 29214) return false;
+        const estado = p.estado_inmueble ? p.estado_inmueble.estado_inmueble : "";
+        return estado === "Disponible" || estado === "En proceso";
     });
 
     const inmuebles: Inmueble[] = rawProperties.map((p: any) => {
