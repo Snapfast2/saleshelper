@@ -40,6 +40,29 @@ function diasSeguimientoInfo(dias?: number) {
   return { text: `Venc.`, color: "#dc2626" };
 }
 
+function obtenerEtiquetaEdad(fechaIso: string) {
+  const ms = Date.now() - new Date(fechaIso).getTime();
+  const hrs = Math.floor(ms / 3600000);
+  const dias = Math.floor(ms / 86400000);
+
+  if (hrs < 2) {
+    return { text: "⚡ Nuevo", color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", border: "rgba(16, 185, 129, 0.2)" };
+  }
+  if (dias < 1) {
+    return { text: "✨ Hoy", color: "#22c55e", bg: "rgba(34, 197, 94, 0.06)", border: "rgba(34, 197, 94, 0.15)" };
+  }
+  if (dias <= 3) {
+    return { text: "📅 Reciente", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.06)", border: "rgba(59, 130, 246, 0.15)" };
+  }
+  if (dias <= 7) {
+    return { text: "⏳ Pendiente", color: "#eab308", bg: "rgba(234, 179, 8, 0.06)", border: "rgba(234, 179, 8, 0.15)" };
+  }
+  if (dias <= 30) {
+    return { text: `⚠️ Sin gestionar (${dias}d)`, color: "#f97316", bg: "rgba(249, 115, 22, 0.06)", border: "rgba(249, 115, 22, 0.15)" };
+  }
+  return { text: `❄️ Frío / Archivar (${dias}d)`, color: "#9ca3af", bg: "var(--bg-card-hover)", border: "var(--border)" };
+}
+
 // ─── Opciones recordatorio ─────────────────────────────────────────────
 const OPCIONES = [
   { value: "hoy" as const, label: "Esta tarde", emoji: "⚡" },
@@ -125,7 +148,13 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   const primerNombre = cliente.nombre.toLowerCase().split(" ")[0];
   const nombreCap = primerNombre.charAt(0).toUpperCase() + primerNombre.slice(1);
   const seg = showSeguimiento ? diasSeguimientoInfo(cliente.diasSeguimiento) : null;
-  const esNuevo = (Date.now() - new Date(cliente.fecha).getTime()) < 5 * 60 * 60 * 1000; // < 5 horas
+  
+  const ms = Date.now() - new Date(cliente.fecha).getTime();
+  const dias = Math.floor(ms / 86400000);
+  const esNuevo = ms < 5 * 60 * 60 * 1000; // < 5 horas
+  const esAntiguo = dias > 7;
+
+  const etiqueta = obtenerEtiquetaEdad(cliente.fecha);
 
   const hrefFicha = `/whatsapp?inmueble=${encodeURIComponent(cliente.inmuebleInteres)}&cliente=${encodeURIComponent(cliente.nombre)}${tel ? `&telefono=${tel}` : ""}`;
   const hrefOb = `/respuestas?cliente=${encodeURIComponent(nombreCap)}${tel ? `&telefono=${tel}` : ""}`;
@@ -149,10 +178,37 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 16px", borderTop: "1px solid var(--border)" }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "10px 16px",
+        borderTop: "1px solid var(--border)",
+        opacity: esAntiguo ? 0.72 : 1,
+        transition: "opacity 0.2s ease",
+      }}>
         {/* Avatar + badge Nuevo */}
         <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: "50%", background: esNuevo ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))" : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 800, color: esNuevo ? "#16a34a" : "var(--red)" }}>
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            background: esNuevo
+              ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
+              : esAntiguo
+                ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
+                : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 14,
+            fontWeight: 800,
+            color: esNuevo
+              ? "#16a34a"
+              : esAntiguo
+                ? "#9ca3af"
+                : "var(--red)"
+          }}>
             {nombreCap.charAt(0)}
           </div>
           {esNuevo && (
@@ -172,12 +228,35 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
+            textTransform: "capitalize",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}>
             {cliente.nombre.toLowerCase()}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+            <span style={{
+              fontSize: 9,
+              fontWeight: 800,
+              color: etiqueta.color,
+              background: etiqueta.bg,
+              border: `1px solid ${etiqueta.border}`,
+              padding: "1px 6px",
+              borderRadius: "4px",
+              textTransform: "uppercase",
+              letterSpacing: "0.02em",
+              display: "inline-flex",
+              alignItems: "center"
+            }}>
+              {etiqueta.text}
+            </span>
             <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-              {tiempoTranscurrido(cliente.fecha)} · {cliente.estado}
+              {cliente.estado}
             </span>
             {seg && (
               <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· 🔔 {seg.text}</span>
@@ -220,10 +299,23 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
   const [expandido, setExpandido] = useState(true);
   const n = clientes.length;
 
+  // Clasificar clientes
+  const clientesRecientes = clientes.filter(c => {
+    const ms = Date.now() - new Date(c.fecha).getTime();
+    const dias = Math.floor(ms / 86400000);
+    return dias <= 7;
+  });
+
+  const clientesAntiguos = clientes.filter(c => {
+    const ms = Date.now() - new Date(c.fecha).getTime();
+    const dias = Math.floor(ms / 86400000);
+    return dias > 7;
+  });
+
   return (
     <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-      {/* ── Foto del inmueble ── */}
-      {inmueble?.imagen ? (
+      {/* ── Foto del inmueble o Placeholder Premium ── */}
+      {inmueble?.imagen && !inmueble.imagen.includes("placeholder") ? (
         <div style={{ position: "relative", height: 130, overflow: "hidden" }}>
           <Image src={inmueble.imagen} alt={inmueble.titulo} fill style={{ objectFit: "cover" }} sizes="480px" loading="lazy" />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 60%)" }} />
@@ -238,16 +330,56 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           </div>
         </div>
       ) : (
-        <div style={{ height: 52, background: "var(--bg-card-hover)", display: "flex", alignItems: "center", padding: "0 16px", gap: 8, borderBottom: "1px solid var(--border)" }}>
-          <Home size={16} color="var(--text-muted)" />
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-secondary)" }}>Ref: {codigoRef !== "sin-inmueble" ? codigoRef : "Sin inmueble asociado"}</span>
+        <div style={{
+          position: "relative",
+          height: 130,
+          background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          padding: "16px",
+          color: "#fff",
+          overflow: "hidden"
+        }}>
+          {/* Watermark Home Icon */}
+          <div style={{ position: "absolute", right: -20, bottom: -30, opacity: 0.08, transform: "rotate(-10deg)", pointerEvents: "none" }}>
+            <Home size={140} color="#fff" strokeWidth={1.5} />
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", zIndex: 1 }}>
+            <span style={{
+              background: "rgba(255, 255, 255, 0.12)",
+              backdropFilter: "blur(4px)",
+              color: "#fff",
+              padding: "4px 10px",
+              borderRadius: "20px",
+              fontSize: 10,
+              fontWeight: 800,
+              border: "1px solid rgba(255, 255, 255, 0.15)",
+              textTransform: "uppercase",
+              letterSpacing: "0.03em"
+            }}>
+              {codigoRef === "sin-inmueble" ? "🔑 General" : "🏠 Ficha Domus"}
+            </span>
+          </div>
+
+          <div style={{ zIndex: 1 }}>
+            <h4 style={{ fontSize: 14, fontWeight: 800, margin: 0, color: "#fff", letterSpacing: "-0.01em" }}>
+              {codigoRef === "sin-inmueble" ? "Consulta General" : `Inmueble Ref: ${codigoRef}`}
+            </h4>
+            <p style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.65)", marginTop: 4, fontWeight: 400 }}>
+              {codigoRef === "sin-inmueble"
+                ? "Interés general en portafolio de servicios"
+                : "Propiedad vendida, archivada o captada por otro asesor"}
+            </p>
+          </div>
         </div>
       )}
 
       {/* ── Header del grupo: contador + expand ── */}
       <button
         onClick={() => setExpandido(!expandido)}
-        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "none", border: "none", borderTop: inmueble?.imagen ? "1px solid var(--border)" : "none", cursor: "pointer" }}
+        style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", background: "none", border: "none", borderTop: "1px solid var(--border)", cursor: "pointer" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,30,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -274,7 +406,31 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
             transition={{ duration: 0.25, ease: "easeInOut" }}
             style={{ overflow: "hidden" }}
           >
-            {clientes.map((c) => (
+            {/* Clientes Recientes */}
+            {clientesRecientes.map((c) => (
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
+            ))}
+
+            {/* Divisor para Clientes Antiguos */}
+            {clientesRecientes.length > 0 && clientesAntiguos.length > 0 && (
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "8px 16px",
+                background: "var(--bg-card-hover)",
+                borderTop: "1px solid var(--border)",
+                borderBottom: "1px solid var(--border)"
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                  Leads antiguos sin gestionar
+                </span>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              </div>
+            )}
+
+            {/* Clientes Antiguos */}
+            {clientesAntiguos.map((c) => (
               <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
             ))}
           </motion.div>
