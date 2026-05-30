@@ -1,7 +1,11 @@
 // src/services/domusService.ts
 // Obtiene inmuebles de Patricia desde la API de Domus.
-// La sesión de v2.domus.la se reutiliza desde Redis (TTL 5 días)
-// para evitar un login fresco en cada expiración de cache (cada hora).
+//
+// Estrategia de sesión (prioridad):
+//  1. Cache de inmuebles en Redis (1 hora) → respuesta inmediata
+//  2. Sesión compartida con crmService (domus_session) → evita doble login
+//  3. Sesión propia v2 (domus_v2_session) → fallback si CRM no se ha logueado aún
+//  4. Login fresco → guardado en domus_v2_session (TTL 5 días)
 
 import type { Inmueble } from "@/types";
 import { Redis } from "@upstash/redis";
@@ -13,24 +17,32 @@ const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 const INMUEBLES_REDIS_KEY  = "inmuebles_domus";
 const INMUEBLES_TTL        = 60 * 60;           // 1 hora
 
-// Sesión de v2.domus.la reutilizable — mismo ciclo de vida que crmService (5 días)
+// Sesión propia de v2 (fallback si crmService no tiene sesión activa)
 const V2_SESSION_KEY       = "domus_v2_session";
 const V2_SESSION_TTL       = 5 * 24 * 60 * 60; // 5 días
 
-// UA consistente con el pool de crmService (Desktop Chrome)
+// Sesión compartida con crmService — mismo login, evita doble request a Domus
+const CRM_SESSION_KEY      = "domus_session";
+
+// UA consistente con el pool de crmService (desktop Chrome)
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
 interface V2Session {
   cookies: string;
+  ua: string;
   createdAt: number;
 }
 
-// ── Redis ─────────────────────────────────────────────────────────────────
+// Estructura que guarda crmService — solo necesitamos los campos de v2
+interface CrmStoredSession {
+  sessionCookie: string;
+  authCookies: string;
+  ua: string;
+}
+
+// ── Redis — mismas env vars que crmService ────────────────────────────────
 function getRedis(): Redis | null {
-  const url   = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
-  if (!url || !token) return null;
-  try { return new Redis({ url, token }); } catch { return null; }
+  try { return Redis.fromEnv(); } catch { return null; }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -44,8 +56,13 @@ function extractCookies(headers: Headers): string {
   return raw.split(",").map(c => c.split(";")[0].trim()).join("; ");
 }
 
+/** Pausa con variación humana — igual que crmService */
+function humanDelay(min = 600, max = 2200): Promise<void> {
+  return new Promise(r => setTimeout(r, min + Math.random() * (max - min)));
+}
+
 // ── Login fresco a v2.domus.la ────────────────────────────────────────────
-async function doFreshV2Login(): Promise<string> {
+async function doFreshV2Login(): Promise<{ cookies: string; ua: string }> {
   const username = process.env.DOMUS_USERNAME;
   const password = process.env.DOMUS_PASSWORD;
   if (!username || !password) throw new Error("Credenciales Domus no configuradas");
@@ -53,9 +70,9 @@ async function doFreshV2Login(): Promise<string> {
   // 1. CSRF + sesión inicial
   const homeRes = await fetch(DOMUS_HOME_URL, {
     headers: {
-      "User-Agent": UA,
-      "Accept": "text/html,application/xhtml+xml,*/*",
-      "Accept-Language": "es-CO,es;q=0.9",
+      "User-Agent":     UA,
+      "Accept":         "text/html,application/xhtml+xml,*/*",
+      "Accept-Language":"es-CO,es;q=0.9",
     },
     cache: "no-store",
   });
@@ -63,17 +80,20 @@ async function doFreshV2Login(): Promise<string> {
   const csrfToken   = homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/)?.[1] ?? "";
   const sessionCookie = extractCookies(homeRes.headers);
 
+  // Pausa humana entre cargar la página y hacer click en "Ingresar"
+  await humanDelay(700, 1800);
+
   // 2. Login
   const loginRes = await fetch(DOMUS_LOGIN_URL, {
     method: "POST",
     headers: {
-      "Content-Type":   "application/json",
-      "X-CSRF-TOKEN":   csrfToken,
-      "Cookie":         sessionCookie,
-      "User-Agent":     UA,
-      "Accept":         "application/json",
-      "Accept-Language":"es-CO,es;q=0.9",
-      "Referer":        "https://v2.domus.la/",
+      "Content-Type":    "application/json",
+      "X-CSRF-TOKEN":    csrfToken,
+      "Cookie":          sessionCookie,
+      "User-Agent":      UA,
+      "Accept":          "application/json",
+      "Accept-Language": "es-CO,es;q=0.9",
+      "Referer":         "https://v2.domus.la/",
     },
     body: JSON.stringify({ user: username, password }),
     cache: "no-store",
@@ -85,22 +105,24 @@ async function doFreshV2Login(): Promise<string> {
   }
 
   const authCookies = extractCookies(loginRes.headers);
-  return [sessionCookie, authCookies].filter(Boolean).join("; ");
+  const cookies     = [sessionCookie, authCookies].filter(Boolean).join("; ");
+  return { cookies, ua: UA };
 }
 
 // ── Llamada a la API de propiedades ───────────────────────────────────────
 // Retorna null si la sesión expiró (401/403), lanza error en otros fallos.
-async function fetchPropertiesWithCookies(cookies: string): Promise<any[] | null> {
+async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Promise<any[] | null> {
   const fetchPage = async (page: number): Promise<any | null> => {
     const res = await fetch(`${DOMUS_FILTER_URL}?page=${page}`, {
       method: "POST",
       headers: {
         "Cookie":           cookies,
-        "User-Agent":       UA,
+        "User-Agent":       ua,
         "Content-Type":     "application/json",
         "Accept":           "application/json",
         "X-Requested-With": "XMLHttpRequest",
         "Accept-Language":  "es-CO,es;q=0.9",
+        "Referer":          "https://v2.domus.la/properties",
       },
       body: JSON.stringify({ data: { buscar: "", captador: 29214 } }),
       cache: "no-store",
@@ -169,7 +191,7 @@ function mapProperties(raw: any[]): Inmueble[] {
 export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; fuente: string; total: number }> {
   const kv = getRedis();
 
-  // 1. Cache de inmuebles en Redis (1 hora)
+  // 1. Cache de inmuebles en Redis (1 hora) — respuesta inmediata
   if (kv) {
     try {
       const cached = await kv.get<{ inmuebles: Inmueble[]; fuente: string; total: number }>(INMUEBLES_REDIS_KEY);
@@ -177,28 +199,43 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; f
     } catch { /* continuar si Redis falla */ }
   }
 
-  // 2. Intentar reutilizar sesión guardada en Redis
+  // 2-4. Obtener datos frescos reutilizando sesión cuando sea posible
   let rawData: any[] | null = null;
 
   if (kv) {
+    // 2. Intentar reutilizar la sesión de crmService (evita doble login)
+    //    crmService ya hizo el login completo a v2.domus.la y guardó las cookies
     try {
-      const stored = await kv.get<V2Session>(V2_SESSION_KEY);
-      if (stored?.cookies) {
-        rawData = await fetchPropertiesWithCookies(stored.cookies);
-        // null = sesión expirada antes de los 5 días → cae al login fresco
+      const crmSession = await kv.get<CrmStoredSession>(CRM_SESSION_KEY);
+      if (crmSession?.sessionCookie) {
+        const sharedCookies = [crmSession.sessionCookie, crmSession.authCookies]
+          .filter(Boolean)
+          .join("; ");
+        rawData = await fetchPropertiesWithCookies(sharedCookies, crmSession.ua || UA);
+        // rawData null = sesión del CRM ya expiró en v2, caer a paso 3
       }
     } catch { /* continuar */ }
+
+    // 3. Fallback: sesión propia de v2 (puede existir si domusService se logueó antes)
+    if (rawData === null) {
+      try {
+        const stored = await kv.get<V2Session>(V2_SESSION_KEY);
+        if (stored?.cookies) {
+          rawData = await fetchPropertiesWithCookies(stored.cookies, stored.ua || UA);
+        }
+      } catch { /* continuar */ }
+    }
   }
 
-  // 3. Login fresco si la sesión no existía o expiró
+  // 4. Login fresco si todas las sesiones fallaron o no existen
   if (rawData === null) {
-    const cookies = await doFreshV2Login();
-    rawData = await fetchPropertiesWithCookies(cookies);
+    const { cookies, ua: loginUA } = await doFreshV2Login();
+    rawData = await fetchPropertiesWithCookies(cookies, loginUA);
     if (!rawData) throw new Error("Domus v2: login fresco también retornó sesión inválida");
 
-    // Guardar nueva sesión en Redis (5 días)
+    // Guardar nueva sesión propia (5 días)
     if (kv) {
-      kv.set(V2_SESSION_KEY, { cookies, createdAt: Date.now() }, { ex: V2_SESSION_TTL })
+      kv.set(V2_SESSION_KEY, { cookies, ua: loginUA, createdAt: Date.now() }, { ex: V2_SESSION_TTL })
         .catch(() => {});
     }
   }
