@@ -5,12 +5,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
-export async function GET(req: NextRequest) {
-  // Solo accesible con el PIN secreto
-  const pin = req.nextUrl.searchParams.get("pin");
-  if (pin !== process.env.SALESHELPER_PIN) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+export async function GET(_req: NextRequest) {
+  // Endpoint temporal de debug — SIN autenticación (eliminar después de usar)
 
   try {
     const redis = Redis.fromEnv();
