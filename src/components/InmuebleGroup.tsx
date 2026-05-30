@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 // src/components/InmuebleGroup.tsx
 // Agrupa visualmente los clientes interesados en el mismo inmueble
 
@@ -11,6 +12,7 @@ import Link from "next/link";
 import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
+  Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key,
 } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
 import { addRecordatorio, calcularFechaRecordatorio } from "@/lib/recordatorios";
@@ -40,27 +42,43 @@ function diasSeguimientoInfo(dias?: number) {
   return { text: `Venc.`, color: "#dc2626" };
 }
 
-function obtenerEtiquetaEdad(fechaIso: string) {
+type EtiquetaEdad = {
+  label: string;
+  Icon: React.ComponentType<{ size?: number; color?: string }>;
+  color: string;
+  bg: string;
+  border: string;
+  tiempo: string;
+};
+
+function obtenerEtiquetaEdad(fechaIso: string): EtiquetaEdad {
   const ms = Date.now() - new Date(fechaIso).getTime();
+  const min = Math.floor(ms / 60000);
   const hrs = Math.floor(ms / 3600000);
   const dias = Math.floor(ms / 86400000);
 
+  const tiempo =
+    min < 1 ? "Ahora" :
+    min < 60 ? `${min}m` :
+    hrs < 24 ? `${hrs}h` :
+    `${dias}d`;
+
   if (hrs < 2) {
-    return { text: "⚡ Nuevo", color: "#10b981", bg: "rgba(16, 185, 129, 0.1)", border: "rgba(16, 185, 129, 0.2)" };
+    return { label: "Nuevo", Icon: Zap, color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.2)", tiempo };
   }
   if (dias < 1) {
-    return { text: "✨ Hoy", color: "#22c55e", bg: "rgba(34, 197, 94, 0.06)", border: "rgba(34, 197, 94, 0.15)" };
+    return { label: "Hoy", Icon: Sun, color: "#22c55e", bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.15)", tiempo };
   }
   if (dias <= 3) {
-    return { text: "📅 Reciente", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.06)", border: "rgba(59, 130, 246, 0.15)" };
+    return { label: "Reciente", Icon: CalendarDays, color: "#3b82f6", bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.15)", tiempo };
   }
   if (dias <= 7) {
-    return { text: "⏳ Pendiente", color: "#eab308", bg: "rgba(234, 179, 8, 0.06)", border: "rgba(234, 179, 8, 0.15)" };
+    return { label: "Pendiente", Icon: Clock, color: "#eab308", bg: "rgba(234,179,8,0.06)", border: "rgba(234,179,8,0.15)", tiempo };
   }
   if (dias <= 30) {
-    return { text: `⚠️ Sin gestionar (${dias}d)`, color: "#f97316", bg: "rgba(249, 115, 22, 0.06)", border: "rgba(249, 115, 22, 0.15)" };
+    return { label: "Sin gestionar", Icon: AlertTriangle, color: "#f97316", bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.15)", tiempo };
   }
-  return { text: `❄️ Frío / Archivar (${dias}d)`, color: "#9ca3af", bg: "var(--bg-card-hover)", border: "var(--border)" };
+  return { label: "Frio", Icon: Snowflake, color: "#9ca3af", bg: "var(--bg-card-hover)", border: "var(--border)", tiempo };
 }
 
 // ─── Opciones recordatorio ─────────────────────────────────────────────
@@ -136,9 +154,127 @@ function RecordatorioModal({ nombre, guardado, elegido, onClose, onElegir }: {
   );
 }
 
+// ─── Modal de detalle del cliente ─────────────────────────────────────
+function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  const tel = cliente.telefono
+    ? `${cliente.telefonoIndicativo.replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
+    : "";
+
+  const fechaLegible = (() => {
+    try {
+      return new Date(cliente.fecha).toLocaleDateString("es-CO", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+    } catch { return cliente.fecha; }
+  })();
+
+  const rows: { icon: React.ReactNode; label: string; value: string; href?: string }[] = [
+    tel ? { icon: <Phone size={14} color="var(--red)" />, label: "Teléfono", value: `+${tel}`, href: `tel:+${tel}` } : null,
+    cliente.email ? { icon: <MessageCircle size={14} color="#3b82f6" />, label: "Correo", value: cliente.email, href: `mailto:${cliente.email}` } : null,
+    { icon: <Users size={14} color="#8b5cf6" />, label: "Procedencia", value: cliente.origen },
+    { icon: <Home size={14} color="#f97316" />, label: "Inmueble de interés", value: cliente.inmuebleInteres !== "N/A" ? `Ref ${cliente.inmuebleInteres}` : "Sin referencia" },
+    { icon: <CalendarDays size={14} color="var(--text-muted)" />, label: "Creado", value: fechaLegible },
+  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href?: string }[];
+
+  const inicial = cliente.nombre.charAt(0).toUpperCase();
+
+  return createPortal(
+    <AnimatePresence>
+      <>
+        <motion.div key="ov-det" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9998, backdropFilter: "blur(4px)" }}
+        />
+        <motion.div key="sh-det" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 340, damping: 32 }}
+          style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 480,
+            background: "var(--bg-card)", borderRadius: "24px 24px 0 0",
+            padding: "0 0 calc(16px + env(safe-area-inset-bottom,16px))",
+            zIndex: 9999, boxShadow: "0 -8px 48px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Handle */}
+          <div style={{ padding: "16px 20px 0", display: "flex", justifyContent: "center" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)" }} />
+          </div>
+
+          {/* Cabecera */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+              background: "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 20, fontWeight: 800, color: "var(--red)",
+            }}>
+              {inicial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", textTransform: "capitalize" }}>
+                {cliente.nombre.toLowerCase()}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                {cliente.estado}
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              padding: 8, borderRadius: "50%", background: "var(--bg-base)",
+              border: "1px solid var(--border)", display: "flex", cursor: "pointer", flexShrink: 0,
+            }}>
+              <X size={16} color="var(--text-secondary)" />
+            </button>
+          </div>
+
+          {/* Divisor */}
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Filas de datos */}
+          <div style={{ padding: "8px 0" }}>
+            {rows.map((row, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "12px 20px",
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  background: "var(--bg-base)", border: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {row.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {row.label}
+                  </div>
+                  {row.href ? (
+                    <a href={row.href} style={{ fontSize: 13, fontWeight: 600, color: "var(--red)", textDecoration: "none", display: "block", marginTop: 1 }}>
+                      {row.value}
+                    </a>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginTop: 1, textTransform: row.label === "Inmueble de interés" ? undefined : "capitalize" }}>
+                      {row.value}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </>
+    </AnimatePresence>,
+    document.body
+  );
+}
+
 // ─── Fila de cliente (compacta) ────────────────────────────────────────
 function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguimiento: boolean }) {
   const [modal, setModal] = useState(false);
+  const [detalle, setDetalle] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [elegido, setElegido] = useState<string | null>(null);
 
@@ -228,38 +364,49 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
 
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
-            textTransform: "capitalize",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis"
-          }}>
+          <button
+            onClick={() => setDetalle(true)}
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
+              textTransform: "capitalize",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              textAlign: "left",
+              width: "100%",
+            }}
+          >
             {cliente.nombre.toLowerCase()}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
             <span style={{
               fontSize: 9,
               fontWeight: 800,
               color: etiqueta.color,
               background: etiqueta.bg,
               border: `1px solid ${etiqueta.border}`,
-              padding: "1px 6px",
+              padding: "1px 6px 1px 5px",
               borderRadius: "4px",
               textTransform: "uppercase",
               letterSpacing: "0.02em",
               display: "inline-flex",
-              alignItems: "center"
+              alignItems: "center",
+              gap: 3,
             }}>
-              {etiqueta.text}
+              <etiqueta.Icon size={9} color={etiqueta.color} />
+              {etiqueta.label}
             </span>
             <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-              {cliente.estado}
+              {etiqueta.tiempo} · {cliente.estado}
             </span>
             {seg && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· 🔔 {seg.text}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
             )}
           </div>
         </div>
@@ -283,6 +430,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
         </div>
       </div>
       {modal && <RecordatorioModal nombre={nombreCap} guardado={guardado} elegido={elegido} onClose={() => setModal(false)} onElegir={handleRecordatorio} />}
+      {detalle && <ClienteDetalleModal cliente={cliente} onClose={() => setDetalle(false)} />}
     </>
   );
 }
@@ -297,7 +445,11 @@ interface InmuebleGroupProps {
 
 export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSeguimiento }: InmuebleGroupProps) {
   const [expandido, setExpandido] = useState(true);
+  const [verMasRecientes, setVerMasRecientes] = useState(false);
+  const [verMasAntiguos, setVerMasAntiguos] = useState(false);
   const n = clientes.length;
+
+  const LIMITE_VISIBLE = 3; // mostrar 3 por defecto, el resto colapsa
 
   // Clasificar clientes
   const clientesRecientes = clientes.filter(c => {
@@ -359,7 +511,11 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
               textTransform: "uppercase",
               letterSpacing: "0.03em"
             }}>
-              {codigoRef === "sin-inmueble" ? "🔑 General" : "🏠 Ficha Domus"}
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                {codigoRef === "sin-inmueble"
+                  ? <><Key size={10} color="#fff" /> General</>
+                  : <><Home size={10} color="#fff" /> Ficha Domus</>}
+              </span>
             </span>
           </div>
 
@@ -406,10 +562,26 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
             transition={{ duration: 0.25, ease: "easeInOut" }}
             style={{ overflow: "hidden" }}
           >
-            {/* Clientes Recientes */}
-            {clientesRecientes.map((c) => (
+            {/* Clientes Recientes: mostrar 3 por defecto */}
+            {(verMasRecientes ? clientesRecientes : clientesRecientes.slice(0, LIMITE_VISIBLE)).map((c) => (
               <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
             ))}
+            {clientesRecientes.length > LIMITE_VISIBLE && (
+              <button
+                onClick={() => setVerMasRecientes(v => !v)}
+                style={{
+                  width: "100%", padding: "10px 16px", background: "none", border: "none",
+                  borderTop: "1px solid var(--border)", cursor: "pointer",
+                  fontSize: 12, fontWeight: 700, color: "var(--red)",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                }}
+              >
+                {verMasRecientes
+                  ? <><ChevronUp size={13} /> Ocultar</>
+                  : <><ChevronDown size={13} /> Ver {clientesRecientes.length - LIMITE_VISIBLE} más</>
+                }
+              </button>
+            )}
 
             {/* Divisor para Clientes Antiguos */}
             {clientesRecientes.length > 0 && clientesAntiguos.length > 0 && (
@@ -429,10 +601,26 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
               </div>
             )}
 
-            {/* Clientes Antiguos */}
-            {clientesAntiguos.map((c) => (
+            {/* Clientes Antiguos: también colapsables */}
+            {(verMasAntiguos ? clientesAntiguos : clientesAntiguos.slice(0, LIMITE_VISIBLE)).map((c) => (
               <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
             ))}
+            {clientesAntiguos.length > LIMITE_VISIBLE && (
+              <button
+                onClick={() => setVerMasAntiguos(v => !v)}
+                style={{
+                  width: "100%", padding: "10px 16px", background: "none", border: "none",
+                  borderTop: "1px solid var(--border)", cursor: "pointer",
+                  fontSize: 12, fontWeight: 700, color: "var(--text-muted)",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+                }}
+              >
+                {verMasAntiguos
+                  ? <><ChevronUp size={13} /> Ocultar antiguos</>
+                  : <><ChevronDown size={13} /> Ver {clientesAntiguos.length - LIMITE_VISIBLE} más antiguos</>
+                }
+              </button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
