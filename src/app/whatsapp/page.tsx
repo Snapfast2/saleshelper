@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, CheckCircle, Copy, Link as LinkIcon, User } from "lucide-react";
+import { MessageCircle, CheckCircle, Copy, Link as LinkIcon, User, ExternalLink } from "lucide-react";
 import PropCard from "@/components/PropCard";
 import type { Inmueble } from "@/types";
 import { generarMensajeWS, generarLinkWS } from "@/lib/mensajes";
@@ -33,6 +33,7 @@ function WhatsAppContent() {
   const [selectedId, setSelectedId] = useState<string | null>(preselectedId);
   const [nombreCliente, setNombreCliente] = useState(clienteParam);
   const [copied, setCopied] = useState(false);
+  const [copiedFicha, setCopiedFicha] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -187,18 +188,34 @@ function WhatsAppContent() {
               </button>
             </div>
 
-            {selectedInmueble?.urlDomus && (
+            {selectedInmueble?.urlL2L && (
               <button
                 className="btn-secondary"
                 style={{ marginTop: 14 }}
+                onClick={async () => {
+                  const fichaUrl = `${window.location.origin}/ficha/${selectedInmueble.id}`;
+                  await navigator.clipboard.writeText(fichaUrl);
+                  setCopiedFicha(true);
+                  setTimeout(() => setCopiedFicha(false), 2500);
+                }}
+              >
+                {copiedFicha ? <CheckCircle size={18} color="#4ADE80" /> : <ExternalLink size={18} />}
+                {copiedFicha ? "Link copiado" : "Copiar link ficha"}
+              </button>
+            )}
+
+            {selectedInmueble?.urlDomus && (
+              <button
+                className="btn-secondary"
+                style={{ marginTop: 8, opacity: 0.6, fontSize: 12 }}
                 onClick={() => {
                   navigator.clipboard.writeText(selectedInmueble.urlDomus!);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
               >
-                <LinkIcon size={18} />
-                Copiar solo Link Domus
+                <LinkIcon size={16} />
+                Copiar link L2L
               </button>
             )}
           </div>

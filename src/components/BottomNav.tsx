@@ -17,6 +17,9 @@ const TABS = [
 export default function BottomNav() {
   const pathname = usePathname();
 
+  // No mostrar en fichas públicas
+  if (pathname.startsWith("/ficha")) return null;
+
   return (
     <nav className="bottom-nav">
       {TABS.map(({ href, icon: Icon, label }) => {

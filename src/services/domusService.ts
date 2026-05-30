@@ -166,6 +166,18 @@ function mapProperties(raw: any[]): Inmueble[] {
       const codigo   = String(p.codigo || p.id);
       const urlL2L   = p.codigo ? `https://l2lbienesraices.com/inmueble/${p.codigo}` : "";
 
+      // Capturar todas las imágenes (Domus puede devolver el array en distintos campos)
+      const rawImgs: any[] = Array.isArray(p.imagenes) ? p.imagenes
+        : Array.isArray(p.fotos) ? p.fotos
+        : Array.isArray(p.photos) ? p.photos
+        : [];
+      const imagenes: string[] = rawImgs
+        .map((img: any) => img?.imageurl || img?.url || img?.src)
+        .filter((url): url is string => Boolean(url) && !url.includes("placeholder"));
+      if (imagen && !imagen.includes("placeholder") && !imagenes.includes(imagen)) {
+        imagenes.unshift(imagen);
+      }
+
       return {
         id:           codigo,
         codigoDomus:  codigo,
@@ -180,6 +192,7 @@ function mapProperties(raw: any[]): Inmueble[] {
         banos:        p.banos            ?? 0,
         garajes:      p.parqueadero      ?? 0,
         imagen,
+        imagenes,
         urlL2L,
         urlDomus:     urlL2L,
         estado:       p.estado_inmueble?.estado_inmueble ?? "Disponible",
