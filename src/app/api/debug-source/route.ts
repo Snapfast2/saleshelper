@@ -34,15 +34,8 @@ export async function GET(_req: NextRequest) {
       code: c.code,
       full_name: c.full_name,
       source: c.source,
-      source_name: c.source_name,
-      origen: c.origen,
-      origin: c.origin,
-      portal: c.portal,
-      autolead: c.autolead,
-      autolead_source: c.autolead_source,
-      lead_source: c.lead_source,
-      channel: c.channel,
-      // todos los keys del objeto para ver qué más hay
+      // El campo clave — aquí debería estar Metrocuadrado
+      autoleads: c.autoleads,
       _keys: Object.keys(c),
     }));
 
