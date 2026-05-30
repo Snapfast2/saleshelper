@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, BellOff, X, Check } from "lucide-react";
+import { Bell, BellOff, X, Check, Zap } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 export default function NotificationBanner() {
@@ -141,6 +141,69 @@ export function NotificationHeaderButton() {
         color={isSubscribed ? "#16a34a" : "var(--red)"}
         fill={isSubscribed ? "rgba(22,163,74,0.3)" : "none"}
       />
+    </button>
+  );
+}
+// Botón pequeño de test — al lado de la campana, solo cuando ya está suscrito
+export function TestNotifButton() {
+  const { isSubscribed } = usePushNotifications();
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  if (!isSubscribed) return null;
+
+  const handleTest = async () => {
+    if (sending) return;
+    setSending(true);
+    try {
+      await fetch("/api/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Nuevo lead · Autoleads",
+          body:  "Daniel M. · Ref 1046101",
+          url:   "/clientes",
+          waUrl: "https://wa.me/573143586609",
+          tag:   "test-notif",
+          actions: [
+            { action: "ver-perfil", title: "Ver perfil" },
+            { action: "whatsapp",   title: "WhatsApp"  },
+          ],
+        }),
+      });
+      setSent(true);
+      setTimeout(() => setSent(false), 2500);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleTest}
+      title="Enviar notificación de prueba"
+      style={{
+        background: sent
+          ? "rgba(22,163,74,0.12)"
+          : sending
+            ? "rgba(234,179,8,0.1)"
+            : "rgba(196,30,58,0.08)",
+        border: "none",
+        borderRadius: "50%",
+        width: 38,
+        height: 38,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: sending ? "not-allowed" : "pointer",
+        transition: "all 0.2s",
+        flexShrink: 0,
+      }}
+    >
+      {sent
+        ? <Check size={16} color="#16a34a" />
+        : <Zap size={16} color={sending ? "#eab308" : "var(--red)"} fill={sending ? "rgba(234,179,8,0.3)" : "none"} />
+      }
     </button>
   );
 }

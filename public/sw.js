@@ -23,36 +23,55 @@ self.addEventListener("push", (event) => {
 
   const title = data.title || "SalesHelper";
   const options = {
-    body: data.body || "Tienes un recordatorio pendiente",
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
+    body: data.body || "Tienes una notificación",
+    icon: "/icon-192.png",       // ← ruta correcta (sin /icons/)
+    badge: "/icon-192.png",      // ← ruta correcta
     tag: data.tag || "saleshelper",
-    data: { url: data.url || "/" },
+    data: {
+      url: data.url || "/",
+      waUrl: data.waUrl || null,
+    },
     vibrate: [200, 100, 200],
     requireInteraction: false,
+    actions: data.actions || [], // ← botones: "Ver perfil", "WhatsApp"
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// ── Click en notificación → abre la app ────────────────────────────
+// ── Click en notificación o en botón de acción ──────────────────────
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url || "/";
+
+  const action    = event.action;          // "ver-perfil" | "whatsapp" | ""
+  const notifData = event.notification.data || {};
+  const appOrigin = self.location.origin;
+
+  let targetUrl;
+  if (action === "whatsapp" && notifData.waUrl) {
+    targetUrl = notifData.waUrl;           // abre WhatsApp Web / app
+  } else {
+    targetUrl = notifData.url || "/";      // abre la app
+  }
+
+  const isExternal = targetUrl.startsWith("http") &&
+                     !targetUrl.startsWith(appOrigin);
 
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clients) => {
-        // Si ya hay una ventana abierta, enfocarla
-        for (const client of clients) {
-          if (client.url.includes(self.location.origin)) {
-            client.focus();
-            client.navigate(targetUrl);
-            return;
+        // Si es una URL interna y hay ventana abierta, reutilizarla
+        if (!isExternal) {
+          for (const client of clients) {
+            if (client.url.startsWith(appOrigin)) {
+              client.focus();
+              client.navigate(targetUrl);
+              return;
+            }
           }
         }
-        // Si no, abrir una nueva
+        // Si no hay ventana abierta o es URL externa, abrir nueva
         return self.clients.openWindow(targetUrl);
       })
   );

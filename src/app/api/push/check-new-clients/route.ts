@@ -63,11 +63,24 @@ export async function GET(req: Request) {
       if (!client) continue;
 
       const primerNombre = client.nombre.split(" ")[0];
+      const apellido     = client.nombre.split(" ")[1] || "";
+      const tel = client.telefono
+        ? `${client.telefonoIndicativo.replace(/\D/g, "")}${client.telefono.replace(/\D/g, "")}`
+        : "";
+      const ref   = client.inmuebleInteres !== "N/A" ? client.inmuebleInteres : null;
+      const waUrl = tel ? `https://wa.me/${tel}` : null;
+
+      const nombreCorto = `${primerNombre}${apellido ? " " + apellido.charAt(0) + "." : ""}`;
       const payload = JSON.stringify({
-        title: `🏠 Nuevo lead: ${primerNombre}`,
-        body: `${client.origen} · Ref: ${client.inmuebleInteres !== "N/A" ? client.inmuebleInteres : "Sin ref"}`,
-        url: "/clientes",
-        tag: `nuevo-cliente-${newId}`,
+        title: `Nuevo lead · ${client.origen}`,
+        body:  `${nombreCorto}${ref ? " · Ref " + ref : ""}`,
+        url:   "/clientes",
+        waUrl,
+        tag:   `nuevo-cliente-${newId}`,
+        actions: [
+          { action: "ver-perfil", title: "Ver perfil" },
+          ...(waUrl ? [{ action: "whatsapp", title: "WhatsApp" }] : []),
+        ],
       });
 
       try {
