@@ -1,11 +1,5 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "regions": ["gru1"],
-  "crons": [
-    {
-      "path": "/api/push/check-new-clients",
-      "schedule": "*/15 * * * *"
-    }
-  ]
+  "regions": ["gru1"]
 }
