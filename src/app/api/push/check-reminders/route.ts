@@ -74,7 +74,7 @@ export async function GET() {
           await webpush.sendNotification(
             subscription,
             JSON.stringify({
-              title: `🔔 Seguimiento: ${primerNombre}`,
+              title: `Seguimiento: ${primerNombre}`,
               body: `Es hora de contactar a ${primerNombre}. Ref: ${r.inmuebleInteres}`,
               url: `/clientes`,
               tag: `seguimiento-${r.id}`,
@@ -89,7 +89,13 @@ export async function GET() {
       })
     );
 
-    await kv.set(REMINDERS_KEY, updated);
+    // Limpiar recordatorios ya enviados con más de 7 días de antigüedad
+    const hace7dias = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const limpio = updated.filter(
+      (r) => !(r.enviado && new Date(r.fechaRecordatorio) < hace7dias)
+    );
+
+    await kv.set(REMINDERS_KEY, limpio);
     return NextResponse.json({ checked: reminders.length, sent });
   } catch (err) {
     console.error("[Reminders GET]", err);

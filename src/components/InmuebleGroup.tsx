@@ -1,12 +1,10 @@
 'use client';
-import React from 'react';
 // src/components/InmuebleGroup.tsx
 // Agrupa visualmente los clientes interesados en el mismo inmueble
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {

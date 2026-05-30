@@ -4,7 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, Smartphone, MessageSquareQuote, Bell, ChevronRight } from "lucide-react";
+import { MessageCircle, Share2, Building2, ExternalLink, RefreshCw, MessageSquareQuote, Bell } from "lucide-react";
 
 import PropCard from "@/components/PropCard";
 import { AGENTE_PATRICIA } from "@/lib/agente";
@@ -19,14 +19,18 @@ export default function Home() {
   const router = useRouter();
   const { inmuebles, isLoading, mutate } = useInmuebles();
   const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
-  const { checkReminders } = usePushNotifications();
+  const { isSubscribed, checkReminders } = usePushNotifications();
 
-  // Cargar recordatorios pendientes y verificar push al abrir la app
+  // Cargar recordatorios pendientes al abrir la app
   useEffect(() => {
     setRecordatorios(getRecordatoriosPendientes());
-    // Silently check if any server-side reminders need to fire
-    checkReminders();
   }, []);
+
+  // Verificar recordatorios vencidos solo cuando ya sabemos que está suscrito
+  useEffect(() => {
+    if (!isSubscribed) return;
+    checkReminders();
+  }, [isSubscribed]);
 
   const handleCompletarRecordatorio = (id: string) => {
     marcarCompletado(id);
