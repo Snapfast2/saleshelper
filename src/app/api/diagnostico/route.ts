@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { fetchCrmClients } from "@/services/crmService";
 
 const UA_POOL = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -6,6 +7,8 @@ const UA_POOL = [
   "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
   "Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
 ];
+
+const DAYS_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
@@ -20,6 +23,9 @@ function timeAgo(ts: number): string {
 
 export async function GET() {
   const result: Record<string, any> = {};
+  const now = new Date();
+  result.diaSemana = DAYS_ES[now.getDay()];
+  result.esDomingo = now.getDay() === 0;
 
   // ── 1. IP y geolocalización ──────────────────────────────────────────────
   try {
@@ -131,6 +137,26 @@ export async function GET() {
 
   result.regionVercel = process.env.VERCEL_REGION || "local";
   result.timestamp = new Date().toISOString();
+
+  // ── 7. Prueba de fetch de clientes en vivo ──────────────────────────────
+  const t3 = Date.now();
+  try {
+    const [nuevos, seguimiento] = await Promise.all([
+      fetchCrmClients("1", { noCache: true }).catch((e: any) => ({ error: e.message })),
+      fetchCrmClients("2", { noCache: true }).catch((e: any) => ({ error: e.message })),
+    ]);
+    result.fetchClientes = {
+      latenciaMs: Date.now() - t3,
+      nuevos: Array.isArray(nuevos)
+        ? { ok: true, cantidad: nuevos.length }
+        : { ok: false, error: (nuevos as any).error },
+      seguimiento: Array.isArray(seguimiento)
+        ? { ok: true, cantidad: seguimiento.length }
+        : { ok: false, error: (seguimiento as any).error },
+    };
+  } catch (e: any) {
+    result.fetchClientes = { ok: false, error: e.message, latenciaMs: Date.now() - t3 };
+  }
 
   return Response.json(result);
 }

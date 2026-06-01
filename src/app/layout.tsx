@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import BottomNav from "@/components/BottomNav";
+import PushAutoSubscribe from "@/components/PushAutoSubscribe";
 import "./globals.css";
 
 // ── Fuente optimizada vía next/font (zero layout shift, sin request externo) ──
@@ -56,6 +57,7 @@ export default function RootLayout({
         <div className="app-shell">
           {children}
           <BottomNav />
+          <PushAutoSubscribe />
         </div>
       </body>
     </html>

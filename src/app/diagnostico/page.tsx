@@ -45,6 +45,16 @@ export default function DiagnosticoPage() {
         <p style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 4 }}>
           Medición en vivo — cada análisis es fresco, sin caché{elapsed ? ` · ${elapsed}ms` : ""}
         </p>
+        {data?.esDomingo && (
+          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 10, background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.4)", fontSize: 12, color: "#fbbf24" }}>
+            ⚠️ Hoy es <strong>Domingo</strong> — el día que reportas problemas
+          </div>
+        )}
+        {data?.diaSemana && !data.esDomingo && (
+          <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+            Hoy es {data.diaSemana}
+          </p>
+        )}
       </div>
 
       <button onClick={runDiag} disabled={loading} style={{
@@ -58,6 +68,40 @@ export default function DiagnosticoPage() {
 
       {data && !loading && (
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* PRUEBA DE CLIENTES EN VIVO */}
+          <Section title="👥 Prueba de clientes en vivo">
+            {data.fetchClientes?.error ? (
+              <div style={{ color: "#f87171", fontSize: 12, wordBreak: "break-word" }}>
+                ❌ Error: {data.fetchClientes.error}
+              </div>
+            ) : (
+              <>
+                <Row label="Tiempo de fetch" value={`${data.fetchClientes?.latenciaMs ?? "—"}ms`} />
+                <Row
+                  label="Clientes nuevos (status 1)"
+                  value={
+                    data.fetchClientes?.nuevos?.ok
+                      ? `✅ ${data.fetchClientes.nuevos.cantidad} contactos`
+                      : `❌ ${data.fetchClientes?.nuevos?.error ?? "error"}`
+                  }
+                />
+                <Row
+                  label="Clientes seguimiento (status 2)"
+                  value={
+                    data.fetchClientes?.seguimiento?.ok
+                      ? `✅ ${data.fetchClientes.seguimiento.cantidad} contactos`
+                      : `❌ ${data.fetchClientes?.seguimiento?.error ?? "error"}`
+                  }
+                />
+                {data.fetchClientes?.nuevos?.ok && data.fetchClientes.nuevos.cantidad === 0 && (
+                  <div style={{ fontSize: 11, color: "#fbbf24", marginTop: 4, padding: "6px 10px", background: "rgba(251,191,36,0.1)", borderRadius: 8 }}>
+                    ⚠️ Login funcionó pero el CRM devolvió 0 clientes. Puede haber un problema en el CRM de Domus.
+                  </div>
+                )}
+              </>
+            )}
+          </Section>
 
           {/* VEREDICTO */}
           <Section title="">

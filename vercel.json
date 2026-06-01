@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm run build",
   "framework": "nextjs",
-  "regions": ["gru1"]
+  "regions": ["gru1"],
+  "crons": [
+    {
+      "path": "/api/crm/keep-alive",
+      "schedule": "0 10 * * *"
+    }
+  ]
 }

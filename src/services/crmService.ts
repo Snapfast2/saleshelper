@@ -74,55 +74,105 @@ async function doFullLogin(ua: string): Promise<StoredSession | null> {
   if (!username || !password) throw new Error("Credenciales no configuradas");
 
   const ts = Date.now();
+  const logBase = `[CRM-LOGIN ${new Date().toISOString()}]`;
 
   // 1. CSRF + sesión inicial
-  const homeRes = await fetch(`https://v2.domus.la?t=${ts}`, {
-    headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
-    cache: "no-store",
-  });
+  console.log(`${logBase} Paso 1: obteniendo CSRF de Domus...`);
+  let homeRes: Response;
+  try {
+    homeRes = await fetch(`https://v2.domus.la?t=${ts}`, {
+      headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
+      cache: "no-store",
+    });
+  } catch (e: any) {
+    console.error(`${logBase} ❌ Paso 1 FALLÓ — no se pudo conectar a Domus: ${e.message}`);
+    throw e;
+  }
   const homeText = await homeRes.text();
   const csrfToken = homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/)?.[1] ?? "";
   const sessionCookie = extractCookies(homeRes.headers);
+  console.log(`${logBase} Paso 1 OK — HTTP ${homeRes.status}, CSRF: ${csrfToken ? "encontrado" : "❌ NO ENCONTRADO"}, cookie: ${sessionCookie ? "OK" : "❌ vacía"}`);
 
   await humanDelay(800, 1800);
 
   // 2. Login
-  const loginRes = await fetch("https://v2.domus.la/auth-login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken,
-      "Cookie": sessionCookie, "User-Agent": ua,
-      "Accept": "application/json", "Accept-Language": "es-CO,es;q=0.9",
-      "Referer": "https://v2.domus.la/",
-    },
-    body: JSON.stringify({ user: username, password }),
-    cache: "no-store",
-  });
+  console.log(`${logBase} Paso 2: haciendo login con usuario "${username?.slice(0, 4)}..."`);
+  let loginRes: Response;
+  try {
+    loginRes = await fetch("https://v2.domus.la/auth-login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken,
+        "Cookie": sessionCookie, "User-Agent": ua,
+        "Accept": "application/json", "Accept-Language": "es-CO,es;q=0.9",
+        "Referer": "https://v2.domus.la/",
+      },
+      body: JSON.stringify({ user: username, password }),
+      cache: "no-store",
+    });
+  } catch (e: any) {
+    console.error(`${logBase} ❌ Paso 2 FALLÓ — error de red en login: ${e.message}`);
+    throw e;
+  }
   const loginData: any = await loginRes.json().catch(() => ({}));
-  if (loginData.mensaje !== "Login exitoso" && loginData.camb_clave === undefined) return null;
+  console.log(`${logBase} Paso 2 respuesta — HTTP ${loginRes.status}, mensaje: "${loginData.mensaje}", camb_clave: ${loginData.camb_clave}`);
+  if (loginData.mensaje !== "Login exitoso" && loginData.camb_clave === undefined) {
+    console.error(`${logBase} ❌ Login rechazado por Domus. Respuesta completa: ${JSON.stringify(loginData).slice(0, 200)}`);
+    return null;
+  }
 
   const authCookies = extractCookies(loginRes.headers);
   const finalCookies = sessionCookie + "; " + authCookies;
+  console.log(`${logBase} Paso 2 OK — auth cookies: ${authCookies ? "OK" : "❌ vacías"}`);
 
   await humanDelay(600, 1500);
 
   // 3. SSO → CRM
-  const crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
-    headers: { "Cookie": finalCookies, "User-Agent": ua, "Referer": "https://v2.domus.la/", "Accept-Language": "es-CO,es;q=0.9" },
-    redirect: "manual", cache: "no-store",
-  });
-  if (crmAuthRes.status !== 302 && crmAuthRes.status !== 301) return null;
+  console.log(`${logBase} Paso 3: SSO hacia CRM...`);
+  let crmAuthRes: Response;
+  try {
+    crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
+      headers: { "Cookie": finalCookies, "User-Agent": ua, "Referer": "https://v2.domus.la/", "Accept-Language": "es-CO,es;q=0.9" },
+      redirect: "manual", cache: "no-store",
+    });
+  } catch (e: any) {
+    console.error(`${logBase} ❌ Paso 3 FALLÓ — error de red en SSO: ${e.message}`);
+    throw e;
+  }
+  console.log(`${logBase} Paso 3 respuesta — HTTP ${crmAuthRes.status}`);
+  if (crmAuthRes.status !== 302 && crmAuthRes.status !== 301) {
+    console.error(`${logBase} ❌ SSO no redirigió. Se esperaba 301/302, se recibió ${crmAuthRes.status}`);
+    return null;
+  }
   const redirectUrl = crmAuthRes.headers.get("location");
-  if (!redirectUrl) return null;
+  if (!redirectUrl) {
+    console.error(`${logBase} ❌ SSO no devolvió URL de redirección`);
+    return null;
+  }
+  console.log(`${logBase} Paso 3 OK — redirige a: ${redirectUrl.slice(0, 80)}...`);
 
   await humanDelay(500, 1200);
 
   // 4. Token → sesión CRM
-  const crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
-    headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
-    redirect: "manual", cache: "no-store",
-  });
+  console.log(`${logBase} Paso 4: obteniendo sesión CRM...`);
+  let crmRes: Response;
+  try {
+    crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
+      headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
+      redirect: "manual", cache: "no-store",
+    });
+  } catch (e: any) {
+    console.error(`${logBase} ❌ Paso 4 FALLÓ — error de red al obtener sesión CRM: ${e.message}`);
+    throw e;
+  }
   const crmSessionCookie = extractCookies(crmRes.headers, "session");
+  console.log(`${logBase} Paso 4 — HTTP ${crmRes.status}, sesión CRM: ${crmSessionCookie ? "✅ OK" : "❌ NO ENCONTRADA"}`);
+
+  if (!crmSessionCookie) {
+    console.error(`${logBase} ❌ Login completo pero NO se obtuvo cookie de sesión CRM. El login no servirá.`);
+  } else {
+    console.log(`${logBase} ✅ Login exitoso en ${Date.now() - ts}ms`);
+  }
 
   return { sessionCookie, authCookies, crmSessionCookie, ua, createdAt: Date.now() };
 }
@@ -181,13 +231,17 @@ export async function fetchCrmClients(
   }
 
   // 3. Fetch desde Domus (directo cuando noCache=true, o cache miss)
+  const logFetch = `[CRM-FETCH status=${statusType} ${new Date().toISOString()}]`;
   try {
+    console.log(`${logFetch} Iniciando fetch de clientes...`);
     let session = await getSession();
+    console.log(`${logFetch} Sesión obtenida — cookie CRM: ${session.crmSessionCookie ? "✅ presente" : "❌ VACÍA"}`);
 
     const targetUrl = statusType === "todos" || statusType === ""
       ? "contacts?page=1&order=created_at_new"
       : `contacts?page=1&contact_status_type=${statusType}&order=created_at_new`;
 
+    console.log(`${logFetch} Llamando CRM API → ${targetUrl}`);
     const apiRes = await fetch("https://crm.domusweb.co/api/get", {
       method: "POST",
       headers: {
@@ -201,11 +255,21 @@ export async function fetchCrmClients(
       body: JSON.stringify({ url: targetUrl }),
       cache: "no-store",
     });
+    console.log(`${logFetch} CRM API respuesta — HTTP ${apiRes.status}`);
 
-    // Si la sesión caducó, limpiar KV y reintentar una vez
-    if (apiRes.status === 401 || apiRes.status === 403) {
+    // Parsear el body primero — el CRM a veces devuelve HTTP 200 con code:403 en el body
+    const apiData = await apiRes.json().catch(() => ({}));
+
+    // Detectar sesión caducada: tanto por HTTP status como por code en el body
+    const sessionExpired =
+      apiRes.status === 401 || apiRes.status === 403 ||
+      (apiData?.code === 403 || apiData?.code === 401);
+
+    if (sessionExpired) {
+      console.warn(`${logFetch} ⚠️ Sesión rechazada (HTTP ${apiRes.status}, body code: ${apiData?.code ?? "—"}) — limpiando KV y reintentando login...`);
       if (kv) { await kv.del(SESSION_KEY); await kv.del(redisDataKey); }
       session = await getSession();
+      console.log(`${logFetch} Nueva sesión tras relogin — cookie: ${session.crmSessionCookie ? "✅" : "❌ VACÍA"}`);
 
       const retry = await fetch("https://crm.domusweb.co/api/get", {
         method: "POST",
@@ -220,29 +284,40 @@ export async function fetchCrmClients(
         body: JSON.stringify({ url: targetUrl }),
         cache: "no-store",
       });
-      const retryData = await retry.json();
+      console.log(`${logFetch} Reintento CRM API — HTTP ${retry.status}`);
+      const retryData = await retry.json().catch(() => ({}));
       if (retryData?.data) {
         const clients = mapClients(retryData.data);
+        console.log(`${logFetch} ✅ Reintento exitoso — ${clients.length} clientes`);
         memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
         if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
         return clients;
       }
+      console.error(`${logFetch} ❌ Reintento también falló. Respuesta: ${JSON.stringify(retryData).slice(0, 200)}`);
+      throw new Error("Re-login fallido — CRM no acepta la nueva sesión");
     }
 
-    const apiData = await apiRes.json();
     if (apiData?.data) {
       const clients = mapClients(apiData.data);
+      console.log(`${logFetch} ✅ Fetch exitoso — ${clients.length} clientes obtenidos`);
       memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
       // Guardar en Redis — el cron lo mantiene fresco cada 15 min
       if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
       return clients;
     }
 
+    console.error(`${logFetch} ❌ Respuesta inesperada del CRM. Claves recibidas: ${Object.keys(apiData || {}).join(", ")}. Fragmento: ${JSON.stringify(apiData).slice(0, 300)}`);
     throw new Error("Respuesta inesperada del CRM");
 
+
   } catch (error) {
-    console.error("CRM fetch error:", error instanceof Error ? error.message : "Unknown");
-    if (memCache[cacheKey]) return memCache[cacheKey];
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`${logFetch} ❌ Error fatal en fetchCrmClients: ${msg}`);
+    if (memCache[cacheKey]) {
+      console.warn(`${logFetch} ⚠️ Devolviendo ${memCache[cacheKey].length} clientes desde caché en memoria (datos pueden ser viejos)`);
+      return memCache[cacheKey];
+    }
+    console.error(`${logFetch} ❌ Sin caché disponible — devolviendo lista vacía. ESTO CAUSA "No hay clientes"`);
     return [];
   }
 }
