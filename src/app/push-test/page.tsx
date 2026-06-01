@@ -1,6 +1,7 @@
 'use client';
 // src/app/push-test/page.tsx
 // Página de diagnóstico de push notifications — abre esto desde Android para debuggear
+// Abre chrome://inspect/#service-workers en PC para ver los logs del SW
 
 import { useState, useEffect } from "react";
 
@@ -234,6 +235,51 @@ export default function PushTestPage() {
           ))}
         </div>
       )}
+
+      {/* Guía de solución */}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ fontSize: "13px", fontWeight: "800", color: "var(--text-primary)", marginBottom: 12 }}>
+          🛠️ Si no llega la notificación
+        </div>
+
+        {[
+          {
+            emoji: "📱",
+            title: "1. Revisar permisos del sistema Android",
+            detail: "Ajustes → Aplicaciones → Chrome → Notificaciones → Activar todas",
+          },
+          {
+            emoji: "🔔",
+            title: "2. Revisar permiso en Chrome (Android)",
+            detail: "Chrome → ⋮ → Configuración → Notificaciones → saleshelper-patricia.vercel.app → Permitir",
+          },
+          {
+            emoji: "💾",
+            title: "3. Si está instalada como app (PWA)",
+            detail: "Ajustes → Aplicaciones → SalesHelper (o Patricia) → Notificaciones → Activar",
+          },
+          {
+            emoji: "🖥️",
+            title: "4. Debug avanzado (PC + cable USB)",
+            detail: "Conecta el cel al PC → abre chrome://inspect/#service-workers → verás los logs [SW] en tiempo real",
+          },
+        ].map((item, i) => (
+          <div key={i} style={{
+            padding: "12px 14px",
+            borderRadius: "10px",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            marginBottom: 8,
+          }}>
+            <div style={{ fontSize: "13px", fontWeight: "700", color: "var(--text-primary)" }}>
+              {item.emoji} {item.title}
+            </div>
+            <div style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: 4 }}>
+              {item.detail}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

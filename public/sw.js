@@ -12,20 +12,26 @@ self.addEventListener("activate", (event) => {
 
 // ── Push Notifications ──────────────────────────────────────────────
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
+  console.log("[SW] Push recibido", event.data ? "con datos" : "SIN datos");
+  if (!event.data) {
+    console.warn("[SW] Push vacío — ignorado");
+    return;
+  }
 
   let data = {};
   try {
     data = event.data.json();
-  } catch {
+    console.log("[SW] Payload:", JSON.stringify(data));
+  } catch (e) {
     data = { title: "SalesHelper", body: event.data.text() };
+    console.warn("[SW] No se pudo parsear JSON, usando texto plano");
   }
 
   const title = data.title || "SalesHelper";
   const options = {
     body: data.body || "Tienes una notificación",
-    icon: "/icon-192.png",       // ← ruta correcta (sin /icons/)
-    badge: "/icon-192.png",      // ← ruta correcta
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
     tag: data.tag || "saleshelper",
     data: {
       url: data.url || "/",
@@ -33,10 +39,15 @@ self.addEventListener("push", (event) => {
     },
     vibrate: [200, 100, 200],
     requireInteraction: false,
-    actions: data.actions || [], // ← botones: "Ver perfil", "WhatsApp"
+    actions: data.actions || [],
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  console.log("[SW] Mostrando notificación:", title);
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+      .then(() => console.log("[SW] Notificación mostrada OK"))
+      .catch((err) => console.error("[SW] Error mostrando notificación:", err))
+  );
 });
 
 // ── Click en notificación o en botón de acción ──────────────────────
