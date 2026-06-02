@@ -118,15 +118,15 @@ function RecordatorioModal({ nombre, guardado, elegido, onClose, onElegir }: {
         >
           <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)", margin: "0 auto 20px" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>🔔 Recordar a {nombre}</h3>
+            <h3 style={{ fontSize: 21, fontWeight: 700, margin: 0 }}>🔔 Recordar a {nombre}</h3>
             <button onClick={onClose} style={{ padding: 8, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", cursor: "pointer" }}>
               <X size={18} color="var(--text-secondary)" />
             </button>
           </div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>¿Cuándo quieres que te recuerde hacer seguimiento?</p>
+          <p style={{ fontSize: 15, color: "var(--text-secondary)", marginBottom: 20 }}>¿Cuándo quieres que te recuerde hacer seguimiento?</p>
           {guardado ? (
             <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", padding: "28px 20px", color: "#16a34a", fontWeight: 700, fontSize: 17 }}
+              style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "center", padding: "28px 20px", color: "#16a34a", fontWeight: 700, fontSize: 20 }}
             >
               <CheckCircle size={32} color="#16a34a" /> ¡Recordatorio guardado!
             </motion.div>
@@ -138,10 +138,10 @@ function RecordatorioModal({ nombre, guardado, elegido, onClose, onElegir }: {
                     display: "flex", alignItems: "center", gap: 14, padding: "16px", borderRadius: 14,
                     border: `1px solid ${elegido === op.value ? "var(--border-red)" : "var(--border)"}`,
                     background: elegido === op.value ? "var(--red-glow)" : "var(--bg-base)",
-                    cursor: "pointer", fontSize: 15, fontWeight: 600, color: "var(--text-primary)", textAlign: "left", width: "100%",
+                    cursor: "pointer", fontSize: 17, fontWeight: 600, color: "var(--text-primary)", textAlign: "left", width: "100%",
                   }}
                 >
-                  <span style={{ fontSize: 24 }}>{op.emoji}</span>{op.label}
+                  <span style={{ fontSize: 28 }}>{op.emoji}</span>{op.label}
                 </motion.button>
               ))}
             </div>
@@ -209,15 +209,15 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
               width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
               background: "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 20, fontWeight: 800, color: "var(--red)",
+              fontSize: 23, fontWeight: 800, color: "var(--red)",
             }}>
               {inicial}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", textTransform: "capitalize" }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", textTransform: "capitalize" }}>
                 {cliente.nombre.toLowerCase()}
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+              <div style={{ fontSize: 14, color: "var(--text-muted)", marginTop: 2 }}>
                 {cliente.estado}
               </div>
             </div>
@@ -247,15 +247,15 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
                   {row.icon}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                     {row.label}
                   </div>
                   {row.href ? (
-                    <a href={row.href} style={{ fontSize: 13, fontWeight: 600, color: "var(--red)", textDecoration: "none", display: "block", marginTop: 1 }}>
+                    <a href={row.href} style={{ fontSize: 15, fontWeight: 600, color: "var(--red)", textDecoration: "none", display: "block", marginTop: 1 }}>
                       {row.value}
                     </a>
                   ) : (
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginTop: 1, textTransform: row.label === "Inmueble de interés" ? undefined : "capitalize" }}>
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginTop: 1, textTransform: row.label === "Inmueble de interés" ? undefined : "capitalize" }}>
                       {row.value}
                     </div>
                   )}
@@ -341,7 +341,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 800,
               color: esNuevo
                 ? "#16a34a"
@@ -358,7 +358,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                 background: "#16a34a",
                 border: "2px solid var(--bg-card)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 8, fontWeight: 900, color: "#fff",
+                fontSize: 9, fontWeight: 900, color: "#fff",
                 animation: "pulse-nuevo 2s ease-in-out infinite",
               }}>
                 N
@@ -371,7 +371,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
             <button
               onClick={() => setDetalle(true)}
               style={{
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 700,
                 color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
                 textTransform: "capitalize",
@@ -390,7 +390,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
               <span style={{
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: 800,
                 color: etiqueta.color,
                 background: etiqueta.bg,
@@ -406,11 +406,11 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                 <etiqueta.Icon size={9} color={etiqueta.color} />
                 {etiqueta.label}
               </span>
-              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                 {etiqueta.tiempo} · {cliente.estado}
               </span>
               {seg && (
-                <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
               )}
             </div>
           </div>
@@ -478,10 +478,10 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.1) 60%)" }} />
           <div style={{ position: "absolute", bottom: 10, left: 12, right: 12, display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inmueble.titulo}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{inmueble.tipo} · {inmueble.barrio || inmueble.ciudad}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inmueble.titulo}</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 2 }}>{inmueble.tipo} · {inmueble.barrio || inmueble.ciudad}</div>
             </div>
-            <div style={{ background: "var(--red)", color: "#fff", padding: "4px 10px", borderRadius: 20, fontSize: 13, fontWeight: 800, flexShrink: 0 }}>
+            <div style={{ background: "var(--red)", color: "#fff", padding: "4px 10px", borderRadius: 20, fontSize: 15, fontWeight: 800, flexShrink: 0 }}>
               {formatearPrecio(inmueble.precio)}
             </div>
           </div>
@@ -510,7 +510,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
               color: "#fff",
               padding: "4px 10px",
               borderRadius: "20px",
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               border: "1px solid rgba(255, 255, 255, 0.15)",
               textTransform: "uppercase",
@@ -525,10 +525,10 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           </div>
 
           <div style={{ zIndex: 1 }}>
-            <h4 style={{ fontSize: 14, fontWeight: 800, margin: 0, color: "#fff", letterSpacing: "-0.01em" }}>
+            <h4 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: "#fff", letterSpacing: "-0.01em" }}>
               {codigoRef === "sin-inmueble" ? "Consulta General" : `Inmueble Ref: ${codigoRef}`}
             </h4>
-            <p style={{ fontSize: 11, color: "rgba(255, 255, 255, 0.65)", marginTop: 4, fontWeight: 400 }}>
+            <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.65)", marginTop: 4, fontWeight: 400 }}>
               {codigoRef === "sin-inmueble"
                 ? "Interés general en portafolio de servicios"
                 : "Propiedad vendida, archivada o captada por otro asesor"}
@@ -546,12 +546,12 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,30,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Users size={14} color="var(--red)" />
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
             {n} {n === 1 ? "cliente interesado" : "clientes interesados"}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-muted)" }}>
-          <span style={{ fontSize: 11 }}>{expandido ? "Ocultar" : "Ver"}</span>
+          <span style={{ fontSize: 13 }}>{expandido ? "Ocultar" : "Ver"}</span>
           {expandido ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
@@ -577,7 +577,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
                 style={{
                   width: "100%", padding: "10px 16px", background: "none", border: "none",
                   borderTop: "1px solid var(--border)", cursor: "pointer",
-                  fontSize: 12, fontWeight: 700, color: "var(--red)",
+                  fontSize: 14, fontWeight: 700, color: "var(--red)",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                 }}
               >
@@ -599,7 +599,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
                 borderTop: "1px solid var(--border)",
                 borderBottom: "1px solid var(--border)"
               }}>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-secondary)", letterSpacing: "0.05em", textTransform: "uppercase" }}>
                   Leads antiguos sin gestionar
                 </span>
                 <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
@@ -616,7 +616,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
                 style={{
                   width: "100%", padding: "10px 16px", background: "none", border: "none",
                   borderTop: "1px solid var(--border)", cursor: "pointer",
-                  fontSize: 12, fontWeight: 700, color: "var(--text-muted)",
+                  fontSize: 14, fontWeight: 700, color: "var(--text-muted)",
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
                 }}
               >

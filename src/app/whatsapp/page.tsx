@@ -207,7 +207,7 @@ function WhatsAppContent() {
             {selectedInmueble?.urlDomus && (
               <button
                 className="btn-secondary"
-                style={{ marginTop: 8, opacity: 0.6, fontSize: 12 }}
+                style={{ marginTop: 8, opacity: 0.6, fontSize: 14 }}
                 onClick={() => {
                   navigator.clipboard.writeText(selectedInmueble.urlDomus!);
                   setCopied(true);

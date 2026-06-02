@@ -79,7 +79,7 @@ export default function PinPage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 32,
+          fontSize: 37,
           boxShadow: "0 8px 32px rgba(196,30,58,0.4)",
         }}>
           🏠
@@ -87,10 +87,10 @@ export default function PinPage() {
 
         {/* Título */}
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>
+          <h1 style={{ fontSize: 25, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>
             SalesHelper
           </h1>
-          <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>
+          <p style={{ fontSize: 15, color: "#94a3b8", marginTop: 6 }}>
             {loading ? "Verificando..." : "Ingresa tu PIN de acceso"}
           </p>
         </div>
@@ -120,7 +120,7 @@ export default function PinPage() {
                   : "2px solid rgba(255,255,255,0.12)",
                 background: "rgba(255,255,255,0.07)",
                 color: "#e2e8f0",
-                fontSize: 28,
+                fontSize: 32,
                 textAlign: "center",
                 outline: "none",
                 transition: "border-color 0.2s, transform 0.1s",
@@ -134,7 +134,7 @@ export default function PinPage() {
 
         {/* Error */}
         {error && (
-          <p style={{ color: "#f87171", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "#f87171", fontSize: 15, margin: 0 }}>
             PIN incorrecto. Intenta de nuevo.
           </p>
         )}

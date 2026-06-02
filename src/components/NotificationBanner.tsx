@@ -26,7 +26,7 @@ export default function NotificationBanner() {
     return (
       <div style={{ margin: "0 20px 12px", padding: "10px 14px", borderRadius: 12, background: "rgba(220,38,38,0.06)", border: "1px solid rgba(220,38,38,0.15)", display: "flex", gap: 8, alignItems: "center" }}>
         <BellOff size={15} color="var(--red)" />
-        <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+        <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
           Notificaciones bloqueadas. Actívalas en Ajustes del navegador.
         </span>
       </div>
@@ -44,7 +44,7 @@ export default function NotificationBanner() {
           style={{ margin: "0 20px 12px", padding: "10px 14px", borderRadius: 12, background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.2)", display: "flex", gap: 8, alignItems: "center" }}
         >
           <Check size={15} color="#16a34a" />
-          <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>¡Notificaciones activadas! Revisa tu pantalla 🔔</span>
+          <span style={{ fontSize: 14, color: "#16a34a", fontWeight: 600 }}>¡Notificaciones activadas! Revisa tu pantalla 🔔</span>
         </motion.div>
       );
     }

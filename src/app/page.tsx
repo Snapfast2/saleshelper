@@ -254,7 +254,7 @@ export default function Home() {
                 gap: 8,
                 cursor: "pointer",
                 color: "var(--text-secondary)",
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: 600,
               }}
               onClick={() => router.push("/inmuebles")}

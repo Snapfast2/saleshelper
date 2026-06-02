@@ -105,7 +105,7 @@ export default async function FichaPage({
             style={{ width: "100%", height: "100%", objectFit: "cover" }}
           />
         ) : (
-          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#bbb", fontSize: 13 }}>
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#bbb", fontSize: 15 }}>
             Sin foto disponible
           </div>
         )}
@@ -119,7 +119,7 @@ export default async function FichaPage({
             display: "inline-block",
             background: tagBg,
             color: "#fff",
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: 700,
             padding: "4px 12px",
             borderRadius: 20,
@@ -128,11 +128,11 @@ export default async function FichaPage({
           }}>
             {tag}
           </span>
-          <div style={{ color: "#fff", fontSize: 28, fontWeight: 800, lineHeight: 1, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>
+          <div style={{ color: "#fff", fontSize: 32, fontWeight: 800, lineHeight: 1, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>
             {precio}
           </div>
           {inm.gestion === "arriendo" && (
-            <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 13, marginTop: 2 }}>por mes</div>
+            <div style={{ color: "rgba(255,255,255,0.75)", fontSize: 15, marginTop: 2 }}>por mes</div>
           )}
         </div>
       </div>
@@ -141,10 +141,10 @@ export default async function FichaPage({
       <div style={{ padding: "22px 20px 0" }}>
 
         {/* Título + ubicación */}
-        <h1 style={{ fontSize: 19, fontWeight: 700, color: "#111", margin: "0 0 6px", lineHeight: 1.3 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", margin: "0 0 6px", lineHeight: 1.3 }}>
           {inm.tipo} {inm.gestion === "venta" ? "en Venta" : "en Arriendo"}
         </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#666", fontSize: 13, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, color: "#666", fontSize: 15, marginBottom: 20 }}>
           <MapPin size={14} color="#C41E3A" />
           <span>{inm.barrio}, {inm.ciudad}</span>
         </div>
@@ -160,13 +160,13 @@ export default async function FichaPage({
               textAlign: "center",
             }}>
               <Icon size={20} color="#C41E3A" style={{ marginBottom: 6 }} />
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>{label}</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>{label}</div>
             </div>
           ))}
         </div>
 
         {/* Ref */}
-        <div style={{ fontSize: 12, color: "#aaa", marginBottom: 20 }}>
+        <div style={{ fontSize: 14, color: "#aaa", marginBottom: 20 }}>
           Ref: {inm.id} · L2L Bienes Raíces
         </div>
 
@@ -197,9 +197,9 @@ export default async function FichaPage({
             }}
           />
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#111" }}>{agente.nombreCompleto}</div>
-            <div style={{ fontSize: 12, color: "#C41E3A", fontWeight: 600 }}>{agente.cargo}</div>
-            <div style={{ fontSize: 12, color: "#888" }}>{agente.inmobiliaria}</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#111" }}>{agente.nombreCompleto}</div>
+            <div style={{ fontSize: 14, color: "#C41E3A", fontWeight: 600 }}>{agente.cargo}</div>
+            <div style={{ fontSize: 14, color: "#888" }}>{agente.inmobiliaria}</div>
           </div>
         </div>
 
@@ -207,7 +207,7 @@ export default async function FichaPage({
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
           <a href={`tel:${agente.telefono}`} style={{
             display: "flex", alignItems: "center", gap: 12,
-            color: "#333", textDecoration: "none", fontSize: 14,
+            color: "#333", textDecoration: "none", fontSize: 16,
           }}>
             <div style={{ width: 38, height: 38, background: "#f5f5f5", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Phone size={17} color="#C41E3A" />
@@ -216,7 +216,7 @@ export default async function FichaPage({
           </a>
           <a href={`mailto:${agente.email}`} style={{
             display: "flex", alignItems: "center", gap: 12,
-            color: "#333", textDecoration: "none", fontSize: 14,
+            color: "#333", textDecoration: "none", fontSize: 16,
           }}>
             <div style={{ width: 38, height: 38, background: "#f5f5f5", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Mail size={17} color="#C41E3A" />
@@ -235,7 +235,7 @@ export default async function FichaPage({
           style={{
             display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
             background: "#25D366", color: "#fff", textDecoration: "none",
-            padding: "17px", borderRadius: 14, fontSize: 16, fontWeight: 700,
+            padding: "17px", borderRadius: 14, fontSize: 18, fontWeight: 700,
             boxShadow: "0 4px 20px rgba(37,211,102,0.35)",
           }}
         >
@@ -253,7 +253,7 @@ export default async function FichaPage({
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
               color: "#666", textDecoration: "none",
-              padding: "13px", borderRadius: 14, fontSize: 13, fontWeight: 500,
+              padding: "13px", borderRadius: 14, fontSize: 15, fontWeight: 500,
               border: "1px solid #e5e5e5",
             }}
           >
