@@ -83,6 +83,14 @@ export async function GET(req: Request) {
       const client = clients.find(c => String(c.id) === newId);
       if (!client) continue;
 
+      // Filtro de seguridad máximo: si el cliente fue creado hace más de 24 horas,
+      // es un cliente viejo que el CRM movió de página (por ej. por una edición). No notificar.
+      const createdAt = new Date(client.fecha);
+      const horasDesdeCreacion = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
+      if (horasDesdeCreacion > 24) {
+        continue;
+      }
+
       const primerNombre = client.nombre.split(" ")[0];
       const apellido     = client.nombre.split(" ")[1] || "";
       const tel = client.telefono
