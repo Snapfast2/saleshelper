@@ -328,7 +328,20 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
         )}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
           {/* Avatar + badge Nuevo */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
+          <button 
+            onClick={() => setDetalle(true)}
+            style={{ 
+              position: "relative", 
+              flexShrink: 0,
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              WebkitUserSelect: "none",
+              userSelect: "none",
+              WebkitTouchCallout: "none"
+            }}
+          >
             <div style={{
               width: 36,
               height: 36,
@@ -364,7 +377,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                 N
               </div>
             )}
-          </div>
+          </button>
 
           {/* Info */}
           <div style={{ flex: 1, minWidth: 0 }}>
