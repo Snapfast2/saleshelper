@@ -186,7 +186,6 @@ function MorphingDialogContent({
 
   useEffect(() => {
     if (isOpen) {
-      document.body.classList.add('overflow-hidden');
       const focusableElements = containerRef.current?.querySelectorAll(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
       );
@@ -198,7 +197,6 @@ function MorphingDialogContent({
         (focusableElements[0] as HTMLElement).focus();
       }
     } else {
-      document.body.classList.remove('overflow-hidden');
       triggerRef.current?.focus();
     }
   }, [isOpen, triggerRef]);

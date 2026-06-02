@@ -290,9 +290,11 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                   fontWeight: 700,
                   color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
                   textTransform: "capitalize",
-                  whiteSpace: "nowrap",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical",
                   overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  lineHeight: 1.2,
                 }}
               >
                 {cliente.nombre.toLowerCase()}
