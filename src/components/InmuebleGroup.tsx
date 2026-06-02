@@ -8,15 +8,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { BorderTrail } from "@/components/motion-primitives/border-trail";
-import { AnimatedGroup } from "@/components/motion-primitives/animated-group";
-import { TextEffect } from "@/components/motion-primitives/text-effect";
-import {
-  MorphingDialog,
-  MorphingDialogTrigger,
-  MorphingDialogContent,
-  MorphingDialogContainer,
-  MorphingDialogClose,
-} from "@/components/motion-primitives/morphing-dialog";
 import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
@@ -162,9 +153,127 @@ function RecordatorioModal({ nombre, guardado, elegido, onClose, onElegir }: {
   );
 }
 
-// ─── Fila de cliente con Morphing Dialog ──────────────────────────────
+// ─── Modal de detalle del cliente ─────────────────────────────────────
+function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+
+  const tel = cliente.telefono
+    ? `${cliente.telefonoIndicativo.replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
+    : "";
+
+  const fechaLegible = (() => {
+    try {
+      return new Date(cliente.fecha).toLocaleDateString("es-CO", {
+        weekday: "long", day: "numeric", month: "long", year: "numeric",
+      });
+    } catch { return cliente.fecha; }
+  })();
+
+  const rows: { icon: React.ReactNode; label: string; value: string; href?: string }[] = [
+    tel ? { icon: <Phone size={14} color="var(--red)" />, label: "Teléfono", value: `+${tel}`, href: `tel:+${tel}` } : null,
+    cliente.email ? { icon: <MessageCircle size={14} color="#3b82f6" />, label: "Correo", value: cliente.email, href: `mailto:${cliente.email}` } : null,
+    { icon: <Users size={14} color="#8b5cf6" />, label: "Procedencia", value: cliente.origen },
+    { icon: <Home size={14} color="#f97316" />, label: "Inmueble de interés", value: cliente.inmuebleInteres !== "N/A" ? `Ref ${cliente.inmuebleInteres}` : "Sin referencia" },
+    { icon: <CalendarDays size={14} color="var(--text-muted)" />, label: "Creado", value: fechaLegible },
+  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href?: string }[];
+
+  const inicial = cliente.nombre.charAt(0).toUpperCase();
+
+  return createPortal(
+    <AnimatePresence>
+      <>
+        <motion.div key="ov-det" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9998, backdropFilter: "blur(4px)" }}
+        />
+        <motion.div key="sh-det" initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 340, damping: 32 }}
+          style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 480,
+            background: "var(--bg-card)", borderRadius: "24px 24px 0 0",
+            padding: "0 0 calc(16px + env(safe-area-inset-bottom,16px))",
+            zIndex: 9999, boxShadow: "0 -8px 48px rgba(0,0,0,0.18)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Handle */}
+          <div style={{ padding: "16px 20px 0", display: "flex", justifyContent: "center" }}>
+            <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--border)" }} />
+          </div>
+
+          {/* Cabecera */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 20px" }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+              background: "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 23, fontWeight: 800, color: "var(--red)",
+            }}>
+              {inicial}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", textTransform: "capitalize" }}>
+                {cliente.nombre.toLowerCase()}
+              </div>
+              <div style={{ fontSize: 14, color: "var(--text-muted)", marginTop: 2 }}>
+                {cliente.estado}
+              </div>
+            </div>
+            <button onClick={onClose} style={{
+              padding: 8, borderRadius: "50%", background: "var(--bg-base)",
+              border: "1px solid var(--border)", display: "flex", cursor: "pointer", flexShrink: 0,
+            }}>
+              <X size={16} color="var(--text-secondary)" />
+            </button>
+          </div>
+
+          {/* Divisor */}
+          <div style={{ height: 1, background: "var(--border)" }} />
+
+          {/* Filas de datos */}
+          <div style={{ padding: "8px 0" }}>
+            {rows.map((row, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", gap: 14,
+                padding: "12px 20px",
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: "50%",
+                  background: "var(--bg-base)", border: "1px solid var(--border)",
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>
+                  {row.icon}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                    {row.label}
+                  </div>
+                  {row.href ? (
+                    <a href={row.href} style={{ fontSize: 15, fontWeight: 600, color: "var(--red)", textDecoration: "none", display: "block", marginTop: 1 }}>
+                      {row.value}
+                    </a>
+                  ) : (
+                    <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", marginTop: 1, textTransform: row.label === "Inmueble de interés" ? undefined : "capitalize" }}>
+                      {row.value}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </>
+    </AnimatePresence>,
+    document.body
+  );
+}
+
+// ─── Fila de cliente (compacta) ────────────────────────────────────────
 function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguimiento: boolean }) {
   const [modal, setModal] = useState(false);
+  const [detalle, setDetalle] = useState(false);
   const [guardado, setGuardado] = useState(false);
   const [elegido, setElegido] = useState<string | null>(null);
 
@@ -177,7 +286,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   
   const ms = Date.now() - new Date(cliente.fecha).getTime();
   const dias = Math.floor(ms / 86400000);
-  const esNuevo = ms < 5 * 60 * 60 * 1000;
+  const esNuevo = ms < 5 * 60 * 60 * 1000; // < 5 horas
   const esAntiguo = dias > 7;
 
   const etiqueta = obtenerEtiquetaEdad(cliente.fecha);
@@ -202,219 +311,131 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
     setTimeout(() => { setModal(false); setGuardado(false); setElegido(null); }, 1500);
   };
 
-  const fechaLegible = (() => {
-    try {
-      return new Date(cliente.fecha).toLocaleDateString("es-CO", {
-        weekday: "long", day: "numeric", month: "long", year: "numeric",
-      });
-    } catch { return cliente.fecha; }
-  })();
-
-  const rows: { icon: React.ReactNode; label: string; value: string; href?: string }[] = [
-    tel ? { icon: <Phone size={14} color="var(--red)" />, label: "Teléfono", value: `+${tel}`, href: `tel:+${tel}` } : null,
-    cliente.email ? { icon: <MessageCircle size={14} color="#3b82f6" />, label: "Correo", value: cliente.email, href: `mailto:${cliente.email}` } : null,
-    { icon: <Users size={14} color="#8b5cf6" />, label: "Procedencia", value: cliente.origen },
-    { icon: <Home size={14} color="#f97316" />, label: "Inmueble de interés", value: cliente.inmuebleInteres !== "N/A" ? `Ref ${cliente.inmuebleInteres}` : "Sin referencia" },
-    { icon: <CalendarDays size={14} color="var(--text-muted)" />, label: "Creado", value: fechaLegible },
-  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href?: string }[];
-
-  const inicial = cliente.nombre.charAt(0).toUpperCase();
-
   return (
     <>
-      <MorphingDialog transition={{ type: 'spring', bounce: 0, duration: 0.3 }}>
-        <MorphingDialogTrigger
-          as="div"
-          style={{
-            position: "relative",
-            padding: "12px 18px",
-            borderTop: "1px solid var(--border)",
-            opacity: esAntiguo ? 0.72 : 1,
-            transition: "opacity 0.2s ease, background 0.2s ease",
-            overflow: "hidden",
-            width: "100%",
-            display: "block",
-            textAlign: "left",
-            background: "var(--bg-card)",
-            border: "none",
-            borderBottom: "1px solid var(--border)",
-            cursor: "pointer",
-          }}
-        >
-          {esNuevo && (
-            <BorderTrail
-              style={{ '--trail-color': '#16a34a' } as React.CSSProperties}
-            />
-          )}
-          <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 12, width: "100%" }}>
-            {/* Avatar + badge Nuevo */}
-            <div style={{ position: "relative", flexShrink: 0 }}>
+      <div style={{
+        position: "relative",
+        padding: "10px 16px",
+        borderTop: "1px solid var(--border)",
+        opacity: esAntiguo ? 0.72 : 1,
+        transition: "opacity 0.2s ease",
+        overflow: "hidden",
+      }}>
+        {esNuevo && (
+          <BorderTrail
+            style={{ '--trail-color': '#16a34a' } as React.CSSProperties}
+          />
+        )}
+        <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+          {/* Avatar + badge Nuevo */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: esNuevo
+                ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
+                : esAntiguo
+                  ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
+                  : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontWeight: 800,
+              color: esNuevo
+                ? "#16a34a"
+                : esAntiguo
+                  ? "#9ca3af"
+                  : "var(--red)"
+            }}>
+              {nombreCap.charAt(0)}
+            </div>
+            {esNuevo && (
               <div style={{
-                width: 41,
-                height: 41,
-                borderRadius: "50%",
-                background: esNuevo
-                  ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
-                  : esAntiguo
-                    ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
-                    : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 18,
-                fontWeight: 800,
-                color: esNuevo ? "#16a34a" : esAntiguo ? "#9ca3af" : "var(--red)"
+                position: "absolute", top: -3, right: -3,
+                width: 16, height: 16, borderRadius: "50%",
+                background: "#16a34a",
+                border: "2px solid var(--bg-card)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 900, color: "#fff",
+                animation: "pulse-nuevo 2s ease-in-out infinite",
               }}>
-                {inicial}
+                N
               </div>
-              {esNuevo && (
-                <div style={{
-                  position: "absolute", top: -3, right: -3,
-                  width: 18, height: 18, borderRadius: "50%",
-                  background: "#16a34a",
-                  border: "2px solid var(--bg-card)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 10, fontWeight: 900, color: "#fff",
-                  animation: "pulse-nuevo 2s ease-in-out infinite",
-                }}>
-                  N
-                </div>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 17,
-                  fontWeight: 700,
-                  color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
-                  textTransform: "capitalize",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
-                  lineHeight: 1.2,
-                }}
-              >
-                {cliente.nombre.toLowerCase()}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
-                <span style={{
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: etiqueta.color,
-                  background: etiqueta.bg,
-                  border: `1px solid ${etiqueta.border}`,
-                  padding: "2px 7px",
-                  borderRadius: "6px",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.02em",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 3,
-                }}>
-                  <etiqueta.Icon size={10} color={etiqueta.color} />
-                  {etiqueta.label}
-                </span>
-                <span style={{ fontSize: 14, color: "var(--text-muted)" }}>
-                  {etiqueta.tiempo} · {cliente.estado}
-                </span>
-                {seg && (
-                  <span style={{ fontSize: 14, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Acciones rápidas (stopPropagation) */}
-            <div
-              style={{ display: "flex", gap: 7, alignItems: "center", flexShrink: 0 }}
-              onClick={(e) => e.stopPropagation()}
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <button
+              onClick={() => setDetalle(true)}
+              style={{
+                fontSize: 15,
+                fontWeight: 700,
+                color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
+                textTransform: "capitalize",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
             >
-              {tel && (
-                <a href={`tel:+${tel}`} style={{ width: 37, height: 37, borderRadius: "50%", background: "rgba(34,197,94,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                  <Phone size={16} color="#16a34a" />
-                </a>
+              {cliente.nombre.toLowerCase()}
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
+              <span style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: etiqueta.color,
+                background: etiqueta.bg,
+                border: `1px solid ${etiqueta.border}`,
+                padding: "1px 6px 1px 5px",
+                borderRadius: "4px",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+              }}>
+                <etiqueta.Icon size={9} color={etiqueta.color} />
+                {etiqueta.label}
+              </span>
+              <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                {etiqueta.tiempo} · {cliente.estado}
+              </span>
+              {seg && (
+                <span style={{ fontSize: 12, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
               )}
-              <Link href={hrefFicha} style={{ width: 37, height: 37, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-                <MessageCircle size={16} color="#25D366" />
-              </Link>
-              <button onClick={() => setModal(true)} style={{ width: 37, height: 37, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <Bell size={16} color="var(--text-muted)" />
-              </button>
             </div>
           </div>
-        </MorphingDialogTrigger>
 
-        {/* CONTENIDO DEL MORPHING DIALOG */}
-        <MorphingDialogContainer>
-          <MorphingDialogContent
-            style={{
-              background: "var(--bg-card)", borderRadius: 28,
-              width: "calc(100% - 32px)", maxWidth: 440, margin: "0 auto",
-              boxShadow: "0 24px 48px rgba(0,0,0,0.25)",
-              overflow: "hidden",
-            }}
-          >
-            {/* Cabecera */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "24px 24px 20px" }}>
-              <div style={{
-                width: 55, height: 55, borderRadius: "50%", flexShrink: 0,
-                background: "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 26, fontWeight: 800, color: "var(--red)",
-              }}>
-                {inicial}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 21, fontWeight: 800, color: "var(--text-primary)", textTransform: "capitalize", lineHeight: 1.2 }}>
-                  {cliente.nombre.toLowerCase()}
-                </div>
-                <div style={{ fontSize: 16, color: "var(--text-muted)", marginTop: 4 }}>
-                  {cliente.estado}
-                </div>
-              </div>
-              <MorphingDialogClose />
-            </div>
-
-            {/* Divisor */}
-            <div style={{ height: 1, background: "var(--border)", opacity: 0.7 }} />
-
-            {/* Filas de datos */}
-            <div style={{ padding: "12px 0 24px" }}>
-              {rows.map((row, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 16,
-                  padding: "14px 24px",
-                }}>
-                  <div style={{
-                    width: 37, height: 37, borderRadius: "50%",
-                    background: "var(--bg-base)", border: "1px solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                  }}>
-                    {row.icon}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, color: "var(--text-muted)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                      {row.label}
-                    </div>
-                    {row.href ? (
-                      <a href={row.href} style={{ fontSize: 17, fontWeight: 600, color: "var(--red)", textDecoration: "none", display: "block", marginTop: 2 }}>
-                        {row.value}
-                      </a>
-                    ) : (
-                      <div style={{ fontSize: 17, fontWeight: 600, color: "var(--text-primary)", marginTop: 2, textTransform: row.label === "Inmueble de interés" ? undefined : "capitalize" }}>
-                        {row.value}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </MorphingDialogContent>
-        </MorphingDialogContainer>
-      </MorphingDialog>
+          {/* Acciones rápidas */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            {tel && (
+              <a href={`tel:+${tel}`} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(34,197,94,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+                <Phone size={14} color="#16a34a" />
+              </a>
+            )}
+            <Link href={hrefFicha} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+              <MessageCircle size={14} color="#25D366" />
+            </Link>
+            <Link href={hrefOb} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+              <MessageSquareQuote size={14} color="var(--text-muted)" />
+            </Link>
+            <button onClick={() => setModal(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Bell size={14} color="var(--text-muted)" />
+            </button>
+          </div>
+        </div>
+      </div>
       {modal && <RecordatorioModal nombre={nombreCap} guardado={guardado} elegido={elegido} onClose={() => setModal(false)} onElegir={handleRecordatorio} />}
+      {detalle && <ClienteDetalleModal cliente={cliente} onClose={() => setDetalle(false)} />}
     </>
   );
 }
@@ -525,10 +546,8 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,30,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <Users size={14} color="var(--red)" />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)" }}>
-            <TextEffect per="word" preset="blur">
-              {`${n} ${n === 1 ? "cliente interesado" : "clientes interesados"}`}
-            </TextEffect>
+          <span style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+            {n} {n === 1 ? "cliente interesado" : "clientes interesados"}
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-muted)" }}>
@@ -549,11 +568,9 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
             style={{ overflow: "hidden" }}
           >
             {/* Clientes Recientes: mostrar 3 por defecto */}
-            <AnimatedGroup preset="slide" className="w-full">
-              {(verMasRecientes ? clientesRecientes : clientesRecientes.slice(0, LIMITE_VISIBLE)).map((c) => (
-                <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
-              ))}
-            </AnimatedGroup>
+            {(verMasRecientes ? clientesRecientes : clientesRecientes.slice(0, LIMITE_VISIBLE)).map((c) => (
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
+            ))}
             {clientesRecientes.length > LIMITE_VISIBLE && (
               <button
                 onClick={() => setVerMasRecientes(v => !v)}
@@ -590,11 +607,9 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
             )}
 
             {/* Clientes Antiguos: también colapsables */}
-            <AnimatedGroup preset="slide" className="w-full">
-              {(verMasAntiguos ? clientesAntiguos : clientesAntiguos.slice(0, LIMITE_VISIBLE)).map((c) => (
-                <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
-              ))}
-            </AnimatedGroup>
+            {(verMasAntiguos ? clientesAntiguos : clientesAntiguos.slice(0, LIMITE_VISIBLE)).map((c) => (
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
+            ))}
             {clientesAntiguos.length > LIMITE_VISIBLE && (
               <button
                 onClick={() => setVerMasAntiguos(v => !v)}
