@@ -23,7 +23,17 @@ export function BorderTrail({
   };
 
   return (
-    <div className='pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent [mask-clip:padding-box,border-box] [mask-composite:intersect] [mask-image:linear-gradient(transparent,transparent),linear-gradient(#000,#000)]'>
+    <div
+      className='pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent'
+      style={{
+        WebkitMaskClip: 'padding-box, border-box',
+        WebkitMaskComposite: 'xor',
+        maskClip: 'padding-box, border-box',
+        maskComposite: 'exclude',
+        WebkitMaskImage: 'linear-gradient(transparent,transparent), linear-gradient(#000,#000)',
+        maskImage: 'linear-gradient(transparent,transparent), linear-gradient(#000,#000)',
+      }}
+    >
       <motion.div
         className={`absolute aspect-square bg-zinc-500 ${className || ''}`}
         style={{

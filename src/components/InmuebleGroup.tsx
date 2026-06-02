@@ -315,9 +315,6 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
     <>
       <div style={{
         position: "relative",
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
         padding: "10px 16px",
         borderTop: "1px solid var(--border)",
         opacity: esAntiguo ? 0.72 : 1,
@@ -326,117 +323,119 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
       }}>
         {esNuevo && (
           <BorderTrail
+            className="bg-green-500"
             style={{
-              boxShadow:
-                '0px 0px 60px 30px rgb(34 197 94 / 30%), 0 0 100px 60px rgb(34 197 94 / 20%), 0 0 140px 90px rgb(34 197 94 / 10%)',
+              boxShadow: '0px 0px 20px 10px rgb(34 197 94 / 30%), 0 0 40px 20px rgb(34 197 94 / 20%)',
             }}
-            size={100}
+            size={60}
           />
         )}
-        {/* Avatar + badge Nuevo */}
-        <div style={{ position: "relative", flexShrink: 0 }}>
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: "50%",
-            background: esNuevo
-              ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
-              : esAntiguo
-                ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
-                : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 14,
-            fontWeight: 800,
-            color: esNuevo
-              ? "#16a34a"
-              : esAntiguo
-                ? "#9ca3af"
-                : "var(--red)"
-          }}>
-            {nombreCap.charAt(0)}
-          </div>
-          {esNuevo && (
+        <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
+          {/* Avatar + badge Nuevo */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
             <div style={{
-              position: "absolute", top: -3, right: -3,
-              width: 16, height: 16, borderRadius: "50%",
-              background: "#16a34a",
-              border: "2px solid var(--bg-card)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 8, fontWeight: 900, color: "#fff",
-              animation: "pulse-nuevo 2s ease-in-out infinite",
-            }}>
-              N
-            </div>
-          )}
-        </div>
-
-        {/* Info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <button
-            onClick={() => setDetalle(true)}
-            style={{
-              fontSize: 13,
-              fontWeight: 700,
-              color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
-              textTransform: "capitalize",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-              textAlign: "left",
-              width: "100%",
-            }}
-          >
-            {cliente.nombre.toLowerCase()}
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
-            <span style={{
-              fontSize: 9,
-              fontWeight: 800,
-              color: etiqueta.color,
-              background: etiqueta.bg,
-              border: `1px solid ${etiqueta.border}`,
-              padding: "1px 6px 1px 5px",
-              borderRadius: "4px",
-              textTransform: "uppercase",
-              letterSpacing: "0.02em",
-              display: "inline-flex",
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: esNuevo
+                ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
+                : esAntiguo
+                  ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
+                  : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+              display: "flex",
               alignItems: "center",
-              gap: 3,
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 800,
+              color: esNuevo
+                ? "#16a34a"
+                : esAntiguo
+                  ? "#9ca3af"
+                  : "var(--red)"
             }}>
-              <etiqueta.Icon size={9} color={etiqueta.color} />
-              {etiqueta.label}
-            </span>
-            <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-              {etiqueta.tiempo} · {cliente.estado}
-            </span>
-            {seg && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
+              {nombreCap.charAt(0)}
+            </div>
+            {esNuevo && (
+              <div style={{
+                position: "absolute", top: -3, right: -3,
+                width: 16, height: 16, borderRadius: "50%",
+                background: "#16a34a",
+                border: "2px solid var(--bg-card)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 8, fontWeight: 900, color: "#fff",
+                animation: "pulse-nuevo 2s ease-in-out infinite",
+              }}>
+                N
+              </div>
             )}
           </div>
-        </div>
 
-        {/* Acciones rápidas */}
-        <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-          {tel && (
-            <a href={`tel:+${tel}`} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(34,197,94,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-              <Phone size={14} color="#16a34a" />
-            </a>
-          )}
-          <Link href={hrefFicha} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-            <MessageCircle size={14} color="#25D366" />
-          </Link>
-          <Link href={hrefOb} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
-            <MessageSquareQuote size={14} color="var(--text-muted)" />
-          </Link>
-          <button onClick={() => setModal(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-            <Bell size={14} color="var(--text-muted)" />
-          </button>
+          {/* Info */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <button
+              onClick={() => setDetalle(true)}
+              style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
+                textTransform: "capitalize",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                textAlign: "left",
+                width: "100%",
+              }}
+            >
+              {cliente.nombre.toLowerCase()}
+            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
+              <span style={{
+                fontSize: 9,
+                fontWeight: 800,
+                color: etiqueta.color,
+                background: etiqueta.bg,
+                border: `1px solid ${etiqueta.border}`,
+                padding: "1px 6px 1px 5px",
+                borderRadius: "4px",
+                textTransform: "uppercase",
+                letterSpacing: "0.02em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 3,
+              }}>
+                <etiqueta.Icon size={9} color={etiqueta.color} />
+                {etiqueta.label}
+              </span>
+              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                {etiqueta.tiempo} · {cliente.estado}
+              </span>
+              {seg && (
+                <span style={{ fontSize: 10, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
+              )}
+            </div>
+          </div>
+
+          {/* Acciones rápidas */}
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            {tel && (
+              <a href={`tel:+${tel}`} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(34,197,94,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+                <Phone size={14} color="#16a34a" />
+              </a>
+            )}
+            <Link href={hrefFicha} style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(37,211,102,0.1)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+              <MessageCircle size={14} color="#25D366" />
+            </Link>
+            <Link href={hrefOb} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+              <MessageSquareQuote size={14} color="var(--text-muted)" />
+            </Link>
+            <button onClick={() => setModal(true)} style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--bg-base)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <Bell size={14} color="var(--text-muted)" />
+            </button>
+          </div>
         </div>
       </div>
       {modal && <RecordatorioModal nombre={nombreCap} guardado={guardado} elegido={elegido} onClose={() => setModal(false)} onElegir={handleRecordatorio} />}
