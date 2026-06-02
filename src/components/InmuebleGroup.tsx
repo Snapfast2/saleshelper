@@ -224,6 +224,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
     <>
       <MorphingDialog transition={{ type: 'spring', bounce: 0, duration: 0.3 }}>
         <MorphingDialogTrigger
+          as="div"
           style={{
             position: "relative",
             padding: "12px 18px",

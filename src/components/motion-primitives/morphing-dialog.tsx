@@ -25,7 +25,7 @@ export type MorphingDialogContextType = {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   uniqueId: string;
-  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  triggerRef: React.RefObject<any>;
 };
 
 const MorphingDialogContext =
@@ -52,7 +52,7 @@ function MorphingDialogProvider({
 }: MorphingDialogProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const uniqueId = useId();
-  const triggerRef = useRef<HTMLButtonElement>(null!);
+  const triggerRef = useRef<any>(null!);
 
   const contextValue = useMemo(
     () => ({
@@ -88,7 +88,8 @@ export type MorphingDialogTriggerProps = {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
-  triggerRef?: React.RefObject<HTMLButtonElement>;
+  triggerRef?: React.RefObject<any>;
+  as?: 'button' | 'div';
 };
 
 function MorphingDialogTrigger({
@@ -96,6 +97,7 @@ function MorphingDialogTrigger({
   className,
   style,
   triggerRef,
+  as = 'button',
 }: MorphingDialogTriggerProps) {
   const { setIsOpen, isOpen, uniqueId } = useMorphingDialog();
 
@@ -113,21 +115,25 @@ function MorphingDialogTrigger({
     [isOpen, setIsOpen]
   );
 
+  const MotionComponent = as === 'div' ? motion.div : motion.button;
+
   return (
-    <motion.button
+    <MotionComponent
       ref={triggerRef}
       layoutId={`dialog-${uniqueId}`}
       className={cn('relative cursor-pointer', className)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       style={style}
+      role={as === 'div' ? 'button' : undefined}
+      tabIndex={as === 'div' ? 0 : undefined}
       aria-haspopup='dialog'
       aria-expanded={isOpen}
       aria-controls={`motion-ui-morphing-dialog-content-${uniqueId}`}
       aria-label={`Open dialog ${uniqueId}`}
     >
       {children}
-    </motion.button>
+    </MotionComponent>
   );
 }
 
