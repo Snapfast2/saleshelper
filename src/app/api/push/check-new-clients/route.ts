@@ -128,22 +128,6 @@ export async function GET(req: Request) {
     const updatedKnownIds = new Set([...knownIds, ...currentIds]);
     await redis.set(KNOWN_IDS_KEY, Array.from(updatedKnownIds));
 
-    // TEMPORAL: Notificación de "Latido" para comprobar que sí está corriendo automáticamente
-    if (newIds.length === 0) {
-      const horaActual = new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit' });
-      const payload = JSON.stringify({
-        title: "🤖 Vigilante Activo",
-        body: `Revisión automática de las ${horaActual} completada. ${clients.length} clientes en total, 0 nuevos.`,
-        url: "/",
-        tag: "status-ping"
-      });
-      for (const sub of subscriptions) {
-        try {
-          await webpush.sendNotification(sub, payload);
-        } catch(e) {}
-      }
-    }
-
     if (hasExpired) {
       await redis.set("push_subscriptions_v2", activeSubscriptions);
     }
