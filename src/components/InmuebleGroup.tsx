@@ -170,21 +170,35 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
         weekday: "long", day: "numeric", month: "long", year: "numeric",
       });
       const timePart = d.toLocaleTimeString("es-CO", {
-        hour: "numeric", minute: "2-digit", hour12: true
+        hour: "2-digit", minute: "2-digit", hour12: true
       });
-      // Capitalize first letter of the day
       const capitalizedDate = datePart.charAt(0).toUpperCase() + datePart.slice(1);
-      return `${capitalizedDate} a las ${timePart}`;
+      
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span>{capitalizedDate}</span>
+          <span style={{ 
+            fontSize: 11, 
+            color: "var(--text-muted)", 
+            textTransform: "uppercase", 
+            letterSpacing: "0.08em",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            fontWeight: 700
+          }}>
+            {timePart}
+          </span>
+        </div>
+      );
     } catch { return cliente.fecha; }
   })();
 
-  const rows: { icon: React.ReactNode; label: string; value: string; href?: string }[] = [
+  const rows: { icon: React.ReactNode; label: string; value: string | React.ReactNode; href?: string }[] = [
     tel ? { icon: <Phone size={14} color="var(--red)" />, label: "Teléfono", value: `+${tel}`, href: `tel:+${tel}` } : null,
     cliente.email ? { icon: <MessageCircle size={14} color="#3b82f6" />, label: "Correo", value: cliente.email, href: `mailto:${cliente.email}` } : null,
     { icon: <Users size={14} color="#8b5cf6" />, label: "Procedencia", value: cliente.origen },
     { icon: <Home size={14} color="#f97316" />, label: "Inmueble de interés", value: cliente.inmuebleInteres !== "N/A" ? `Ref ${cliente.inmuebleInteres}` : "Sin referencia" },
     { icon: <CalendarDays size={14} color="var(--text-muted)" />, label: "Creado", value: fechaLegible },
-  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href?: string }[];
+  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string | React.ReactNode; href?: string }[];
 
   const inicial = cliente.nombre.charAt(0).toUpperCase();
 
