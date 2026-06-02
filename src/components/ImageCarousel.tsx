@@ -53,10 +53,12 @@ export default function ImageCarousel({ images, alt, height = 180 }: Props) {
 
   if (total === 1) {
     return (
-      <div style={{ position: "relative", height, width: "100%", overflow: "hidden" }}>
-        <img
+      <div style={{ position: "relative", height, width: "100%", overflow: "hidden", background: "#000" }}>
+        <motion.img
           src={displayImages[0]}
           alt={alt}
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 8, ease: "easeInOut", repeat: Infinity }}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           loading="lazy"
         />
