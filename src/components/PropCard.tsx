@@ -18,28 +18,28 @@ function formatPrecio(valor: number): string {
   return `$${valor}`;
 }
 
+import ImageCarousel from "./ImageCarousel";
+
 export default function PropCard({ inmueble, onClick, compact }: Props) {
+  // Combinar imagen principal con el array de imágenes
+  const allImages = [inmueble.imagen, ...(inmueble.imagenes || [])];
+  // Eliminar duplicados por si la imagen principal también viene en el array
+  const uniqueImages = Array.from(new Set(allImages));
+
   return (
     <motion.div
       className="prop-card"
-      style={{ width: compact ? 240 : "100%" }}
+      style={{ width: compact ? 240 : "100%", overflow: "hidden" }}
       whileTap={{ scale: 0.97 }}
       transition={{ type: "spring", stiffness: 400, damping: 28 }}
       onClick={() => onClick?.(inmueble)}
     >
       {/* Imagen */}
       <div style={{ position: "relative" }}>
-        <img
-          src={inmueble.imagen}
-          alt={inmueble.titulo}
-          className="prop-card-img"
-          style={{ height: compact ? 140 : 180 }}
-          loading="lazy"
-          decoding="async"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect fill='%23111120' width='400' height='200'/%3E%3Ctext fill='%23444' font-family='Arial' font-size='14' x='50%25' y='50%25' text-anchor='middle' dy='.3em'%3ESin imagen%3C/text%3E%3C/svg%3E";
-          }}
+        <ImageCarousel 
+          images={uniqueImages} 
+          alt={inmueble.titulo} 
+          height={compact ? 140 : 180} 
         />
         
         {/* Badge Venta/Arriendo (Top Left) */}
