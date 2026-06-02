@@ -33,6 +33,7 @@ self.addEventListener("push", (event) => {
     icon: "/icon-192.png",
     badge: "/icon-192.png",
     tag: data.tag || "saleshelper",
+    renotify: true,
     data: {
       url: data.url || "/",
       waUrl: data.waUrl || null,
