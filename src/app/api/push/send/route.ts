@@ -16,10 +16,10 @@ export async function POST(req: Request) {
   try {
     initWebPush();
     const { title, body, url, tag, actions, waUrl } = await req.json();
-    const subscription = await redis.get<any>("push_subscription");
+    const subscriptions = await redis.get<any[]>("push_subscriptions_v2") || [];
 
-    if (!subscription?.endpoint) {
-      return Response.json({ error: "Sin suscripción registrada" }, { status: 404 });
+    if (subscriptions.length === 0) {
+      return Response.json({ error: "Sin suscripciones registradas" }, { status: 404 });
     }
 
     const payload = JSON.stringify({
@@ -30,14 +30,32 @@ export async function POST(req: Request) {
       actions: actions || [],
       waUrl:   waUrl   || null,
     });
-    await webpush.sendNotification(subscription, payload);
-    return Response.json({ ok: true });
-  } catch (err: any) {
-    if (err?.statusCode === 410) {
-      await redis.del("push_subscription");
-      return Response.json({ error: "Suscripción expirada" }, { status: 410 });
+
+    let activeSubscriptions = [...subscriptions];
+    let hasExpired = false;
+
+    const pushPromises = subscriptions.map(async (sub) => {
+      try {
+        await webpush.sendNotification(sub, payload);
+      } catch (err: any) {
+        if (err?.statusCode === 410) {
+          activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+          hasExpired = true;
+        } else {
+          console.error("[Push Send Individual Error]", err);
+        }
+      }
+    });
+
+    await Promise.all(pushPromises);
+
+    if (hasExpired) {
+      await redis.set("push_subscriptions_v2", activeSubscriptions);
     }
-    console.error("[Push Send]", err);
+
+    return Response.json({ ok: true, sentTo: subscriptions.length, active: activeSubscriptions.length });
+  } catch (err: any) {
+    console.error("[Push Send Global Error]", err);
     return Response.json({ error: "Error al enviar" }, { status: 500 });
   }
 }

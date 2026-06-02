@@ -5,7 +5,7 @@ import webpush from "web-push";
 import { Redis } from "@upstash/redis";
 
 const REMINDERS_KEY = "reminders_list";
-const SUBSCRIPTION_KEY = "push_subscription";
+const SUBSCRIPTIONS_KEY = "push_subscriptions_v2";
 
 function getRedis(): Redis | null {
   try { return Redis.fromEnv(); } catch { return null; }
@@ -55,14 +55,16 @@ export async function GET() {
 
     initWebPush();
 
-    const subscription = await kv.get<any>(SUBSCRIPTION_KEY);
-    if (!subscription?.endpoint) {
-      return NextResponse.json({ checked: 0, sent: 0, reason: "Sin suscripción" });
+    const subscriptions = await kv.get<any[]>(SUBSCRIPTIONS_KEY) || [];
+    if (subscriptions.length === 0) {
+      return NextResponse.json({ checked: 0, sent: 0, reason: "Sin suscripciones" });
     }
 
     const reminders = await kv.get<ServerReminder[]>(REMINDERS_KEY) ?? [];
     const ahora = new Date();
     let sent = 0;
+    let activeSubscriptions = [...subscriptions];
+    let hasExpired = false;
 
     const updated = await Promise.all(
       reminders.map(async (r) => {
@@ -70,24 +72,31 @@ export async function GET() {
         if (new Date(r.fechaRecordatorio) > ahora) return r;
 
         const primerNombre = r.nombre.split(" ")[0];
-        try {
-          await webpush.sendNotification(
-            subscription,
-            JSON.stringify({
-              title: `Seguimiento: ${primerNombre}`,
-              body: `Es hora de contactar a ${primerNombre}. Ref: ${r.inmuebleInteres}`,
-              url: `/clientes`,
-              tag: `seguimiento-${r.id}`,
-            })
-          );
-          sent++;
-          return { ...r, enviado: true };
-        } catch (err: any) {
-          if (err?.statusCode === 410) await kv.del(SUBSCRIPTION_KEY);
-          return r;
+        const payload = JSON.stringify({
+          title: `Seguimiento: ${primerNombre}`,
+          body: `Es hora de contactar a ${primerNombre}. Ref: ${r.inmuebleInteres}`,
+          url: `/clientes`,
+          tag: `seguimiento-${r.id}`,
+        });
+
+        for (const sub of subscriptions) {
+          try {
+            await webpush.sendNotification(sub, payload);
+          } catch (err: any) {
+            if (err?.statusCode === 410) {
+              activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+              hasExpired = true;
+            }
+          }
         }
+        sent++;
+        return { ...r, enviado: true };
       })
     );
+
+    if (hasExpired) {
+      await kv.set(SUBSCRIPTIONS_KEY, activeSubscriptions);
+    }
 
     // Limpiar recordatorios ya enviados con más de 7 días de antigüedad
     const hace7dias = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);

@@ -2,7 +2,7 @@
 import { Redis } from "@upstash/redis";
 
 const redis = Redis.fromEnv();
-const KEY = "push_subscription";
+const KEY = "push_subscriptions_v2";
 
 export async function POST(req: Request) {
   try {
@@ -10,7 +10,12 @@ export async function POST(req: Request) {
     if (!subscription?.endpoint) {
       return Response.json({ error: "Suscripción inválida" }, { status: 400 });
     }
-    await redis.set(KEY, subscription);
+    const currentList = await redis.get<any[]>(KEY) || [];
+    const isDuplicate = currentList.some(s => s.endpoint === subscription.endpoint);
+    if (!isDuplicate) {
+      currentList.push(subscription);
+      await redis.set(KEY, currentList);
+    }
     return Response.json({ ok: true });
   } catch (err) {
     console.error("[Push Subscribe]", err);
@@ -19,9 +24,9 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
-  const sub = await redis.get<{ endpoint?: string }>(KEY);
+  const subs = await redis.get<any[]>(KEY) || [];
   return Response.json({
-    subscribed: !!sub?.endpoint,
-    endpoint: sub?.endpoint?.slice(-30) ?? null,
+    subscribedCount: subs.length,
+    endpoints: subs.map(s => s?.endpoint?.slice(-30) ?? null),
   });
 }

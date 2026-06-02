@@ -47,10 +47,10 @@ export async function GET(req: Request) {
 
     // Jitter aleatorio eliminado para evitar 504 Gateway Timeout en Vercel (límite 10s-60s)
 
-    // 1. Buscar suscripción push
-    const subscription = await redis.get<any>(SUBSCRIPTION_KEY);
-    if (!subscription?.endpoint) {
-      return Response.json({ skipped: true, reason: "Sin suscripción push" });
+    // 1. Buscar suscripciones push
+    const subscriptions = await redis.get<any[]>("push_subscriptions_v2") || [];
+    if (subscriptions.length === 0) {
+      return Response.json({ skipped: true, reason: "Sin suscripciones push" });
     }
 
     // 2. Obtener clientes nuevos de Domus — siempre frescos, nunca del caché
@@ -74,6 +74,9 @@ export async function GET(req: Request) {
 
     // 4. Detectar IDs nuevos
     const newIds = [...currentIds].filter(id => !knownIds.has(id));
+
+    let activeSubscriptions = [...subscriptions];
+    let hasExpired = false;
 
     // 5. Enviar notificación por cada cliente nuevo
     for (const newId of newIds) {
@@ -101,12 +104,14 @@ export async function GET(req: Request) {
         ],
       });
 
-      try {
-        await webpush.sendNotification(subscription, payload);
-      } catch (err: any) {
-        if (err?.statusCode === 410) {
-          await redis.del(SUBSCRIPTION_KEY);
-          break; // Suscripción expirada — detener
+      for (const sub of subscriptions) {
+        try {
+          await webpush.sendNotification(sub, payload);
+        } catch (err: any) {
+          if (err?.statusCode === 410) {
+            activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+            hasExpired = true;
+          }
         }
       }
     }
@@ -123,9 +128,15 @@ export async function GET(req: Request) {
         url: "/",
         tag: "status-ping"
       });
-      try {
-        await webpush.sendNotification(subscription, payload);
-      } catch(e) {}
+      for (const sub of subscriptions) {
+        try {
+          await webpush.sendNotification(sub, payload);
+        } catch(e) {}
+      }
+    }
+
+    if (hasExpired) {
+      await redis.set("push_subscriptions_v2", activeSubscriptions);
     }
 
     return Response.json({
