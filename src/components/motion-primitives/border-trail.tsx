@@ -18,35 +18,25 @@ export function BorderTrail({
 }: BorderTrailProps) {
   const defaultTransition: Transition = {
     repeat: Infinity,
-    duration: 5,
+    duration: 3,
     ease: 'linear',
   };
 
   return (
-    <div
-      className='pointer-events-none absolute inset-0 rounded-[inherit] border border-transparent'
-      style={{
-        WebkitMaskClip: 'padding-box, border-box',
-        WebkitMaskComposite: 'xor',
-        maskClip: 'padding-box, border-box',
-        maskComposite: 'exclude',
-        WebkitMaskImage: 'linear-gradient(#fff, #fff), linear-gradient(#fff, #fff)',
-        maskImage: 'linear-gradient(#fff, #fff), linear-gradient(#fff, #fff)',
-      }}
-    >
+    <div className='pointer-events-none absolute inset-0 rounded-[inherit] overflow-hidden'>
+      {/* Rotating gradient */}
       <motion.div
-        className={`absolute aspect-square bg-zinc-500 ${className || ''}`}
+        className={`absolute inset-[-100%] ${className || ''}`}
         style={{
-          width: size,
-          offsetPath: `rect(0 auto auto 0 round ${size}px)`,
+          background: 'conic-gradient(from 90deg at 50% 50%, transparent 50%, var(--trail-color, #22c55e) 100%)',
           ...style,
         }}
-        animate={{
-          offsetDistance: ['0%', '100%'],
-        }}
+        animate={{ rotate: 360 }}
         transition={transition || defaultTransition}
         onAnimationComplete={onAnimationComplete}
       />
+      {/* Inner blocker to create the border effect */}
+      <div className='absolute inset-[1px] rounded-[inherit] bg-[var(--bg-card)]' />
     </div>
   );
 }

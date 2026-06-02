@@ -323,11 +323,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
       }}>
         {esNuevo && (
           <BorderTrail
-            className="bg-green-500"
-            style={{
-              boxShadow: '0px 0px 20px 10px rgb(34 197 94 / 30%), 0 0 40px 20px rgb(34 197 94 / 20%)',
-            }}
-            size={60}
+            style={{ '--trail-color': '#16a34a' } as React.CSSProperties}
           />
         )}
         <div style={{ position: "relative", zIndex: 10, display: "flex", alignItems: "center", gap: 10, width: "100%" }}>
