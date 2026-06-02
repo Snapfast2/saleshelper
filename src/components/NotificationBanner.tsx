@@ -160,10 +160,10 @@ export function TestNotifButton() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Nuevo lead · Autoleads",
-          body:  "Daniel M. · Ref 1046101",
+          title: "Nuevo lead · Prueba App",
+          body:  "Cliente Prueba · Ref 123456",
           url:   "/clientes",
-          waUrl: "https://wa.me/573143586609",
+          waUrl: "https://wa.me/573182934712",
           tag:   "test-notif",
           actions: [
             { action: "ver-cliente", title: "Ver Cliente" }
