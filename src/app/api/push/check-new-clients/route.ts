@@ -127,27 +127,7 @@ export async function GET(req: Request) {
     const updatedKnownIds = new Set([...knownIds, ...currentIds]);
     await redis.set(KNOWN_IDS_KEY, Array.from(updatedKnownIds));
 
-    // TEMPORAL: Notificación de "Latido" para comprobar que sí está corriendo automáticamente
-    if (newIds.length === 0) {
-      const horaActual = new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit' });
-      const payload = JSON.stringify({
-        title: "🤖 Vigilante Activo",
-        body: `Revisión automática de las ${horaActual} completada. ${clients.length} clientes en total, 0 nuevos.`,
-        url: "/",
-        renotify: true,
-        tag: "cron-heartbeat"
-      });
-      for (const sub of activeSubscriptions) {
-        try {
-          await webpush.sendNotification(sub, payload);
-        } catch (err: any) {
-          if (err?.statusCode === 410) {
-            activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
-            hasExpired = true;
-          }
-        }
-      }
-    }
+    // Eliminamos el Latido temporal para que no lleguen notificaciones vacías cada hora.
 
     if (hasExpired) {
       await redis.set("push_subscriptions_v2", activeSubscriptions);
