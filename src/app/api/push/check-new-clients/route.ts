@@ -19,10 +19,19 @@ function initWebPush() {
 }
 
 export async function GET(req: Request) {
-  // Validar cron secret para evitar llamadas externas
+  // Validar cron secret o parámetro por URL para facilitar cron-job.org
   const cronSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.get("authorization");
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  
+  const url = new URL(req.url);
+  const querySecret = url.searchParams.get("cron");
+
+  // Permitir si viene el header de Vercel/GitHub o si trae el password en la URL
+  const isAuthorized = 
+    (cronSecret && authHeader === `Bearer ${cronSecret}`) || 
+    querySecret === "saleshelper";
+
+  if (!isAuthorized) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
