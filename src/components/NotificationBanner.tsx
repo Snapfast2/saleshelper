@@ -164,7 +164,10 @@ export function TestNotifButton() {
           body:  "Daniel M. · Ref 1046101",
           url:   "/clientes",
           waUrl: "https://wa.me/573143586609",
-          tag:   "test-notif"
+          tag:   "test-notif",
+          actions: [
+            { action: "ver-cliente", title: "Ver Cliente" }
+          ]
         }),
       });
       setSent(true);
