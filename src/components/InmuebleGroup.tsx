@@ -406,7 +406,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
               style={{
                 fontSize: 15,
                 fontWeight: 700,
-                color: esAntiguo ? "var(--text-secondary)" : "var(--text-primary)",
+                color: "var(--text-primary)",
                 textTransform: "capitalize",
                 whiteSpace: "nowrap",
                 overflow: "hidden",
