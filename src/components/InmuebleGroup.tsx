@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
+import { BorderTrail } from "@/components/motion-primitives/border-trail";
 import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
@@ -313,6 +314,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   return (
     <>
       <div style={{
+        position: "relative",
         display: "flex",
         alignItems: "center",
         gap: 10,
@@ -320,7 +322,17 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
         borderTop: "1px solid var(--border)",
         opacity: esAntiguo ? 0.72 : 1,
         transition: "opacity 0.2s ease",
+        overflow: "hidden",
       }}>
+        {esNuevo && (
+          <BorderTrail
+            style={{
+              boxShadow:
+                '0px 0px 60px 30px rgb(34 197 94 / 30%), 0 0 100px 60px rgb(34 197 94 / 20%), 0 0 140px 90px rgb(34 197 94 / 10%)',
+            }}
+            size={100}
+          />
+        )}
         {/* Avatar + badge Nuevo */}
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div style={{
