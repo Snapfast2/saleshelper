@@ -116,8 +116,9 @@ export async function GET(req: Request) {
       }
     }
 
-    // 6. Actualizar IDs conocidos
-    await redis.set(KNOWN_IDS_KEY, Array.from(currentIds));
+    // 6. Actualizar IDs conocidos (manteniendo un historial infinito para no repetir si un viejo vuelve a la pag 1)
+    const updatedKnownIds = new Set([...knownIds, ...currentIds]);
+    await redis.set(KNOWN_IDS_KEY, Array.from(updatedKnownIds));
 
     // TEMPORAL: Notificación de "Latido" para comprobar que sí está corriendo automáticamente
     if (newIds.length === 0) {
