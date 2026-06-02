@@ -328,16 +328,16 @@ function mapClients(data: any[]): Cliente[] {
     // el portal específico solo está en el detalle individual del contacto.
     // Mostramos "Autoleads" que coincide con lo que el CRM de Domus muestra.
     let origin = "Portal Web";
-    if (c.autoleads === 1) {
-      origin = "Autoleads";
+    if (c.source === 6) {
+      origin = "Metrocuadrado";
     } else if (c.source === 2) {
       origin = "Finca Raíz";
-    } else if (c.source === 6) {
-      origin = "Metrocuadrado";
     } else if (c.source === 5) {
       origin = "Ciencuadras";
     } else if (c.source === 3) {
       origin = "Sitio Web Propio";
+    } else if (c.autoleads === 1) {
+      origin = "Autoleads";
     }
     return {
       id: c.code,
