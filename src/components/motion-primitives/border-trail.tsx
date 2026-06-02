@@ -30,8 +30,8 @@ export function BorderTrail({
         WebkitMaskComposite: 'xor',
         maskClip: 'padding-box, border-box',
         maskComposite: 'exclude',
-        WebkitMaskImage: 'linear-gradient(transparent,transparent), linear-gradient(#000,#000)',
-        maskImage: 'linear-gradient(transparent,transparent), linear-gradient(#000,#000)',
+        WebkitMaskImage: 'linear-gradient(#fff, #fff), linear-gradient(#fff, #fff)',
+        maskImage: 'linear-gradient(#fff, #fff), linear-gradient(#fff, #fff)',
       }}
     >
       <motion.div
