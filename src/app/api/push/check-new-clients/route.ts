@@ -105,11 +105,7 @@ export async function GET(req: Request) {
         body:  `${nombreCorto}${ref ? " · Ref " + ref : ""}`,
         url:   "/clientes",
         waUrl,
-        tag:   `nuevo-cliente-${newId}`,
-        actions: [
-          { action: "ver-perfil", title: "Ver perfil" },
-          ...(waUrl ? [{ action: "whatsapp", title: "WhatsApp" }] : []),
-        ],
+        tag:   `nuevo-cliente-${newId}`
       });
 
       for (const sub of subscriptions) {
