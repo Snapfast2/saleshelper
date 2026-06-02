@@ -62,22 +62,19 @@ function obtenerEtiquetaEdad(fechaIso: string): EtiquetaEdad {
     hrs < 24 ? `${hrs}h` :
     `${dias}d`;
 
-  if (hrs < 2) {
-    return { label: "Nuevo", Icon: Zap, color: "#10b981", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.2)", tiempo };
+  if (hrs < 5) {
+    return { label: "Nuevo", Icon: Zap, color: "#16a34a", bg: "rgba(22,163,74,0.06)", border: "rgba(22,163,74,0.15)", tiempo };
   }
   if (dias < 1) {
-    return { label: "Hoy", Icon: Sun, color: "#22c55e", bg: "rgba(34,197,94,0.06)", border: "rgba(34,197,94,0.15)", tiempo };
+    return { label: "Hoy", Icon: Sun, color: "#16a34a", bg: "rgba(22,163,74,0.06)", border: "rgba(22,163,74,0.15)", tiempo };
   }
-  if (dias <= 3) {
-    return { label: "Reciente", Icon: CalendarDays, color: "#3b82f6", bg: "rgba(59,130,246,0.06)", border: "rgba(59,130,246,0.15)", tiempo };
+  if (dias < 2) {
+    return { label: "Pendiente", Icon: Clock, color: "#f97316", bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.15)", tiempo };
   }
-  if (dias <= 7) {
-    return { label: "Pendiente", Icon: Clock, color: "#eab308", bg: "rgba(234,179,8,0.06)", border: "rgba(234,179,8,0.15)", tiempo };
+  if (dias < 7) {
+    return { label: "Urgente", Icon: AlertTriangle, color: "#dc2626", bg: "rgba(220,38,38,0.06)", border: "rgba(220,38,38,0.15)", tiempo };
   }
-  if (dias <= 30) {
-    return { label: "Sin gestionar", Icon: AlertTriangle, color: "#f97316", bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.15)", tiempo };
-  }
-  return { label: "Frio", Icon: Snowflake, color: "#9ca3af", bg: "var(--bg-card-hover)", border: "var(--border)", tiempo };
+  return { label: "Olvidado", Icon: Snowflake, color: "#991b1b", bg: "rgba(153,27,27,0.06)", border: "rgba(153,27,27,0.15)", tiempo };
 }
 
 // ─── Opciones recordatorio ─────────────────────────────────────────────
@@ -307,8 +304,10 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
   
   const ms = Date.now() - new Date(cliente.fecha).getTime();
   const dias = Math.floor(ms / 86400000);
-  const esNuevo = ms < 5 * 60 * 60 * 1000; // < 5 horas
-  const esAntiguo = dias > 7;
+  const esNuevo = ms < 5 * 60 * 60 * 1000;
+  const esCritico = dias >= 2;
+  const esPeligro = dias >= 1 && dias < 2;
+  const esFresco = dias < 1;
 
   const etiqueta = obtenerEtiquetaEdad(cliente.fecha);
 
@@ -338,7 +337,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
         position: "relative",
         padding: "10px 16px",
         borderTop: "1px solid var(--border)",
-        opacity: esAntiguo ? 0.72 : 1,
+        opacity: 1,
         transition: "opacity 0.2s ease",
         overflow: "hidden",
       }}>
@@ -367,21 +366,21 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: esNuevo
+              background: esFresco
                 ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
-                : esAntiguo
-                  ? "linear-gradient(135deg, rgba(156,163,175,0.15), rgba(156,163,175,0.05))"
-                  : "linear-gradient(135deg, rgba(196,30,58,0.15), rgba(196,30,58,0.05))",
+                : esCritico
+                  ? "linear-gradient(135deg, rgba(220,38,38,0.2), rgba(220,38,38,0.08))"
+                  : "linear-gradient(135deg, rgba(249,115,22,0.2), rgba(249,115,22,0.08))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 16,
               fontWeight: 800,
-              color: esNuevo
+              color: esFresco
                 ? "#16a34a"
-                : esAntiguo
-                  ? "#9ca3af"
-                  : "var(--red)"
+                : esCritico
+                  ? "#dc2626"
+                  : "#f97316"
             }}>
               {nombreCap.charAt(0)}
             </div>
