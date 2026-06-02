@@ -165,9 +165,16 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
 
   const fechaLegible = (() => {
     try {
-      return new Date(cliente.fecha).toLocaleDateString("es-CO", {
+      const d = new Date(cliente.fecha);
+      const datePart = d.toLocaleDateString("es-CO", {
         weekday: "long", day: "numeric", month: "long", year: "numeric",
       });
+      const timePart = d.toLocaleTimeString("es-CO", {
+        hour: "numeric", minute: "2-digit", hour12: true
+      });
+      // Capitalize first letter of the day
+      const capitalizedDate = datePart.charAt(0).toUpperCase() + datePart.slice(1);
+      return `${capitalizedDate} a las ${timePart}`;
     } catch { return cliente.fecha; }
   })();
 
