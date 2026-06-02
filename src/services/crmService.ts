@@ -329,13 +329,13 @@ function mapClients(data: any[]): Cliente[] {
     // Mostramos "Autoleads" que coincide con lo que el CRM de Domus muestra.
     let origin = "Portal Web";
     if (c.source === 6) {
+      origin = "Proppit";
+    } else if (c.source === 3) {
       origin = "Metrocuadrado";
     } else if (c.source === 2) {
       origin = "Finca Raíz";
     } else if (c.source === 5) {
       origin = "Ciencuadras";
-    } else if (c.source === 3) {
-      origin = "Sitio Web Propio";
     } else if (c.autoleads === 1) {
       origin = "Autoleads";
     }
@@ -347,7 +347,7 @@ function mapClients(data: any[]): Cliente[] {
       telefonoIndicativo: c.phones?.length > 0 ? c.phones[0].phone_indicative : "+57",
       estado: c.status?.name ?? "Desconocido",
       inmuebleInteres: c.entities?.length > 0 ? c.entities[0].property_code : "N/A",
-      origen: origin + ` (ID: ${c.source})`,
+      origen: origin,
       fecha: c.created_at || new Date().toISOString(),
       diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined,
     };

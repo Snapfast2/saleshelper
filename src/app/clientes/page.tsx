@@ -28,7 +28,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   const isNuevos = currentStatus === "1";
 
   const [clientes, inmuebles] = await Promise.all([
-    fetchCrmClients(currentStatus, { noCache: true }),
+    fetchCrmClients(currentStatus),
     fetchInmueblesServer(),
   ]);
 
