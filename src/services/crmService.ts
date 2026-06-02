@@ -347,7 +347,7 @@ function mapClients(data: any[]): Cliente[] {
       telefonoIndicativo: c.phones?.length > 0 ? c.phones[0].phone_indicative : "+57",
       estado: c.status?.name ?? "Desconocido",
       inmuebleInteres: c.entities?.length > 0 ? c.entities[0].property_code : "N/A",
-      origen: origin,
+      origen: origin + ` (ID: ${c.source})`,
       fecha: c.created_at || new Date().toISOString(),
       diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined,
     };
