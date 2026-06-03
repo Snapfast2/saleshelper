@@ -87,24 +87,27 @@ const OPCIONES = [
 ];
 
 // ─── Plantillas WhatsApp ───────────────────────────────────────────────
-function buildTemplates(nombre: string, ref: string) {
+function buildTemplates(nombre: string, inmueble?: Inmueble) {
   const n = nombre.split(" ")[0];
   const n2 = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
-  const r = ref && ref !== "N/A" ? ref : null;
+  // Descripción amigable: "el apartamento en Laureles" o null si no hay inmueble
+  const desc = inmueble
+    ? `${inmueble.tipo ? `el ${inmueble.tipo.toLowerCase()}` : "el inmueble"}${inmueble.barrio ? ` en ${inmueble.barrio}` : ""}`
+    : null;
   return [
     {
       id: "primer-contacto",
       titulo: "Primer contacto",
       subtitulo: "Para cuando llega por primera vez",
       emoji: "👋",
-      texto: `Hola ${n2}, te saluda Patricia.${r ? ` Vi que te interesó la referencia ${r} y con mucho gusto te cuento todo sobre ella.` : " Me alegra que te hayas comunicado con nosotros."} Es un inmueble que tiene cosas muy buenas que vale la pena conocer. ¿Tienes un momento hoy para hablar? 🏡`,
+      texto: `Hola ${n2}, te saluda Patricia.${desc ? ` Vi que te interesó ${desc} y con mucho gusto te cuento todo sobre él.` : " Me alegra que te hayas comunicado con nosotros."} Tiene cosas muy buenas que vale la pena conocer. ¿Tienes un momento hoy para hablar? 🏡`,
     },
     {
       id: "ficha-tecnica",
       titulo: "Enviar ficha técnica",
       subtitulo: "Información detallada del inmueble",
       emoji: "📎",
-      texto: `Hola ${n2}, con mucho gusto te comparto la información completa${r ? ` de la referencia ${r}` : ""}. Aquí puedes ver todos los detalles: precio, área, ubicación y características. Cualquier duda me preguntas con toda confianza 🏡`,
+      texto: `Hola ${n2}, con mucho gusto te comparto la información completa${desc ? ` de ${desc}` : ""}. Aquí puedes ver todos los detalles: precio, área, ubicación y características. Cualquier duda me preguntas con toda confianza 🏡`,
     },
     {
       id: "seguimiento",
@@ -131,10 +134,11 @@ function buildTemplates(nombre: string, ref: string) {
 }
 
 function WhatsAppModal({
-  cliente, tel, onClose,
+  cliente, tel, inmueble, onClose,
 }: {
   cliente: Cliente;
   tel: string;
+  inmueble?: Inmueble;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -144,7 +148,7 @@ function WhatsAppModal({
   useEffect(() => { setMounted(true); }, []);
   if (!mounted) return null;
 
-  const templates = buildTemplates(cliente.nombre, cliente.inmuebleInteres);
+  const templates = buildTemplates(cliente.nombre, inmueble);
   const tplActual = templates.find(t => t.id === seleccionado);
 
   const abrirWhatsApp = (texto: string) => {
@@ -494,7 +498,7 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
 }
 
 // ─── Fila de cliente (compacta) ────────────────────────────────────────
-function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguimiento: boolean }) {
+function ClienteRow({ cliente, showSeguimiento, inmueble }: { cliente: Cliente; showSeguimiento: boolean; inmueble?: Inmueble }) {
   const [modal, setModal] = useState(false);
   const [waModal, setWaModal] = useState(false);
   const [detalle, setDetalle] = useState(false);
@@ -707,7 +711,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
         </div>
       </div>
       {modal && <RecordatorioModal nombre={nombreCap} guardado={guardado} elegido={elegido} onClose={() => setModal(false)} onElegir={handleRecordatorio} />}
-      {waModal && <WhatsAppModal cliente={cliente} tel={tel} onClose={() => setWaModal(false)} />}
+      {waModal && <WhatsAppModal cliente={cliente} tel={tel} inmueble={inmueble} onClose={() => setWaModal(false)} />}
       {detalle && <ClienteDetalleModal cliente={cliente} onClose={() => setDetalle(false)} />}
     </>
   );
@@ -842,7 +846,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           >
             {/* Clientes Recientes: mostrar 3 por defecto */}
             {(verMasRecientes ? clientesRecientes : clientesRecientes.slice(0, LIMITE_VISIBLE)).map((c) => (
-              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} />
             ))}
             {clientesRecientes.length > LIMITE_VISIBLE && (
               <button
@@ -881,7 +885,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
 
             {/* Clientes Antiguos: también colapsables */}
             {(verMasAntiguos ? clientesAntiguos : clientesAntiguos.slice(0, LIMITE_VISIBLE)).map((c) => (
-              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} />
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} />
             ))}
             {clientesAntiguos.length > LIMITE_VISIBLE && (
               <button
