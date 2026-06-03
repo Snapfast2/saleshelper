@@ -408,18 +408,45 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                 fontWeight: 700,
                 color: "var(--text-primary)",
                 textTransform: "capitalize",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
                 background: "none",
                 border: "none",
                 padding: 0,
                 cursor: "pointer",
                 textAlign: "left",
                 width: "100%",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px"
               }}
             >
-              {cliente.nombre.toLowerCase()}
+              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {cliente.nombre.toLowerCase()}
+              </span>
+              {dias < 1 ? (
+                <motion.span
+                  animate={{ scale: [1, 1.2, 1], rotate: [-10, 10, -10] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0 }}
+                >
+                  🔥
+                </motion.span>
+              ) : dias < 7 ? (
+                <motion.span
+                  animate={{ y: [-2, 2, -2] }}
+                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0 }}
+                >
+                  🧊
+                </motion.span>
+              ) : (
+                <motion.span
+                  animate={{ opacity: [1, 0.4, 1] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0, filter: "grayscale(100%)" }}
+                >
+                  💀
+                </motion.span>
+              )}
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
               <span style={{
