@@ -420,7 +420,7 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
               }}
             >
               <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {cliente.nombre.toLowerCase()}
+                {cliente.nombre.split(" ")[0].toLowerCase()}
               </span>
               {dias < 1 ? (
                 <motion.span
