@@ -11,7 +11,7 @@ import { BorderTrail } from "@/components/motion-primitives/border-trail";
 import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
-  Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key,
+  Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key, Flame, Skull
 } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
 import { addRecordatorio, calcularFechaRecordatorio } from "@/lib/recordatorios";
@@ -426,25 +426,25 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
                 <motion.span
                   animate={{ scale: [1, 1.2, 1], rotate: [-10, 10, -10] }}
                   transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0 }}
+                  style={{ display: "inline-flex", flexShrink: 0 }}
                 >
-                  🔥
+                  <Flame size={15} color="#dc2626" strokeWidth={2.5} />
                 </motion.span>
               ) : dias < 7 ? (
                 <motion.span
                   animate={{ y: [-2, 2, -2] }}
                   transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0 }}
+                  style={{ display: "inline-flex", flexShrink: 0 }}
                 >
-                  🧊
+                  <Snowflake size={15} color="#0284c7" strokeWidth={2.5} />
                 </motion.span>
               ) : (
                 <motion.span
                   animate={{ opacity: [1, 0.4, 1] }}
                   transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                  style={{ fontSize: 14, display: "inline-block", flexShrink: 0, filter: "grayscale(100%)" }}
+                  style={{ display: "inline-flex", flexShrink: 0 }}
                 >
-                  💀
+                  <Skull size={15} color="#52525b" strokeWidth={2.5} />
                 </motion.span>
               )}
             </button>
