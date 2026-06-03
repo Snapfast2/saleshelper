@@ -420,7 +420,13 @@ function ClienteRow({ cliente, showSeguimiento }: { cliente: Cliente; showSeguim
               }}
             >
               <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {cliente.nombre.split(" ")[0].toLowerCase()}
+                {(() => {
+                  const parts = cliente.nombre.trim().split(/\s+/);
+                  if (parts.length > 1) {
+                    return `${parts[0]} ${parts[1].charAt(0)}.`.toLowerCase();
+                  }
+                  return parts[0].toLowerCase();
+                })()}
               </span>
               {dias < 1 ? (
                 <motion.span
