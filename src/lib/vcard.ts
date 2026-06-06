@@ -29,13 +29,32 @@ END:VCARD`;
 
   // Crear archivo Blob y forzar descarga
   const blob = new Blob([vcard], { type: "text/vcard" });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${nombreContacto}.vcf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const filename = `${nombreContacto}.vcf`;
+  const file = new File([blob], filename, { type: "text/vcard" });
+
+  const descargarFallback = () => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert("Se descargó el contacto. Por favor abre el archivo desde tus notificaciones para guardarlo en tu agenda.");
+  };
+
+  // Intentar usar el menú de compartir nativo del celular (que permite "Añadir a Contactos" directo)
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    navigator.share({
+      files: [file],
+      title: "Guardar contacto"
+    }).catch((err) => {
+      console.log("El usuario canceló o falló share, usando fallback", err);
+      descargarFallback();
+    });
+  } else {
+    // Si el navegador no soporta share, hacemos la descarga normal
+    descargarFallback();
+  }
 }
