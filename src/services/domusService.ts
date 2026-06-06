@@ -14,7 +14,7 @@ const DOMUS_HOME_URL       = "https://v2.domus.la";
 const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
-const INMUEBLES_REDIS_KEY  = "inmuebles_domus";
+const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2";
 const INMUEBLES_TTL        = 60 * 60;           // 1 hora
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
