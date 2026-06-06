@@ -12,6 +12,7 @@
     "@upstash/redis": "^1.38.0",
     "cheerio": "^1.2.0",
     "clsx": "^2.1.1",
+    "firebase": "^12.14.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.16.0",
     "motion": "^12.40.0",
