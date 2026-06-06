@@ -12,7 +12,7 @@ import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
   Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key, Flame, Skull,
-  Send, Pencil
+  Send, Pencil, Paperclip
 } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
 import { addRecordatorio, calcularFechaRecordatorio } from "@/lib/recordatorios";
@@ -254,6 +254,23 @@ function WhatsAppModal({
                     whiteSpace: "pre-wrap",
                   }}>
                     {textoEditado}
+                  </div>
+                )}
+
+                {inmueble?.urlDomus && !textoEditado.includes(inmueble.urlDomus) && (
+                  <div style={{ marginTop: 12 }}>
+                    <button
+                      onClick={() => setTextoEditado(prev => prev + `\n\nPuedes ver las fotos y la ficha técnica aquí:\n${inmueble.urlDomus}`)}
+                      style={{
+                        padding: "10px 14px", borderRadius: 10,
+                        border: "1px dashed var(--brand-primary)", background: "rgba(225,29,72,0.05)",
+                        cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                        fontSize: 14, fontWeight: 700, color: "var(--brand-primary)", width: "100%"
+                      }}
+                    >
+                      <Paperclip size={16} />
+                      Adjuntar ficha técnica de Domus
+                    </button>
                   </div>
                 )}
 
