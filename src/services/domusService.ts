@@ -167,7 +167,7 @@ function mapProperties(raw: any[]): Inmueble[] {
       const urlL2L   = p.codigo ? `https://l2lbienesraices.com/inmueble/${p.codigo}` : "";
       
       const rawString = `property=${p.id}&profile=29214&group=0&template=1&contact=1`;
-      const urlDomusBase64 = Buffer.from(rawString).toString("base64");
+      const urlDomusBase64 = typeof btoa !== "undefined" ? btoa(rawString) : Buffer.from(rawString).toString("base64");
       const urlDomusCard = `https://card.domus.la/public/file/${urlDomusBase64}`;
 
       // Capturar todas las imágenes (Domus puede devolver el array en distintos campos)

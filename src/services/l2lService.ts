@@ -98,7 +98,10 @@ export async function scrapeL2L(): Promise<{ inmuebles: Inmueble[], fuente: stri
         banos,
         garajes: 0,
         imagen: img,
+        imagenes: [img].filter(Boolean),
         urlL2L,
+        urlDomus: urlL2L,
+        estado: "Disponible",
         codigoDomus: id,
       });
     });

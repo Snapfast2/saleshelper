@@ -269,7 +269,7 @@ function WhatsAppModal({
                       }}
                     >
                       <Paperclip size={16} />
-                      Adjuntar ficha técnica de Domus
+                      Adjuntar ficha técnica
                     </button>
                   </div>
                 )}
