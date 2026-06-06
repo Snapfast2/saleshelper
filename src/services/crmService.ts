@@ -234,81 +234,105 @@ export async function fetchCrmClients(
   const logFetch = `[CRM-FETCH status=${statusType} ${new Date().toISOString()}]`;
   try {
     console.log(`${logFetch} Iniciando fetch de clientes...`);
-    let session = await getSession();
-    console.log(`${logFetch} Sesión obtenida — cookie CRM: ${session.crmSessionCookie ? "✅ presente" : "❌ VACÍA"}`);
+    let activeSession = await getSession();
+    console.log(`${logFetch} Sesión obtenida — cookie CRM: ${activeSession.crmSessionCookie ? "✅ presente" : "❌ VACÍA"}`);
 
-    const targetUrl = statusType === "todos" || statusType === ""
-      ? "contacts?page=1&order=created_at_new"
-      : `contacts?page=1&contact_status_type=${statusType}&order=created_at_new`;
+    const fetchPage = async (page: number, s: StoredSession) => {
+      const url = statusType === "todos" || statusType === ""
+        ? `contacts?page=${page}&order=created_at_new`
+        : `contacts?page=${page}&contact_status_type=${statusType}&order=created_at_new`;
 
-    console.log(`${logFetch} Llamando CRM API → ${targetUrl}`);
-    const apiRes = await fetch("https://crm.domusweb.co/api/get", {
-      method: "POST",
-      headers: {
-        "Cookie": session.crmSessionCookie,
-        "User-Agent": session.ua,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Accept-Language": "es-CO,es;q=0.9",
-        "Referer": "https://crm.domusweb.co/",
-      },
-      body: JSON.stringify({ url: targetUrl }),
-      cache: "no-store",
-    });
-    console.log(`${logFetch} CRM API respuesta — HTTP ${apiRes.status}`);
-
-    // Parsear el body primero — el CRM a veces devuelve HTTP 200 con code:403 en el body
-    const apiData = await apiRes.json().catch(() => ({}));
-
-    // Detectar sesión caducada: tanto por HTTP status como por code en el body
-    const sessionExpired =
-      apiRes.status === 401 || apiRes.status === 403 ||
-      (apiData?.code === 403 || apiData?.code === 401);
-
-    if (sessionExpired) {
-      console.warn(`${logFetch} ⚠️ Sesión rechazada (HTTP ${apiRes.status}, body code: ${apiData?.code ?? "—"}) — limpiando KV y reintentando login...`);
-      if (kv) { await kv.del(SESSION_KEY); await kv.del(redisDataKey); }
-      session = await getSession();
-      console.log(`${logFetch} Nueva sesión tras relogin — cookie: ${session.crmSessionCookie ? "✅" : "❌ VACÍA"}`);
-
-      const retry = await fetch("https://crm.domusweb.co/api/get", {
+      console.log(`${logFetch} [Página ${page}] Llamando CRM API...`);
+      const apiRes = await fetch("https://crm.domusweb.co/api/get", {
         method: "POST",
         headers: {
-          "Cookie": session.crmSessionCookie,
-          "User-Agent": session.ua,
+          "Cookie": s.crmSessionCookie,
+          "User-Agent": s.ua,
           "Content-Type": "application/json",
           "Accept": "application/json",
           "Accept-Language": "es-CO,es;q=0.9",
           "Referer": "https://crm.domusweb.co/",
         },
-        body: JSON.stringify({ url: targetUrl }),
+        body: JSON.stringify({ url }),
         cache: "no-store",
       });
-      console.log(`${logFetch} Reintento CRM API — HTTP ${retry.status}`);
-      const retryData = await retry.json().catch(() => ({}));
-      if (retryData?.data) {
-        const clients = mapClients(retryData.data);
-        console.log(`${logFetch} ✅ Reintento exitoso — ${clients.length} clientes`);
-        memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
-        if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
-        return clients;
+
+      const apiData = await apiRes.json().catch(() => ({}));
+      const sessionExpired =
+        apiRes.status === 401 || apiRes.status === 403 ||
+        (apiData?.code === 403 || apiData?.code === 401);
+
+      if (sessionExpired) {
+        throw new Error("SESSION_EXPIRED");
       }
-      console.error(`${logFetch} ❌ Reintento también falló. Respuesta: ${JSON.stringify(retryData).slice(0, 200)}`);
-      throw new Error("Re-login fallido — CRM no acepta la nueva sesión");
+      return apiData;
+    };
+
+    let firstPageData: any;
+    try {
+      firstPageData = await fetchPage(1, activeSession);
+    } catch (err: any) {
+      if (err.message === "SESSION_EXPIRED") {
+        console.warn(`${logFetch} ⚠️ Sesión rechazada en página 1 — limpiando KV y reintentando login...`);
+        if (kv) { await kv.del(SESSION_KEY); await kv.del(redisDataKey); }
+        activeSession = await getSession();
+        console.log(`${logFetch} Nueva sesión tras relogin — cookie: ${activeSession.crmSessionCookie ? "✅" : "❌ VACÍA"}`);
+        firstPageData = await fetchPage(1, activeSession);
+      } else {
+        throw err;
+      }
     }
 
-    if (apiData?.data) {
-      const clients = mapClients(apiData.data);
-      console.log(`${logFetch} ✅ Fetch exitoso — ${clients.length} clientes obtenidos`);
-      memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
-      // Guardar en Redis — el cron lo mantiene fresco cada 15 min
-      if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
-      return clients;
+    if (!firstPageData?.data) {
+      console.error(`${logFetch} ❌ Respuesta inesperada del CRM. Claves recibidas: ${Object.keys(firstPageData || {}).join(", ")}`);
+      throw new Error("Respuesta inesperada del CRM");
     }
 
-    console.error(`${logFetch} ❌ Respuesta inesperada del CRM. Claves recibidas: ${Object.keys(apiData || {}).join(", ")}. Fragmento: ${JSON.stringify(apiData).slice(0, 300)}`);
-    throw new Error("Respuesta inesperada del CRM");
+    let allData = [...firstPageData.data];
+    const lastPage = firstPageData.last_page || 1;
+    const totalContacts = firstPageData.total || allData.length;
+    console.log(`${logFetch} ✅ Página 1: ${allData.length}/${totalContacts} clientes. Páginas totales: ${lastPage}`);
 
+    if (lastPage > 1) {
+      console.log(`${logFetch} Cargando ${lastPage - 1} páginas restantes en paralelo...`);
+      const pagePromises: Promise<any[]>[] = [];
+
+      for (let p = 2; p <= lastPage; p++) {
+        const fetchPageWithRetry = async (pageNum: number): Promise<any[]> => {
+          try {
+            const res = await fetchPage(pageNum, activeSession);
+            return res?.data || [];
+          } catch (err: any) {
+            if (err.message === "SESSION_EXPIRED") {
+              console.warn(`${logFetch} ⚠️ Sesión rechazada en página ${pageNum} — renovando sesión...`);
+              if (kv) { await kv.del(SESSION_KEY); }
+              activeSession = await getSession();
+              const res = await fetchPage(pageNum, activeSession);
+              return res?.data || [];
+            }
+            throw err;
+          }
+        };
+
+        pagePromises.push(
+          fetchPageWithRetry(p).catch((err) => {
+            console.error(`${logFetch} ❌ Error cargando página ${p}:`, err);
+            return [];
+          })
+        );
+      }
+
+      const results = await Promise.all(pagePromises);
+      for (const pageItems of results) {
+        allData.push(...pageItems);
+      }
+      console.log(`${logFetch} Carga de páginas completada. Total clientes reunidos: ${allData.length}`);
+    }
+
+    const clients = mapClients(allData);
+    memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
+    if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
+    return clients;
 
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
