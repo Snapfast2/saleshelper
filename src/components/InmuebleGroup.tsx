@@ -12,11 +12,10 @@ import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
   Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key, Flame, Skull,
-  Send, Pencil, Paperclip, Save
+  Send, Pencil, Paperclip
 } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
 import { addRecordatorio, calcularFechaRecordatorio } from "@/lib/recordatorios";
-import { descargarVCard } from "@/lib/vcard";
 import { registrarInteraccionWS } from "@/lib/interacciones";
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -280,21 +279,6 @@ function WhatsAppModal({
                     </button>
                   </div>
                 )}
-
-                <div style={{ marginTop: 14 }}>
-                  <button
-                    onClick={() => descargarVCard(cliente.nombre, tel, inmueble?.titulo)}
-                    style={{
-                      width: "100%", padding: "12px", borderRadius: 12,
-                      border: "1px solid var(--border)", background: "var(--bg-card)",
-                      cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                      fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
-                    }}
-                  >
-                    <Save size={18} color="var(--brand-primary)" />
-                    Guardar contacto en el celular
-                  </button>
-                </div>
 
                 <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
                   <button
