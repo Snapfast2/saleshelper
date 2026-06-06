@@ -36,12 +36,21 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   const inmuebleMap = new Map<string, Inmueble>();
   inmuebles.forEach((i) => inmuebleMap.set(i.id, i));
 
-  // Agrupar clientes por inmuebleInteres
+  // Filtrar y agrupar clientes por inmuebleInteres
   const grupos = new Map<string, Cliente[]>();
+  let totalClientesFiltrados = 0;
+
   clientes.forEach((c) => {
-    const key = c.inmuebleInteres ? String(c.inmuebleInteres) : "sin-inmueble";
+    const key = c.inmuebleInteres && c.inmuebleInteres !== "N/A" ? String(c.inmuebleInteres) : "sin-inmueble";
+    
+    // Descartar clientes de inmuebles inactivos (vendidos, archivados, de otro asesor)
+    if (key !== "sin-inmueble" && !inmuebleMap.has(key)) {
+      return;
+    }
+
     if (!grupos.has(key)) grupos.set(key, []);
     grupos.get(key)!.push(c);
+    totalClientesFiltrados++;
   });
 
   // Ordenar: grupos con más clientes primero, "sin-inmueble" al final
@@ -62,8 +71,8 @@ export default async function ClientesPage({ searchParams }: PageProps) {
         <div>
           <h1 className="header-title">Clientes CRM</h1>
           <p className="header-sub">
-            {clientes.length > 0
-              ? `${clientes.length} contacto${clientes.length !== 1 ? "s" : ""} · ${gruposOrdenados.length} inmueble${gruposOrdenados.length !== 1 ? "s" : ""}`
+            {totalClientesFiltrados > 0
+              ? `${totalClientesFiltrados} contacto${totalClientesFiltrados !== 1 ? "s" : ""} · ${gruposOrdenados.length} inmueble${gruposOrdenados.length !== 1 ? "s" : ""}`
               : "Leads y contactos de portales inmobiliarios."}
           </p>
         </div>
@@ -87,7 +96,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
       </div>
 
 
-      {clientes.length === 0 ? (
+      {totalClientesFiltrados === 0 ? (
         <div style={{ padding: "0 20px" }}>
           <EmptyState
             title="No hay clientes"
