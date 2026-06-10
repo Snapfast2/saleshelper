@@ -17,6 +17,7 @@ import {
 import type { Cliente, Inmueble } from "@/types";
 import { addRecordatorio, calcularFechaRecordatorio } from "@/lib/recordatorios";
 import { registrarInteraccionWS } from "@/lib/interacciones";
+import { useUltimasInteracciones } from "@/hooks/useInteracciones";
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 function tiempoTranscurrido(iso: string) {
@@ -521,7 +522,7 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
 }
 
 // ─── Fila de cliente (compacta) ────────────────────────────────────────
-function ClienteRow({ cliente, showSeguimiento, inmueble }: { cliente: Cliente; showSeguimiento: boolean; inmueble?: Inmueble }) {
+function ClienteRow({ cliente, showSeguimiento, inmueble, ultimaInteraccion }: { cliente: Cliente; showSeguimiento: boolean; inmueble?: Inmueble; ultimaInteraccion?: { tipo: string; fecha: Date } }) {
   const [modal, setModal] = useState(false);
   const [waModal, setWaModal] = useState(false);
   const [detalle, setDetalle] = useState(false);
@@ -711,6 +712,16 @@ function ClienteRow({ cliente, showSeguimiento, inmueble }: { cliente: Cliente; 
               {seg && (
                 <span style={{ fontSize: 12, fontWeight: 700, color: seg.color }}>· {seg.text}</span>
               )}
+              {ultimaInteraccion && (
+                <div style={{
+                  fontSize: 10, fontWeight: 800, color: "#1DA34D",
+                  background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.2)",
+                  padding: "1px 6px 1px 5px", borderRadius: "4px",
+                  display: "inline-flex", alignItems: "center", gap: 3, letterSpacing: "0.02em"
+                }}>
+                  👉 Envío: {ultimaInteraccion.tipo}
+                </div>
+              )}
             </div>
           </div>
 
@@ -749,6 +760,8 @@ interface InmuebleGroupProps {
 }
 
 export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSeguimiento }: InmuebleGroupProps) {
+  const interacciones = useUltimasInteracciones();
+  
   const [expandido, setExpandido] = useState(true);
   const [verMasRecientes, setVerMasRecientes] = useState(false);
   const [verMasAntiguos, setVerMasAntiguos] = useState(false);
@@ -869,7 +882,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
           >
             {/* Clientes Recientes: mostrar 3 por defecto */}
             {(verMasRecientes ? clientesRecientes : clientesRecientes.slice(0, LIMITE_VISIBLE)).map((c) => (
-              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} />
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} ultimaInteraccion={interacciones[c.telefono || ""]} />
             ))}
             {clientesRecientes.length > LIMITE_VISIBLE && (
               <button
@@ -908,7 +921,7 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
 
             {/* Clientes Antiguos: también colapsables */}
             {(verMasAntiguos ? clientesAntiguos : clientesAntiguos.slice(0, LIMITE_VISIBLE)).map((c) => (
-              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} />
+              <ClienteRow key={c.id} cliente={c} showSeguimiento={showSeguimiento} inmueble={inmueble} ultimaInteraccion={interacciones[c.telefono || ""]} />
             ))}
             {clientesAntiguos.length > LIMITE_VISIBLE && (
               <button
