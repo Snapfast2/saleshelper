@@ -124,7 +124,7 @@ async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Pro
         "Accept-Language":  "es-CO,es;q=0.9",
         "Referer":          "https://v2.domus.la/properties",
       },
-      body: JSON.stringify({ data: { buscar: "", captador: 29214 } }),
+      body: JSON.stringify({ data: { buscar: "", promotor: 29214 } }),
       cache: "no-store",
     });
 
@@ -154,7 +154,7 @@ async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Pro
 function mapProperties(raw: any[]): Inmueble[] {
   return raw
     .filter((p: any) => {
-      if (!p.captador || p.captador.id !== 29214) return false;
+      if (!p.promotor || p.promotor.id !== 29214) return false;
       const estado = p.estado_inmueble?.estado_inmueble ?? "";
       return estado === "Disponible" || estado === "En proceso";
     })
