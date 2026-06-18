@@ -5,11 +5,12 @@ import { Cliente } from "../types";
 let redis: Redis | null = null;
 function getRedis(): Redis | null {
   if (redis) return redis;
+  if (!process.env.UPSTASH_REDIS_REST_URL) return null; // local sin KV
   try {
     redis = Redis.fromEnv();
     return redis;
   } catch {
-    return null; // local sin KV configurado
+    return null;
   }
 }
 
@@ -131,7 +132,7 @@ async function doFullLogin(ua: string): Promise<StoredSession | null> {
   console.log(`${logBase} Paso 3: SSO hacia CRM...`);
   let crmAuthRes: Response;
   try {
-    crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso?t=${ts}`, {
+    crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso`, {
       headers: { "Cookie": finalCookies, "User-Agent": ua, "Referer": "https://v2.domus.la/", "Accept-Language": "es-CO,es;q=0.9" },
       redirect: "manual", cache: "no-store",
     });
@@ -144,10 +145,13 @@ async function doFullLogin(ua: string): Promise<StoredSession | null> {
     console.error(`${logBase} ❌ SSO no redirigió. Se esperaba 301/302, se recibió ${crmAuthRes.status}`);
     return null;
   }
-  const redirectUrl = crmAuthRes.headers.get("location");
+  let redirectUrl = crmAuthRes.headers.get("location");
   if (!redirectUrl) {
     console.error(`${logBase} ❌ SSO no devolvió URL de redirección`);
     return null;
+  }
+  if (redirectUrl.startsWith("/")) {
+    redirectUrl = "https://v2.domus.la" + redirectUrl;
   }
   console.log(`${logBase} Paso 3 OK — redirige a: ${redirectUrl.slice(0, 80)}...`);
 
