@@ -93,33 +93,48 @@ async function run() {
   let raw = json2.data || [];
   const totalPages = json2.last_page ?? 1;
   
+  // 1. Fetch from L2L to see which 18 IDs she should have
+  const resL2L = await fetch('https://www.l2lbienesraices.com/busqueda/pagina/1/agente/29214', { headers: { 'User-Agent': UA } });
+  const htmlL2L1 = await resL2L.text();
+  const resL2L2 = await fetch('https://www.l2lbienesraices.com/busqueda/pagina/2/agente/29214', { headers: { 'User-Agent': UA } });
+  const htmlL2L2 = await resL2L2.text();
+  
+  const l2lMatches = [...htmlL2L1.matchAll(/\/propiedad\/(\d+)/g), ...htmlL2L2.matchAll(/\/propiedad\/(\d+)/g)];
+  const l2lIds = [...new Set(l2lMatches.map(m => m[1]))];
+  console.log('L2L exact IDs (' + l2lIds.length + '):', l2lIds);
+
+  // 2. Fetch from Domus API
+  const res2 = await fetch(DOMUS_FILTER_URL + '?page=1', {
+    method: 'POST',
+    headers: { Cookie: cookies, 'User-Agent': UA, 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ data: { buscar: '', promotor: 29214 } })
+  });
+  const json2 = await res2.json();
+  let raw = json2.data || [];
+  const totalPages = json2.last_page ?? 1;
+  
   if(totalPages > 1) {
       for(let i=2; i<=totalPages; i++) {
           const resP = await fetch(DOMUS_FILTER_URL + '?page=' + i, {
             method: 'POST',
-            headers: {
-              Cookie: cookies,
-              'User-Agent': UA,
-              'Content-Type': 'application/json',
-              Accept: 'application/json'
-            },
+            headers: { Cookie: cookies, 'User-Agent': UA, 'Content-Type': 'application/json', Accept: 'application/json' },
             body: JSON.stringify({ data: { buscar: '', promotor: 29214 } })
           });
-          const jsonP = await resP.json();
-          raw = raw.concat(jsonP.data || []);
+          raw = raw.concat((await resP.json()).data || []);
       }
   }
 
-  let available = 0;
-  let otherStates = {};
-  for(const p of raw) {
-      const estado = p.estado_inmueble?.estado_inmueble ?? "UNKNOWN";
-      if (estado === "Disponible" || estado === "En proceso") available++;
-      otherStates[estado] = (otherStates[estado] || 0) + 1;
-  }
-  console.log('Total properties fetched:', raw.length);
-  console.log('Available/En proceso:', available);
-  console.log('States breakdown:', otherStates);
+  const domusIds = raw.filter(p => {
+    const estado = p.estado_inmueble?.estado_inmueble ?? "";
+    return estado === "Disponible" || estado === "En proceso";
+  }).map(p => p.id?.toString());
+  
+  console.log('Domus Active IDs (' + domusIds.length + '):', domusIds);
+  
+  const missingInDomus = l2lIds.filter(id => !domusIds.includes(id));
+  const extraInDomus = domusIds.filter(id => !l2lIds.includes(id));
+  console.log('Missing in Domus (in L2L but not in Domus):', missingInDomus);
+  console.log('Extra in Domus (in Domus but not in L2L):', extraInDomus);
 }
 
 run().catch(console.error);

@@ -14,7 +14,7 @@ const DOMUS_HOME_URL       = "https://v2.domus.la";
 const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
-const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v2";
+const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v3";
 const INMUEBLES_TTL        = 60 * 60;           // 1 hora
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
@@ -140,13 +140,16 @@ async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Pro
   let all = [...firstPage.data];
   const totalPages = firstPage.last_page ?? 1;
 
-  if (totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 2))
-    );
-    rest.forEach(p => p?.data && Array.isArray(p.data) && all.push(...p.data));
+  for (let i = 2; i <= totalPages; i++) {
+    try {
+      const page = await fetchPage(i);
+      if (page?.data && Array.isArray(page.data)) {
+        all.push(...page.data);
+      }
+    } catch (e) {
+      console.error("Domus page fetch error:", e);
+    }
   }
-
   return all;
 }
 
