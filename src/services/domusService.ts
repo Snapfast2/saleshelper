@@ -14,7 +14,7 @@ const DOMUS_HOME_URL       = "https://v2.domus.la";
 const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
-const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v3";
+const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v4";
 const INMUEBLES_TTL        = 60 * 60;           // 1 hora
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
@@ -110,46 +110,68 @@ async function doFreshV2Login(): Promise<{ cookies: string; ua: string }> {
 }
 
 // ── Llamada a la API de propiedades ───────────────────────────────────────
+// Hace dos consultas (captador + promotor) y las une deduplicando por ID.
 // Retorna null si la sesión expiró (401/403), lanza error en otros fallos.
-async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Promise<any[] | null> {
-  const fetchPage = async (page: number): Promise<any | null> => {
-    const res = await fetch(`${DOMUS_FILTER_URL}?page=${page}`, {
-      method: "POST",
-      headers: {
-        "Cookie":           cookies,
-        "User-Agent":       ua,
-        "Content-Type":     "application/json",
-        "Accept":           "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-        "Accept-Language":  "es-CO,es;q=0.9",
-        "Referer":          "https://v2.domus.la/properties",
-      },
-      body: JSON.stringify({ data: { buscar: "", promotor: 29214 } }),
-      cache: "no-store",
-    });
+const OLGA_DOMUS_ID = 57256; // ID interno de Olga Patricia en Domus
 
-    if (res.status === 401 || res.status === 403) return null; // sesión expirada
-    if (!res.ok) throw new Error(`Domus properties API: ${res.status}`);
-    return res.json();
+async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Promise<any[] | null> {
+  const fetchAllPages = async (filter: Record<string, unknown>): Promise<any[] | null> => {
+    const fetchPage = async (page: number): Promise<any | null> => {
+      const res = await fetch(`${DOMUS_FILTER_URL}?page=${page}`, {
+        method: "POST",
+        headers: {
+          "Cookie":           cookies,
+          "User-Agent":       ua,
+          "Content-Type":     "application/json",
+          "Accept":           "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          "Accept-Language":  "es-CO,es;q=0.9",
+          "Referer":          "https://v2.domus.la/properties",
+        },
+        body: JSON.stringify({ data: { buscar: "", ...filter } }),
+        cache: "no-store",
+      });
+      if (res.status === 401 || res.status === 403) return null;
+      if (!res.ok) throw new Error(`Domus properties API: ${res.status}`);
+      return res.json();
+    };
+
+    const firstPage = await fetchPage(1);
+    if (!firstPage) return null;                                           // sesión expirada
+    if (!firstPage.data || !Array.isArray(firstPage.data)) return [];
+
+    const all = [...firstPage.data];
+    const totalPages = firstPage.last_page ?? 1;
+
+    for (let i = 2; i <= totalPages; i++) {
+      try {
+        const page = await fetchPage(i);
+        if (page?.data && Array.isArray(page.data)) all.push(...page.data);
+      } catch (e) {
+        console.error("Domus page fetch error:", e);
+      }
+    }
+    return all;
   };
 
-  const firstPage = await fetchPage(1);
-  if (!firstPage)                                           return null; // sesión expirada
-  if (!firstPage.data || !Array.isArray(firstPage.data))   throw new Error("Respuesta inesperada de Domus");
+  // Consulta 1: inmuebles donde ella es Captadora
+  const captadorResults = await fetchAllPages({ captador: OLGA_DOMUS_ID });
+  if (captadorResults === null) return null; // sesión expirada
 
-  let all = [...firstPage.data];
-  const totalPages = firstPage.last_page ?? 1;
+  // Consulta 2: inmuebles donde ella es Promotora
+  const promotorResults = await fetchAllPages({ promotor: OLGA_DOMUS_ID });
+  if (promotorResults === null) return null; // sesión expirada
 
-  for (let i = 2; i <= totalPages; i++) {
-    try {
-      const page = await fetchPage(i);
-      if (page?.data && Array.isArray(page.data)) {
-        all.push(...page.data);
-      }
-    } catch (e) {
-      console.error("Domus page fetch error:", e);
+  // Unir y deduplicar por ID de inmueble
+  const seen = new Set<number>();
+  const all: any[] = [];
+  for (const p of [...captadorResults, ...promotorResults]) {
+    if (!seen.has(p.id)) {
+      seen.add(p.id);
+      all.push(p);
     }
   }
+
   return all;
 }
 
