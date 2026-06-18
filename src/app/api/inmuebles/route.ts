@@ -1,40 +1,21 @@
 // src/app/api/inmuebles/route.ts
 import { NextResponse } from "next/server";
 import { scrapeL2L } from "@/services/l2lService";
-import { fetchDomusProperties } from "@/services/domusService";
+import { fetchDomusProperties, invalidateInmueblesCache } from "@/services/domusService";
 import { INMUEBLES_DEMO } from "@/lib/inmuebles-demo";
 
-// ── Caché en memoria para el proceso del servidor (evita re-fetch entre requests) ──
-let memCache: { data: any; ts: number } | null = null;
-const MEM_CACHE_TTL = 30 * 60 * 1000; // 30 min
+export const dynamic = "force-dynamic";
 
-export const dynamic = "force-dynamic"; // respuesta siempre fresca desde el cliente
-
+// ── GET: Devuelve el catálogo (desde Redis o Domus) ───────────────────────
 export async function GET() {
-  const now = Date.now();
-
-  // Servir desde caché en memoria si es válida
-  /*
-  if (memCache && now - memCache.ts < MEM_CACHE_TTL) {
-    return NextResponse.json(memCache.data, {
-      headers: {
-        "Cache-Control": "private, max-age=1800, stale-while-revalidate=300",
-        "X-Cache": "HIT",
-      },
-    });
-  }
-  */
-
   try {
-    // 1. Intentamos obtener de Domus (fuente más actualizada)
+    // 1. Intentamos obtener de Domus (Redis primero, luego Domus si expiró)
     try {
       const domusData = await fetchDomusProperties();
       if (domusData?.inmuebles?.length > 0) {
-        memCache = { data: domusData, ts: now };
         return NextResponse.json(domusData, {
           headers: {
-            "Cache-Control": "private, max-age=1800, stale-while-revalidate=300",
-            "X-Cache": "MISS",
+            "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
             "X-Source": "domus",
           },
         });
@@ -47,11 +28,9 @@ export async function GET() {
     try {
       const l2lData = await scrapeL2L();
       if (l2lData?.inmuebles?.length > 0) {
-        memCache = { data: l2lData, ts: now };
         return NextResponse.json(l2lData, {
           headers: {
-            "Cache-Control": "private, max-age=1800, stale-while-revalidate=300",
-            "X-Cache": "MISS",
+            "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
             "X-Source": "l2l",
           },
         });
@@ -67,5 +46,21 @@ export async function GET() {
     });
   } catch {
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
+  }
+}
+
+// ── DELETE: Invalidar caché (botón "Forzar actualización" en la app) ─────
+// Solo accesible con el secret header para que no cualquiera lo llame.
+export async function DELETE(req: Request) {
+  const secret = req.headers.get("x-refresh-secret");
+  if (secret !== process.env.REFRESH_SECRET) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  try {
+    await invalidateInmueblesCache();
+    return NextResponse.json({ ok: true, message: "Caché invalidado. La próxima carga traerá datos frescos de Domus." });
+  } catch (e) {
+    return NextResponse.json({ error: "Error al invalidar caché" }, { status: 500 });
   }
 }

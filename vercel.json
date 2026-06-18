@@ -6,6 +6,10 @@
     {
       "path": "/api/crm/keep-alive",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/warmup-inmuebles",
+      "schedule": "0 8 * * *"
     }
   ]
 }

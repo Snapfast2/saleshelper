@@ -15,7 +15,8 @@ export default function InmueblesPage() {
   const router = useRouter();
   const { inmuebles, isLoading, isOffline, mutate } = useInmuebles();
   const [filtered, setFiltered] = useState<Inmueble[]>([]);
-  
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   // Filtros
   const [search, setSearch] = useState("");
   const [filtroGestion, setFiltroGestion] = useState<"todos" | "venta" | "arriendo">("todos");
@@ -45,6 +46,20 @@ export default function InmueblesPage() {
     setFiltered(result);
   };
 
+  // Forzar actualización: borra el caché en Redis y trae datos frescos de Domus
+  const forceRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetch("/api/inmuebles", {
+        method: "DELETE",
+        headers: { "x-refresh-secret": process.env.NEXT_PUBLIC_REFRESH_SECRET ?? "" },
+      });
+    } catch { /* si falla el borrado, igual pedimos datos frescos */ }
+    await mutate();
+    setIsRefreshing(false);
+  };
+
+
   return (
     <div className="page">
       <div className="header" style={{ paddingBottom: 12 }}>
@@ -61,15 +76,24 @@ export default function InmueblesPage() {
           )}
         </div>
         <button 
-          onClick={() => mutate()}
+          onClick={forceRefresh}
+          disabled={isRefreshing || isLoading}
+          title="Actualizar catálogo desde Domus"
           style={{ 
             width: 40, height: 40, borderRadius: 20, 
-            background: "var(--bg-card)", display: "flex", 
+            background: isRefreshing ? "var(--primary)" : "var(--bg-card)",
+            display: "flex", 
             alignItems: "center", justifyContent: "center",
-            border: "1px solid var(--border)"
+            border: "1px solid var(--border)",
+            transition: "background 0.2s",
+            opacity: (isRefreshing || isLoading) ? 0.7 : 1,
           }}
         >
-          <RefreshCw size={20} className={isLoading ? "spinner-icon" : ""} />
+          <RefreshCw 
+            size={20} 
+            color={isRefreshing ? "white" : undefined}
+            className={(isRefreshing || isLoading) ? "spinner-icon" : ""} 
+          />
         </button>
       </div>
 

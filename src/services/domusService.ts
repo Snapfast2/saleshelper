@@ -15,7 +15,7 @@ const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
 const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v4";
-const INMUEBLES_TTL        = 60 * 60;           // 1 hora
+const INMUEBLES_TTL        = 6 * 60 * 60;       // 6 horas (reduce llamadas a Domus de 24/día → 4/día)
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
 const V2_SESSION_KEY       = "domus_v2_session";
@@ -284,8 +284,16 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; f
   const inmuebles = mapProperties(rawData);
   const result    = { inmuebles, fuente: "domus", total: inmuebles.length };
 
-  // Guardar resultado en Redis (1 hora)
+  // Guardar resultado en Redis (6 horas)
   if (kv) kv.set(INMUEBLES_REDIS_KEY, result, { ex: INMUEBLES_TTL }).catch(() => {});
 
   return result;
+}
+
+// ── Invalidar caché (llamado desde el botón "Forzar actualización") ───────
+export async function invalidateInmueblesCache(): Promise<void> {
+  const kv = getRedis();
+  if (kv) {
+    await kv.del(INMUEBLES_REDIS_KEY);
+  }
 }
