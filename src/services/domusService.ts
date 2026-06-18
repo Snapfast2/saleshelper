@@ -14,7 +14,7 @@ const DOMUS_HOME_URL       = "https://v2.domus.la";
 const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
-const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor";
+const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v2";
 const INMUEBLES_TTL        = 60 * 60;           // 1 hora
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
@@ -154,7 +154,6 @@ async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Pro
 function mapProperties(raw: any[]): Inmueble[] {
   return raw
     .filter((p: any) => {
-      if (!p.promotor || p.promotor.id !== 29214) return false;
       const estado = p.estado_inmueble?.estado_inmueble ?? "";
       return estado === "Disponible" || estado === "En proceso";
     })
