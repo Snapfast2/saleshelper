@@ -14,6 +14,7 @@ export async function GET() {
   const now = Date.now();
 
   // Servir desde caché en memoria si es válida
+  /*
   if (memCache && now - memCache.ts < MEM_CACHE_TTL) {
     return NextResponse.json(memCache.data, {
       headers: {
@@ -22,6 +23,7 @@ export async function GET() {
       },
     });
   }
+  */
 
   try {
     // 1. Intentamos obtener de Domus (fuente más actualizada)

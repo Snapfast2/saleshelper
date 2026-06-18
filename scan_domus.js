@@ -79,7 +79,6 @@ async function run() {
     console.log('Promotores array?', Array.isArray(p.promotores) ? p.promotores.map(pr => pr.id) : 'No');
   }
   
-  // Also query by promotor: 29214 to see what comes back
   const res2 = await fetch(DOMUS_FILTER_URL + '?page=1', {
     method: 'POST',
     headers: {
@@ -91,7 +90,36 @@ async function run() {
     body: JSON.stringify({ data: { buscar: '', promotor: 29214 } })
   });
   const json2 = await res2.json();
-  console.log('Total properties with promotor 29214:', json2.total);
+  let raw = json2.data || [];
+  const totalPages = json2.last_page ?? 1;
+  
+  if(totalPages > 1) {
+      for(let i=2; i<=totalPages; i++) {
+          const resP = await fetch(DOMUS_FILTER_URL + '?page=' + i, {
+            method: 'POST',
+            headers: {
+              Cookie: cookies,
+              'User-Agent': UA,
+              'Content-Type': 'application/json',
+              Accept: 'application/json'
+            },
+            body: JSON.stringify({ data: { buscar: '', promotor: 29214 } })
+          });
+          const jsonP = await resP.json();
+          raw = raw.concat(jsonP.data || []);
+      }
+  }
+
+  let available = 0;
+  let otherStates = {};
+  for(const p of raw) {
+      const estado = p.estado_inmueble?.estado_inmueble ?? "UNKNOWN";
+      if (estado === "Disponible" || estado === "En proceso") available++;
+      otherStates[estado] = (otherStates[estado] || 0) + 1;
+  }
+  console.log('Total properties fetched:', raw.length);
+  console.log('Available/En proceso:', available);
+  console.log('States breakdown:', otherStates);
 }
 
 run().catch(console.error);
