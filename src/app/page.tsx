@@ -14,12 +14,16 @@ import EmptyState from "@/components/EmptyState";
 import { getRecordatoriosPendientes, marcarCompletado, generarMensajeSeguimiento, type Recordatorio } from "@/lib/recordatorios";
 import NotificationBanner, { NotificationHeaderButton, TestNotifButton } from "@/components/NotificationBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import WhatsAppModal from "@/components/WhatsAppModal";
+import type { Cliente } from "@/types";
 
 export default function Home() {
   const router = useRouter();
   const { inmuebles, isLoading, mutate } = useInmuebles();
   const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
   const { isSubscribed, checkReminders } = usePushNotifications();
+  const [waModalOpen, setWaModalOpen] = useState(false);
+  const [waModalData, setWaModalData] = useState<{ cliente: Cliente, tel: string } | null>(null);
 
   // Cargar recordatorios pendientes al abrir la app
   useEffect(() => {
@@ -99,9 +103,7 @@ export default function Home() {
           </div>
           <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
             {recordatorios.map((rec) => {
-              const mensajePre = generarMensajeSeguimiento(rec.nombre);
               const telefonoCompleto = `${rec.telefonoIndicativo.replace(/\D/g, "")}${rec.telefono.replace(/\D/g, "")}`;
-              const hrefWA = `/whatsapp?cliente=${encodeURIComponent(rec.nombre)}&telefono=${telefonoCompleto}&inmueble=${encodeURIComponent(rec.inmuebleInteres)}`;
 
               return (
                 <motion.div
@@ -131,7 +133,24 @@ export default function Home() {
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
-                      onClick={() => router.push(hrefWA)}
+                      onClick={() => {
+                        setWaModalData({
+                          cliente: {
+                            id: rec.id,
+                            nombre: rec.nombre,
+                            telefono: rec.telefono,
+                            telefonoIndicativo: rec.telefonoIndicativo,
+                            email: "",
+                            inmuebleInteres: rec.inmuebleInteres,
+                            presupuesto: "",
+                            origen: "",
+                            estado: "Seguimiento",
+                            fecha: new Date().toISOString()
+                          } as Cliente,
+                          tel: telefonoCompleto
+                        });
+                        setWaModalOpen(true);
+                      }}
                       className="btn-ws"
                       style={{ flex: 1, fontSize: "12px", padding: "9px 12px" }}
                     >
@@ -293,6 +312,18 @@ export default function Home() {
           100% { opacity: 0.5; }
         }
       `}} />
+
+      {waModalOpen && waModalData && (
+        <WhatsAppModal
+          cliente={waModalData.cliente}
+          tel={waModalData.tel}
+          defaultTemplateId="seguimiento"
+          onClose={() => {
+            setWaModalOpen(false);
+            setWaModalData(null);
+          }}
+        />
+      )}
     </div>
   );
 }
