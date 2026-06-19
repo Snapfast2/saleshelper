@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
         <div style={{ position:"absolute", left:0, top:0, bottom:0, width:10, background:L2L_RED, display:"flex" }} />
 
-        <div style={{ position:"absolute", top:48, left:56, right:52, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <img src={LOGO_DATA_URL} width={200} height={90} style={{ objectFit:"contain" }} />
+        {/* TOP: solo badge en esquina superior izquierda */}
+        <div style={{ position:"absolute", top:48, left:56, display:"flex" }}>
           <div style={{ background:L2L_RED, borderRadius:10, padding:"13px 36px", display:"flex", alignItems:"center", fontSize:30, fontWeight:900, color:"white", letterSpacing:"0.06em", boxShadow:"0 4px 28px rgba(222,4,11,0.55)" }}>
             {gestionLabel}
           </div>
@@ -112,7 +112,11 @@ export async function GET(req: NextRequest) {
               <div style={{ color:"white", fontSize:34, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
               <div style={{ color:"rgba(255,255,255,0.50)", fontSize:24, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
             </div>
-            <div style={{ color:L2L_RED, fontSize:24, fontWeight:700, display:"flex", alignItems:"flex-end", letterSpacing:"0.01em" }}>{URL_WEB}</div>
+            {/* Logo + URL apilados en la esquina inferior derecha */}
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
+              <img src={LOGO_DATA_URL} width={160} height={64} style={{ objectFit:"contain" }} />
+              <div style={{ color:L2L_RED, fontSize:22, fontWeight:700, display:"flex", letterSpacing:"0.01em" }}>{URL_WEB}</div>
+            </div>
           </div>
 
         </div>
