@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   return new ImageResponse(
     (
-      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden" }}>
+      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden", borderRadius:40 }}>
 
         {imagenSrc && (
           <img src={imagenSrc} width={1080} height={1080} style={{ position:"absolute", top:0, left:0, width:1080, height:1080, objectFit:"cover" }} />
