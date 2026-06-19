@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   const precioStr    = fmt(precio);
   const barrioCiudad = [barrio, ciudad].filter(Boolean).join(", ").toUpperCase();
   const habLabel = habitaciones === 1 ? "Habitacion" : "Habitaciones";
-  const banLabel = banos === 1        ? "Ban\u00f1o"       : "Ban\u00f1os";
+  const banLabel = banos === 1        ? "Ba\u00f1o"       : "Ba\u00f1os";
   const garLabel = garajes === 1      ? "Garaje"     : "Garajes";
 
   // Solo fetch la foto del inmueble (externa)
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   return new ImageResponse(
     (
-      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden", borderRadius:40 }}>
+      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden", borderRadius:64 }}>
 
         {imagenSrc && (
           <img src={imagenSrc} width={1080} height={1080} style={{ position:"absolute", top:0, left:0, width:1080, height:1080, objectFit:"cover" }} />
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
         <div style={{ position:"absolute", top:0, left:0, right:0, height:340, background:"linear-gradient(to bottom,rgba(0,0,0,0.90) 0%,transparent 100%)", display:"flex" }} />
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
-        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:10, background:L2L_RED, display:"flex" }} />
+        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:14, background:L2L_RED, display:"flex" }} />
 
         {/* TOP: logo blanco en esquina superior DERECHA, pegado al borde */}
         <div style={{ position:"absolute", top:44, right:24, display:"flex" }}>
