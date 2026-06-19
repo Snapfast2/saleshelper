@@ -232,7 +232,7 @@ function mapProperties(raw: any[]): Inmueble[] {
 export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; fuente: string; total: number }> {
   const kv = getRedis();
 
-  // 1. Cache de inmuebles en Redis (1 hora) — respuesta inmediata
+  // 1. Cache de inmuebles en Redis (6h) — respuesta inmediata
   if (kv) {
     try {
       const cached = await kv.get<{ inmuebles: Inmueble[]; fuente: string; total: number }>(INMUEBLES_REDIS_KEY);
@@ -240,39 +240,28 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; f
     } catch { /* continuar si Redis falla */ }
   }
 
-  // 2-4. Obtener datos frescos reutilizando sesión cuando sea posible
+  // 2-3. Obtener datos frescos usando sesión propia de v2.domus.la
+  //      NOTA: La sesión del CRM (crm.domusweb.co) NO es válida para v2.domus.la,
+  //            por eso se omite y se usa directamente la sesión propia o un login fresco.
   let rawData: any[] | null = null;
 
+  // 2. Usar sesión propia de v2 guardada (evita login si existe y es válida)
   if (kv) {
-    // 2. Intentar reutilizar la sesión de crmService (evita doble login)
-    //    crmService ya hizo el login completo a v2.domus.la y guardó las cookies
     try {
-      const crmSession = await kv.get<CrmStoredSession>(CRM_SESSION_KEY);
-      if (crmSession?.sessionCookie) {
-        const sharedCookies = [crmSession.sessionCookie, crmSession.authCookies]
-          .filter(Boolean)
-          .join("; ");
-        rawData = await fetchPropertiesWithCookies(sharedCookies, crmSession.ua || UA);
-        // rawData null = sesión del CRM ya expiró en v2, caer a paso 3
+      const stored = await kv.get<V2Session>(V2_SESSION_KEY);
+      if (stored?.cookies) {
+        rawData = await fetchPropertiesWithCookies(stored.cookies, stored.ua || UA);
+        // Si devuelve array vacío (sesión expirada silenciosamente), lo tratamos como null
+        if (Array.isArray(rawData) && rawData.length === 0) rawData = null;
       }
     } catch { /* continuar */ }
-
-    // 3. Fallback: sesión propia de v2 (puede existir si domusService se logueó antes)
-    if (rawData === null) {
-      try {
-        const stored = await kv.get<V2Session>(V2_SESSION_KEY);
-        if (stored?.cookies) {
-          rawData = await fetchPropertiesWithCookies(stored.cookies, stored.ua || UA);
-        }
-      } catch { /* continuar */ }
-    }
   }
 
-  // 4. Login fresco si todas las sesiones fallaron o no existen
+  // 3. Login fresco si la sesión guardada falló, expiró o devolvió vacío
   if (rawData === null) {
     const { cookies, ua: loginUA } = await doFreshV2Login();
     rawData = await fetchPropertiesWithCookies(cookies, loginUA);
-    if (!rawData) throw new Error("Domus v2: login fresco también retornó sesión inválida");
+    if (!rawData || rawData.length === 0) throw new Error("Domus v2: login fresco no devolvió inmuebles");
 
     // Guardar nueva sesión propia (5 días)
     if (kv) {
@@ -284,8 +273,10 @@ export async function fetchDomusProperties(): Promise<{ inmuebles: Inmueble[]; f
   const inmuebles = mapProperties(rawData);
   const result    = { inmuebles, fuente: "domus", total: inmuebles.length };
 
-  // Guardar resultado en Redis (6 horas)
-  if (kv) kv.set(INMUEBLES_REDIS_KEY, result, { ex: INMUEBLES_TTL }).catch(() => {});
+  // Guardar en Redis solo si tenemos resultados reales
+  if (inmuebles.length > 0 && kv) {
+    kv.set(INMUEBLES_REDIS_KEY, result, { ex: INMUEBLES_TTL }).catch(() => {});
+  }
 
   return result;
 }
