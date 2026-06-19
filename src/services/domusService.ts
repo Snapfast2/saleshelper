@@ -110,70 +110,61 @@ async function doFreshV2Login(): Promise<{ cookies: string; ua: string }> {
 }
 
 // ── Llamada a la API de propiedades ───────────────────────────────────────
-// Hace dos consultas (captador + promotor) y las une deduplicando por ID.
-// Retorna null si la sesión expiró (401/403), lanza error en otros fallos.
-const OLGA_DOMUS_ID = 57256; // ID interno de Olga Patricia en Domus
+// Usa el payload EXACTO que Domus envía cuando Olga Patricia filtra sus inmuebles:
+// {"data":{"status":1,"orderby":1,"caractype":1,"id_inmobiliaria_session":607,"cant_paginador":15}}
+// Domus usa las cookies de sesión para devolver solo los inmuebles de Olga (captadora + promotora).
+const DOMUS_INMOBILIARIA_SESSION_ID = 607; // ID de inmobiliaria L2L Bienes Raíces en Domus
 
 async function fetchPropertiesWithCookies(cookies: string, ua: string = UA): Promise<any[] | null> {
-  const fetchAllPages = async (filter: Record<string, unknown>): Promise<any[] | null> => {
-    const fetchPage = async (page: number): Promise<any | null> => {
-      const res = await fetch(`${DOMUS_FILTER_URL}?page=${page}`, {
-        method: "POST",
-        headers: {
-          "Cookie":           cookies,
-          "User-Agent":       ua,
-          "Content-Type":     "application/json",
-          "Accept":           "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          "Accept-Language":  "es-CO,es;q=0.9",
-          "Referer":          "https://v2.domus.la/properties",
+  const fetchPage = async (page: number): Promise<any | null> => {
+    const res = await fetch(`${DOMUS_FILTER_URL}?page=${page}`, {
+      method: "POST",
+      headers: {
+        "Cookie":           cookies,
+        "User-Agent":       ua,
+        "Content-Type":     "application/json",
+        "Accept":           "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        "Accept-Language":  "es-CO,es;q=0.9",
+        "Referer":          "https://v2.domus.la/properties/list",
+        "Origin":           "https://v2.domus.la",
+      },
+      body: JSON.stringify({
+        data: {
+          status:                   1,    // solo inmuebles activos (Disponible/En proceso)
+          orderby:                  1,
+          caractype:                1,
+          id_inmobiliaria_session:  DOMUS_INMOBILIARIA_SESSION_ID,
+          cant_paginador:           15,
         },
-        body: JSON.stringify({ data: { buscar: "", ...filter } }),
-        cache: "no-store",
-      });
-      if (res.status === 401 || res.status === 403) return null;
-      if (!res.ok) throw new Error(`Domus properties API: ${res.status}`);
-      return res.json();
-    };
+      }),
+      cache: "no-store",
+    });
 
-    const firstPage = await fetchPage(1);
-    if (!firstPage) return null;                                           // sesión expirada
-    if (!firstPage.data || !Array.isArray(firstPage.data)) return [];
-
-    const all = [...firstPage.data];
-    const totalPages = firstPage.last_page ?? 1;
-
-    for (let i = 2; i <= totalPages; i++) {
-      try {
-        const page = await fetchPage(i);
-        if (page?.data && Array.isArray(page.data)) all.push(...page.data);
-      } catch (e) {
-        console.error("Domus page fetch error:", e);
-      }
-    }
-    return all;
+    if (res.status === 401 || res.status === 403) return null;  // sesión expirada
+    if (!res.ok) throw new Error(`Domus properties API: ${res.status}`);
+    return res.json();
   };
 
-  // Consulta 1: inmuebles donde ella es Captadora
-  const captadorResults = await fetchAllPages({ captador: OLGA_DOMUS_ID });
-  if (captadorResults === null) return null; // sesión expirada
+  const firstPage = await fetchPage(1);
+  if (!firstPage) return null;                                   // sesión expirada
+  if (!firstPage.data || !Array.isArray(firstPage.data)) return [];
 
-  // Consulta 2: inmuebles donde ella es Promotora
-  const promotorResults = await fetchAllPages({ promotor: OLGA_DOMUS_ID });
-  if (promotorResults === null) return null; // sesión expirada
+  const all = [...firstPage.data];
+  const totalPages = firstPage.last_page ?? 1;
 
-  // Unir y deduplicar por ID de inmueble
-  const seen = new Set<number>();
-  const all: any[] = [];
-  for (const p of [...captadorResults, ...promotorResults]) {
-    if (!seen.has(p.id)) {
-      seen.add(p.id);
-      all.push(p);
+  for (let i = 2; i <= totalPages; i++) {
+    try {
+      const page = await fetchPage(i);
+      if (page?.data && Array.isArray(page.data)) all.push(...page.data);
+    } catch (e) {
+      console.error(`Domus page ${i} error:`, e);
     }
   }
 
   return all;
 }
+
 
 // ── Mapeo de propiedades ──────────────────────────────────────────────────
 function mapProperties(raw: any[]): Inmueble[] {
