@@ -7,13 +7,16 @@ import Link from "next/link";
 import type { Inmueble, Cliente } from "@/types";
 
 async function fetchInmueblesServer(): Promise<Inmueble[]> {
-  try {
-    const d = await fetchDomusProperties();
-    if (d?.inmuebles?.length > 0) return d.inmuebles;
-  } catch {}
+  // L2L primero — misma fuente que /api/inmuebles (18 inmuebles exactos de Patricia)
+  // Garantiza que el property_code del CRM coincida con los IDs del catálogo
   try {
     const l = await scrapeL2L();
     if (l?.inmuebles?.length > 0) return l.inmuebles;
+  } catch {}
+  // Fallback: Domus directo (932 propiedades de toda la agencia)
+  try {
+    const d = await fetchDomusProperties();
+    if (d?.inmuebles?.length > 0) return d.inmuebles;
   } catch {}
   return [];
 }
