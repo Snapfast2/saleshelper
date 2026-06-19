@@ -55,4 +55,5 @@ export interface Cliente {
   origen: string; // Ej: Portal Web
   fecha: string;
   diasSeguimiento?: number;
+  porcentaje?: number;   // % de avance del negocio según Domus (2–100)
 }

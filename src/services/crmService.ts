@@ -378,6 +378,7 @@ function mapClients(data: any[]): Cliente[] {
       origen: origin,
       fecha: c.created_at || new Date().toISOString(),
       diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined,
+      porcentaje: typeof c.status?.percentage === "number" ? c.status.percentage : undefined,
     };
   });
 }

@@ -11,7 +11,7 @@ import { BorderTrail } from "@/components/motion-primitives/border-trail";
 import {
   MessageCircle, Bell, X, CheckCircle, MessageSquareQuote,
   Phone, ChevronUp, ChevronDown, Users, Home,
-  Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key, Flame, Skull,
+  Zap, Sun, CalendarDays, Clock, AlertTriangle, Snowflake, Key, Flame, Skull, Star,
   Send, Pencil, Paperclip
 } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
@@ -54,6 +54,7 @@ type EtiquetaEdad = {
   tiempo: string;
 };
 
+/** Lógica para tab NUEVOS — urgencia por edad del lead */
 function obtenerEtiquetaEdad(fechaIso: string): EtiquetaEdad {
   const ms = Date.now() - new Date(fechaIso).getTime();
   const min = Math.floor(ms / 60000);
@@ -66,19 +67,48 @@ function obtenerEtiquetaEdad(fechaIso: string): EtiquetaEdad {
     hrs < 24 ? `${hrs}h` :
     `${dias}d`;
 
-  if (hrs < 5) {
-    return { label: "Nuevo", Icon: Zap, color: "#16a34a", bg: "rgba(22,163,74,0.06)", border: "rgba(22,163,74,0.15)", tiempo };
+  if (hrs < 5) return { label: "Nuevo",    Icon: Zap,           color: "#16a34a", bg: "rgba(22,163,74,0.06)",   border: "rgba(22,163,74,0.15)",   tiempo };
+  if (dias < 1) return { label: "Hoy",     Icon: Sun,           color: "#16a34a", bg: "rgba(22,163,74,0.06)",   border: "rgba(22,163,74,0.15)",   tiempo };
+  if (dias < 2) return { label: "Pendiente",Icon: Clock,         color: "#f97316", bg: "rgba(249,115,22,0.06)",  border: "rgba(249,115,22,0.15)",  tiempo };
+  if (dias < 7) return { label: "Urgente",  Icon: AlertTriangle, color: "#dc2626", bg: "rgba(220,38,38,0.06)",   border: "rgba(220,38,38,0.15)",   tiempo };
+  return           { label: "Olvidado",  Icon: Snowflake,     color: "#991b1b", bg: "rgba(153,27,27,0.06)",   border: "rgba(153,27,27,0.15)",   tiempo };
+}
+
+/** Lógica para tab SEGUIMIENTO — badge según % de avance del negocio + días de seguimiento */
+function obtenerEtiquetaSeguimiento(
+  fechaIso: string,
+  porcentaje: number | undefined,
+  diasSeguimiento: number | undefined
+): EtiquetaEdad {
+  const ms  = Date.now() - new Date(fechaIso).getTime();
+  const min = Math.floor(ms / 60000);
+  const hrs = Math.floor(ms / 3600000);
+  const dias = Math.floor(ms / 86400000);
+  const tiempo =
+    min < 1 ? "Ahora" :
+    min < 60 ? `${min}m` :
+    hrs < 24 ? `${hrs}h` :
+    `${dias}d`;
+
+  const pct = porcentaje ?? 0;
+  const segVencido = diasSeguimiento !== undefined && diasSeguimiento <= 0;
+
+  // Recién creado — igual que Nuevos
+  if (hrs < 5)  return { label: "Nuevo",       Icon: Zap,           color: "#16a34a", bg: "rgba(22,163,74,0.06)",    border: "rgba(22,163,74,0.15)",   tiempo };
+  if (dias < 1) return { label: "Hoy",         Icon: Sun,           color: "#16a34a", bg: "rgba(22,163,74,0.06)",    border: "rgba(22,163,74,0.15)",   tiempo };
+
+  // Alto avance — muy cerca del cierre (70%+)
+  if (pct >= 70) return { label: "Al cierre",   Icon: Star,          color: "#b45309", bg: "rgba(180,83,9,0.08)",    border: "rgba(180,83,9,0.2)",     tiempo };
+
+  // Avance medio-alto (40-69%)
+  if (pct >= 40) {
+    if (segVencido) return { label: "Pendiente", Icon: AlertTriangle, color: "#ea580c", bg: "rgba(234,88,12,0.07)",   border: "rgba(234,88,12,0.2)",    tiempo };
+    return               { label: "En proceso",  Icon: Clock,         color: "#2563eb", bg: "rgba(37,99,235,0.07)",   border: "rgba(37,99,235,0.2)",    tiempo };
   }
-  if (dias < 1) {
-    return { label: "Hoy", Icon: Sun, color: "#16a34a", bg: "rgba(22,163,74,0.06)", border: "rgba(22,163,74,0.15)", tiempo };
-  }
-  if (dias < 2) {
-    return { label: "Pendiente", Icon: Clock, color: "#f97316", bg: "rgba(249,115,22,0.06)", border: "rgba(249,115,22,0.15)", tiempo };
-  }
-  if (dias < 7) {
-    return { label: "Urgente", Icon: AlertTriangle, color: "#dc2626", bg: "rgba(220,38,38,0.06)", border: "rgba(220,38,38,0.15)", tiempo };
-  }
-  return { label: "Olvidado", Icon: Snowflake, color: "#991b1b", bg: "rgba(153,27,27,0.06)", border: "rgba(153,27,27,0.15)", tiempo };
+
+  // Avance bajo (< 40%)
+  if (segVencido) return  { label: "Frío",       Icon: Snowflake,     color: "#0369a1", bg: "rgba(3,105,161,0.07)",   border: "rgba(3,105,161,0.2)",    tiempo };
+  return                  { label: "Perfilando",  Icon: CalendarDays,  color: "#64748b", bg: "rgba(100,116,139,0.07)", border: "rgba(100,116,139,0.2)",  tiempo };
 }
 
 // ─── Opciones recordatorio ─────────────────────────────────────────────
@@ -316,7 +346,9 @@ function ClienteRow({ cliente, showSeguimiento, inmueble, ultimaInteraccion }: {
   const esPeligro = dias >= 1 && dias < 2;
   const esFresco = dias < 1;
 
-  const etiqueta = obtenerEtiquetaEdad(cliente.fecha);
+  const etiqueta = showSeguimiento
+    ? obtenerEtiquetaSeguimiento(cliente.fecha, cliente.porcentaje, cliente.diasSeguimiento)
+    : obtenerEtiquetaEdad(cliente.fecha);
 
   const hrefFicha = `/whatsapp?inmueble=${encodeURIComponent(cliente.inmuebleInteres)}&cliente=${encodeURIComponent(cliente.nombre)}${tel ? `&telefono=${tel}` : ""}`;
   const hrefOb = `/respuestas?cliente=${encodeURIComponent(nombreCap)}${tel ? `&telefono=${tel}` : ""}`;
@@ -373,21 +405,33 @@ function ClienteRow({ cliente, showSeguimiento, inmueble, ultimaInteraccion }: {
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: esFresco
-                ? "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))"
-                : esCritico
+              background: (() => {
+                if (esFresco) return "linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.08))";
+                if (showSeguimiento) {
+                  const pct = cliente.porcentaje ?? 0;
+                  if (pct >= 70) return "linear-gradient(135deg, rgba(180,83,9,0.22), rgba(234,179,8,0.1))";
+                  if (pct >= 40) return "linear-gradient(135deg, rgba(37,99,235,0.18), rgba(37,99,235,0.07))";
+                  return "linear-gradient(135deg, rgba(100,116,139,0.18), rgba(100,116,139,0.07))";
+                }
+                return esCritico
                   ? "linear-gradient(135deg, rgba(220,38,38,0.2), rgba(220,38,38,0.08))"
-                  : "linear-gradient(135deg, rgba(249,115,22,0.2), rgba(249,115,22,0.08))",
+                  : "linear-gradient(135deg, rgba(249,115,22,0.2), rgba(249,115,22,0.08))";
+              })(),
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 16,
               fontWeight: 800,
-              color: esFresco
-                ? "#16a34a"
-                : esCritico
-                  ? "#dc2626"
-                  : "#f97316"
+              color: (() => {
+                if (esFresco) return "#16a34a";
+                if (showSeguimiento) {
+                  const pct = cliente.porcentaje ?? 0;
+                  if (pct >= 70) return "#b45309";
+                  if (pct >= 40) return "#2563eb";
+                  return "#64748b";
+                }
+                return esCritico ? "#dc2626" : "#f97316";
+              })()
             }}>
               {nombreCap.charAt(0)}
             </div>
@@ -435,30 +479,68 @@ function ClienteRow({ cliente, showSeguimiento, inmueble, ultimaInteraccion }: {
                   return parts[0].toLowerCase();
                 })()}
               </span>
-              {dias < 1 ? (
-                <motion.span
-                  animate={{ scale: [1, 1.2, 1], rotate: [-10, 10, -10] }}
-                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                  style={{ display: "inline-flex", flexShrink: 0 }}
-                >
-                  <Flame size={15} color="#dc2626" strokeWidth={2.5} />
-                </motion.span>
-              ) : dias < 7 ? (
-                <motion.span
-                  animate={{ y: [-2, 2, -2] }}
-                  transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
-                  style={{ display: "inline-flex", flexShrink: 0 }}
-                >
-                  <Snowflake size={15} color="#0284c7" strokeWidth={2.5} />
-                </motion.span>
+              {showSeguimiento ? (
+                // Seguimiento: icono según porcentaje de avance
+                (() => {
+                  const pct = cliente.porcentaje ?? 0;
+                  const segVencido = cliente.diasSeguimiento !== undefined && cliente.diasSeguimiento <= 0;
+                  if (esFresco) return null; // recién creado — solo el badge verde es suficiente
+                  if (pct >= 70) return (
+                    <motion.span
+                      animate={{ scale: [1, 1.08, 1], opacity: [0.85, 1, 0.85] }}
+                      transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                      style={{ display: "inline-flex", flexShrink: 0 }}
+                    >
+                      <Star size={14} color="#b45309" strokeWidth={2.5} fill="#fbbf24" />
+                    </motion.span>
+                  );
+                  if (segVencido && pct >= 40) return (
+                    <motion.span
+                      animate={{ scale: [1, 1.2, 1], rotate: [-8, 8, -8] }}
+                      transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                      style={{ display: "inline-flex", flexShrink: 0 }}
+                    >
+                      <Flame size={15} color="#ea580c" strokeWidth={2.5} />
+                    </motion.span>
+                  );
+                  if (segVencido && pct < 40) return (
+                    <motion.span
+                      animate={{ y: [-2, 2, -2] }}
+                      transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                      style={{ display: "inline-flex", flexShrink: 0 }}
+                    >
+                      <Snowflake size={15} color="#0369a1" strokeWidth={2.5} />
+                    </motion.span>
+                  );
+                  return null; // en proceso y al día — sin icono alarmante
+                })()
               ) : (
-                <motion.span
-                  animate={{ opacity: [1, 0.4, 1] }}
-                  transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                  style={{ display: "inline-flex", flexShrink: 0 }}
-                >
-                  <Skull size={15} color="#52525b" strokeWidth={2.5} />
-                </motion.span>
+                // Nuevos: icono según edad del lead (lógica original)
+                dias < 1 ? (
+                  <motion.span
+                    animate={{ scale: [1, 1.2, 1], rotate: [-10, 10, -10] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                    style={{ display: "inline-flex", flexShrink: 0 }}
+                  >
+                    <Flame size={15} color="#dc2626" strokeWidth={2.5} />
+                  </motion.span>
+                ) : dias < 7 ? (
+                  <motion.span
+                    animate={{ y: [-2, 2, -2] }}
+                    transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                    style={{ display: "inline-flex", flexShrink: 0 }}
+                  >
+                    <Snowflake size={15} color="#0284c7" strokeWidth={2.5} />
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    style={{ display: "inline-flex", flexShrink: 0 }}
+                  >
+                    <Skull size={15} color="#52525b" strokeWidth={2.5} />
+                  </motion.span>
+                )
               )}
             </button>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3, flexWrap: "wrap" }}>
