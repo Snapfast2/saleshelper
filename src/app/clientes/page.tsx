@@ -41,12 +41,11 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   let totalClientesFiltrados = 0;
 
   clientes.forEach((c) => {
-    const key = c.inmuebleInteres && c.inmuebleInteres !== "N/A" ? String(c.inmuebleInteres) : "sin-inmueble";
-    
-    // Descartar clientes de inmuebles inactivos (vendidos, archivados, de otro asesor)
-    if (key !== "sin-inmueble" && !inmuebleMap.has(key)) {
-      return;
-    }
+    // Si el inmueble de interés no está en el catálogo activo, se agrupa como "sin-inmueble"
+    // en lugar de descartarse — así se ven todos los leads (vendidos, archivados, otro asesor)
+    const hasActiveInmueble =
+      c.inmuebleInteres && c.inmuebleInteres !== "N/A" && inmuebleMap.has(String(c.inmuebleInteres));
+    const key = hasActiveInmueble ? String(c.inmuebleInteres) : "sin-inmueble";
 
     if (!grupos.has(key)) grupos.set(key, []);
     grupos.get(key)!.push(c);
