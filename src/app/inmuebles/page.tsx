@@ -46,16 +46,22 @@ export default function InmueblesPage() {
     setFiltered(result);
   };
 
-  // Forzar actualización: borra el caché en Redis y trae datos frescos de Domus
+  // Forzar actualización: limpia Redis y pide datos frescos al servidor
   const forceRefresh = async () => {
     setIsRefreshing(true);
     try {
+      // Borrar caché Redis del servidor
       await fetch("/api/inmuebles", {
         method: "DELETE",
         headers: { "x-refresh-secret": process.env.NEXT_PUBLIC_REFRESH_SECRET ?? "" },
       });
-    } catch { /* si falla el borrado, igual pedimos datos frescos */ }
-    await mutate();
+    } catch { /* si falla, igual pedimos datos frescos */ }
+
+    // Pedir datos frescos al servidor (bypass caché del navegador)
+    await mutate(
+      fetch("/api/inmuebles", { cache: "no-store" }).then(r => r.json()),
+      { revalidate: false }
+    );
     setIsRefreshing(false);
   };
 
