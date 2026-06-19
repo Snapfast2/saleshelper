@@ -1,4 +1,4 @@
-﻿// src/app/api/og/inmueble/route.tsx
+// src/app/api/og/inmueble/route.tsx
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
@@ -44,6 +44,10 @@ export async function GET(req: NextRequest) {
   const area         = Number(p.get("area")         ?? 0);
   const garajes      = Number(p.get("garajes")      ?? 0);
 
+  const formato     = p.get("formato") ?? "feed";
+  const isStory     = formato === "story";
+  const H           = isStory ? 1920 : 1080;
+
   const esArriendo   = gestion === "arriendo";
   const gestionLabel = esArriendo ? "EN ARRIENDO" : "EN VENTA";
   const precioStr    = fmt(precio);
@@ -51,6 +55,28 @@ export async function GET(req: NextRequest) {
   const habLabel = habitaciones === 1 ? "Habitacion" : "Habitaciones";
   const banLabel = banos === 1        ? "Ba\u00f1o"       : "Ba\u00f1os";
   const garLabel = garajes === 1      ? "Garaje"     : "Garajes";
+
+  // Layout dinámico según formato
+  const topGradH     = isStory ? 500  : 340;
+  const botGradH     = isStory ? 1250 : 650;
+  const priceSz      = isStory ? 130  : 110;
+  const locSz        = isStory ? 52   : 46;
+  const badgeSz      = isStory ? 30   : 26;
+  const pillSz       = isStory ? 34   : 30;
+  const agentNameSz  = isStory ? 46   : 40;
+  const agentTelSz   = isStory ? 38   : 34;
+  const agentRolSz   = isStory ? 26   : 22;
+  const labelSz      = isStory ? 24   : 22;
+  const urlSz        = isStory ? 26   : 22;
+  const botPad       = isStory ? "0 70px 130px 70px" : "0 60px 52px 60px";
+  const logoTop      = isStory ? 60   : 44;
+  const logoW        = isStory ? 240  : 220;
+  const logoH        = isStory ? 104  : 96;
+  const priceMB      = isStory ? 40   : 28;
+  const locMB        = isStory ? 12   : 8;
+  const badgeMB      = isStory ? 22   : 16;
+  const sepMB        = isStory ? 40   : 28;
+  const pillMB       = isStory ? 50   : 36;
 
   // Solo fetch la foto del inmueble (externa)
   const imagenSrc = imagen ? await toBase64(imagen) : "";
@@ -73,57 +99,57 @@ export async function GET(req: NextRequest) {
           <img src={WLOGO_DATA_URL} width={220} height={96} style={{ objectFit:"contain" }} />
         </div>
 
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"0 60px 52px 60px", display:"flex", flexDirection:"column" }}>
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:botPad, display:"flex", flexDirection:"column" }}>
 
           {/* Tipo + badge (EN VENTA / EN ARRIENDO) encima de la localidad */}
           <div style={{ color:"rgba(255,255,255,0.5)", fontSize:26, fontWeight:500, marginBottom:10, display:"flex" }}>{tipo}</div>
-          <div style={{ background:L2L_RED, borderRadius:10, padding:"10px 28px", display:"flex", alignItems:"center", fontSize:26, fontWeight:900, color:"white", letterSpacing:"0.06em", marginBottom:16, alignSelf:"flex-start", boxShadow:"0 4px 24px rgba(222,4,11,0.50)" }}>
+          <div style={{ background:L2L_RED, borderRadius:10, padding:"10px 28px", display:"flex", alignItems:"center", fontSize:badgeSz, fontWeight:900, color:"white", letterSpacing:"0.06em", marginBottom:badgeMB, alignSelf:"flex-start", boxShadow:"0 4px 24px rgba(222,4,11,0.50)" }}>
             {gestionLabel}
           </div>
-          <div style={{ color:"white", fontSize:46, fontWeight:800, marginBottom:8, display:"flex", letterSpacing:"0.02em" }}>{barrioCiudad}</div>
+          <div style={{ color:"white", fontSize:locSz, fontWeight:800, marginBottom:locMB, display:"flex", letterSpacing:"0.02em" }}>{barrioCiudad}</div>
           <div style={{ width:72, height:5, background:L2L_RED, borderRadius:3, marginBottom:20, display:"flex" }} />
-          <div style={{ color:"white", fontSize:110, fontWeight:900, lineHeight:1, letterSpacing:"-0.03em", marginBottom:28, display:"flex" }}>{precioStr}</div>
+          <div style={{ color:"white", fontSize:priceSz, fontWeight:900, lineHeight:1, letterSpacing:"-0.03em", marginBottom:priceMB, display:"flex" }}>{precioStr}</div>
 
-          <div style={{ display:"flex", gap:14, marginBottom:36 }}>
+          <div style={{ display:"flex", gap:14, marginBottom:pillMB }}>
             {habitaciones > 0 && (
-              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:30, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
-                {habitaciones} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:26, fontWeight:400 }}>{habLabel}</span>
+              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:pillSz, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
+                {habitaciones} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:pillSz-4, fontWeight:400 }}>{habLabel}</span>
               </div>
             )}
             {banos > 0 && (
-              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:30, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
-                {banos} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:26, fontWeight:400 }}>{banLabel}</span>
+              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:pillSz, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
+                {banos} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:pillSz-4, fontWeight:400 }}>{banLabel}</span>
               </div>
             )}
             {area > 0 && (
-              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:30, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
-                {area} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:26, fontWeight:400 }}>m2</span>
+              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:pillSz, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
+                {area} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:pillSz-4, fontWeight:400 }}>m2</span>
               </div>
             )}
             {garajes > 0 && (
-              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:30, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
-                {garajes} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:26, fontWeight:400 }}>{garLabel}</span>
+              <div style={{ background:"rgba(255,255,255,0.10)", border:"1px solid rgba(255,255,255,0.18)", borderRadius:10, padding:"10px 24px", color:"white", fontSize:pillSz, fontWeight:700, display:"flex", alignItems:"center", gap:8 }}>
+                {garajes} <span style={{ color:"rgba(255,255,255,0.55)", fontSize:pillSz-4, fontWeight:400 }}>{garLabel}</span>
               </div>
             )}
           </div>
 
-          <div style={{ width:"100%", height:1, background:"rgba(255,255,255,0.12)", marginBottom:28, display:"flex" }} />
+          <div style={{ width:"100%", height:1, background:"rgba(255,255,255,0.12)", marginBottom:sepMB, display:"flex" }} />
 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.08em", textTransform:"uppercase" }}>¡Escríbeme!</div>
-              <div style={{ color:"white", fontSize:40, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
-              <div style={{ color:"white", fontSize:34, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
-              <div style={{ color:"rgba(255,255,255,0.50)", fontSize:22, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
+              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:labelSz, fontWeight:400, display:"flex", letterSpacing:"0.08em", textTransform:"uppercase" }}>¡Escríbeme!</div>
+              <div style={{ color:"white", fontSize:agentNameSz, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
+              <div style={{ color:"white", fontSize:agentTelSz, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
+              <div style={{ color:"rgba(255,255,255,0.50)", fontSize:agentRolSz, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
             </div>
-            {/* Solo URL en rojo â€” logo ya aparece arriba */}
-            <div style={{ color:L2L_RED, fontSize:22, fontWeight:700, display:"flex", alignItems:"flex-end", letterSpacing:"0.01em" }}>{URL_WEB}</div>
+            {/* Solo URL en rojo — logo ya aparece arriba */}
+            <div style={{ color:L2L_RED, fontSize:urlSz, fontWeight:700, display:"flex", alignItems:"flex-end", letterSpacing:"0.01em" }}>{URL_WEB}</div>
           </div>
 
         </div>
       </div>
     ),
-    { width:1080, height:1080 }
+    { width:1080, height:H }
   );
 }
 

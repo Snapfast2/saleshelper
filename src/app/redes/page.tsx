@@ -14,7 +14,7 @@ import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function buildOgUrl(inm: Inmueble): string {
+function buildOgUrl(inm: Inmueble, formato: "feed" | "story"): string {
   const params = new URLSearchParams({
     imagen:       inm.imagen,
     tipo:         inm.tipo,
@@ -26,6 +26,7 @@ function buildOgUrl(inm: Inmueble): string {
     banos:        String(inm.banos),
     area:         String(inm.areaTotal),
     garajes:      String(inm.garajes),
+    formato:      formato,
   });
   return `/api/og/inmueble?${params.toString()}`;
 }
@@ -34,17 +35,18 @@ export default function RedesPage() {
   const { inmuebles, isLoading } = useInmuebles();
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [red, setRed] = useState<"facebook" | "instagram">("instagram");
+  const [formato, setFormato] = useState<"feed" | "story">("feed");
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [cardLoaded, setCardLoaded] = useState(false);
 
   const inm = inmuebles[selectedIdx] ?? null;
-  const ogUrl = inm ? buildOgUrl(inm) : null;
+  const ogUrl = inm ? buildOgUrl(inm, formato) : null;
   const postText = inm ? generarPostRedes(inm, red) : "";
 
-  // Reset card loaded on inmueble change
-  useEffect(() => { setCardLoaded(false); }, [selectedIdx]);
+  // Reset card loaded on inmueble or formato change
+  useEffect(() => { setCardLoaded(false); }, [selectedIdx, formato]);
 
   const prev = () => setSelectedIdx(i => Math.max(0, i - 1));
   const next = () => setSelectedIdx(i => Math.min(inmuebles.length - 1, i + 1));
@@ -165,6 +167,26 @@ export default function RedesPage() {
             ))}
           </div>
 
+          {/* ── Selector de Formato ──────────────────────────────── */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+            {(["feed", "story"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setFormato(f)}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 10,
+                  border: `1.5px solid ${formato === f ? "var(--text-primary)" : "var(--border)"}`,
+                  background: formato === f ? "var(--text-primary)" : "transparent",
+                  color: formato === f ? "var(--bg-card)" : "var(--text-secondary)",
+                  fontWeight: 700, fontSize: 14, cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                {f === "feed" ? "Feed (1:1)" : "Story (9:16)"}
+              </button>
+            ))}
+          </div>
+
           {/* ── Selector de inmueble con flechas ─────────────── */}
           <div style={{
             display: "flex",
@@ -197,14 +219,16 @@ export default function RedesPage() {
           {/* ── Card branded preview ──────────────────────────── */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
-              Preview card 1080×1080
+              Preview card {formato === "feed" ? "1080×1080" : "1080×1920"}
             </div>
             <div style={{
               position: "relative",
               borderRadius: 14,
               overflow: "hidden",
               border: "1px solid var(--border)",
-              aspectRatio: "1 / 1",
+              aspectRatio: formato === "feed" ? "1 / 1" : "9 / 16",
+              width: formato === "story" ? "70%" : "100%",
+              margin: "0 auto",
               background: "var(--bg-input)",
             }}>
               {!cardLoaded && (
