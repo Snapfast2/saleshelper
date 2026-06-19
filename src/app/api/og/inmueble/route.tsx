@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   const precioStr    = fmt(precio);
   const barrioCiudad = [barrio, ciudad].filter(Boolean).join(", ").toUpperCase();
   const habLabel = habitaciones === 1 ? "Habitacion" : "Habitaciones";
-  const banLabel = banos === 1        ? "Bano"       : "Banos";
+  const banLabel = banos === 1        ? "Ban\u00f1o"       : "Ban\u00f1os";
   const garLabel = garajes === 1      ? "Garaje"     : "Garajes";
 
   // Solo fetch la foto del inmueble (externa)
@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
         <div style={{ position:"absolute", left:0, top:0, bottom:0, width:10, background:L2L_RED, display:"flex" }} />
 
-        {/* TOP: logo blanco en esquina superior DERECHA */}
-        <div style={{ position:"absolute", top:44, right:52, display:"flex" }}>
+        {/* TOP: logo blanco en esquina superior DERECHA, pegado al borde */}
+        <div style={{ position:"absolute", top:44, right:24, display:"flex" }}>
           <img src={WLOGO_DATA_URL} width={220} height={96} style={{ objectFit:"contain" }} />
         </div>
 
@@ -110,15 +110,13 @@ export async function GET(req: NextRequest) {
 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <div style={{ color:"white", fontSize:38, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
+              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.03em", textTransform:"uppercase" }}>Solicita informacion:</div>
+              <div style={{ color:"white", fontSize:40, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
               <div style={{ color:"white", fontSize:34, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
-              <div style={{ color:"rgba(255,255,255,0.50)", fontSize:24, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
+              <div style={{ color:"rgba(255,255,255,0.50)", fontSize:22, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
             </div>
-            {/* Logo + URL apilados en la esquina inferior derecha */}
-            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-              <img src={WLOGO_DATA_URL} width={160} height={64} style={{ objectFit:"contain" }} />
-              <div style={{ color:L2L_RED, fontSize:22, fontWeight:700, display:"flex", letterSpacing:"0.01em" }}>{URL_WEB}</div>
-            </div>
+            {/* Solo URL en rojo — logo ya aparece arriba */}
+            <div style={{ color:L2L_RED, fontSize:22, fontWeight:700, display:"flex", alignItems:"flex-end", letterSpacing:"0.01em" }}>{URL_WEB}</div>
           </div>
 
         </div>
