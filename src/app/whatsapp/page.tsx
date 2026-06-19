@@ -153,71 +153,124 @@ function WhatsAppContent() {
           <div style={{ padding: "0 20px" }}>
             {/* Nombre del Cliente */}
             <div className="form-group">
-              <label className="form-label">2. Nombre del cliente</label>
+              <label className="form-label" style={{ fontWeight: 600 }}>2. Nombre del cliente (opcional)</label>
               <input
                 type="text"
-                className="form-input"
-                placeholder="Ej. Camilo"
+                style={{
+                  width: "100%", padding: "14px 16px", borderRadius: "12px",
+                  background: "var(--bg-card)", border: "1px solid var(--border)",
+                  color: "var(--text-primary)", fontSize: "15px", outline: "none",
+                  transition: "all 0.2s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "var(--red)"}
+                onBlur={(e) => e.target.style.borderColor = "var(--border)"}
+                placeholder="Ej. Juan (o déjalo vacío)"
                 value={nombreCliente}
                 onChange={(e) => setNombreCliente(e.target.value)}
               />
             </div>
 
             {/* Vista Previa */}
-            <div className="form-group">
-              <label className="form-label">3. Vista previa del mensaje</label>
-              <motion.div
-                className="msg-preview"
-                key={selectedId}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                {mensajeActual}
-              </motion.div>
+            <div className="form-group" style={{ marginTop: 20 }}>
+              <label className="form-label" style={{ fontWeight: 600, marginBottom: 12 }}>3. Vista previa del mensaje</label>
+              <div style={{ padding: "0 8px" }}>
+                <motion.div
+                  key={selectedId + nombreCliente}
+                  initial={{ opacity: 0, scale: 0.95, transformOrigin: "top left" }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                  style={{
+                    background: "#005c4b",
+                    color: "#e9edef",
+                    padding: "12px 14px",
+                    borderRadius: "0 8px 8px 8px",
+                    fontSize: "15px",
+                    lineHeight: "1.4",
+                    whiteSpace: "pre-wrap",
+                    boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    position: "relative",
+                  }}
+                >
+                  <div style={{
+                    position: "absolute",
+                    top: 0, left: -8, width: 0, height: 0,
+                    borderRight: "8px solid #005c4b",
+                    borderBottom: "10px solid transparent"
+                  }} />
+                  {mensajeActual}
+                </motion.div>
+              </div>
             </div>
 
-            {/* Botones */}
-            <div className="grid-2" style={{ padding: 0, marginTop: 24 }}>
-              <button className="btn-secondary" onClick={handleCopy}>
-                {copied ? <CheckCircle size={18} color="#4ADE80" /> : <Copy size={18} />}
-                {copied ? "¡Copiado!" : "Copiar"}
-              </button>
-              <button className="btn-ws" onClick={handleOpenWS}>
-                <MessageCircle size={18} />
+            {/* Botones de Acción Principales */}
+            <div style={{ display: "flex", gap: "10px", marginTop: "24px" }}>
+              <motion.button 
+                whileTap={{ scale: 0.96 }}
+                style={{
+                  flex: 1, padding: "14px", borderRadius: "12px", background: "#25D366", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  fontWeight: "bold", border: "none", boxShadow: "0 4px 12px rgba(37, 211, 102, 0.3)",
+                  fontSize: "15px"
+                }}
+                onClick={handleOpenWS}
+              >
+                <MessageCircle size={20} fill="#fff" />
                 {tieneClienteDestino ? `Enviar a ${clienteParam.split(" ")[0] || "Cliente"}` : "Enviar WhatsApp"}
-              </button>
+              </motion.button>
+              
+              <motion.button 
+                whileTap={{ scale: 0.96 }}
+                style={{
+                  padding: "14px 20px", borderRadius: "12px", background: "var(--bg-card)", color: "var(--text-primary)",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  fontWeight: "bold", border: "1px solid var(--border)"
+                }}
+                onClick={handleCopy}
+              >
+                {copied ? <CheckCircle size={20} color="#4ADE80" /> : <Copy size={20} />}
+              </motion.button>
             </div>
 
-            {selectedInmueble?.urlL2L && (
-              <button
-                className="btn-secondary"
-                style={{ marginTop: 14 }}
-                onClick={async () => {
-                  const fichaUrl = `${window.location.origin}/ficha/${selectedInmueble.id}`;
-                  await navigator.clipboard.writeText(fichaUrl);
-                  setCopiedFicha(true);
-                  setTimeout(() => setCopiedFicha(false), 2500);
-                }}
-              >
-                {copiedFicha ? <CheckCircle size={18} color="#4ADE80" /> : <ExternalLink size={18} />}
-                {copiedFicha ? "Link copiado" : "Copiar link ficha"}
-              </button>
-            )}
+            {/* Links Secundarios */}
+            <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+              {selectedInmueble?.urlL2L && (
+                <button
+                  style={{
+                    flex: 1, padding: "12px", borderRadius: "10px", background: "transparent", color: "var(--text-secondary)",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    fontWeight: 600, border: "1px solid var(--border)", fontSize: "13px"
+                  }}
+                  onClick={async () => {
+                    const fichaUrl = `${window.location.origin}/ficha/${selectedInmueble.id}`;
+                    await navigator.clipboard.writeText(fichaUrl);
+                    setCopiedFicha(true);
+                    setTimeout(() => setCopiedFicha(false), 2500);
+                  }}
+                >
+                  {copiedFicha ? <CheckCircle size={16} color="#4ADE80" /> : <ExternalLink size={16} />}
+                  {copiedFicha ? "Ficha copiada" : "Link de ficha (web)"}
+                </button>
+              )}
 
-            {selectedInmueble?.urlDomus && (
-              <button
-                className="btn-secondary"
-                style={{ marginTop: 8, opacity: 0.6, fontSize: 14 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(selectedInmueble.urlDomus!);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-              >
-                <LinkIcon size={16} />
-                Copiar link L2L
-              </button>
-            )}
+              {selectedInmueble?.urlDomus && (
+                <button
+                  style={{
+                    flex: 1, padding: "12px", borderRadius: "10px", background: "transparent", color: "var(--text-secondary)",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                    fontWeight: 600, border: "1px dashed var(--border)", fontSize: "13px"
+                  }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedInmueble.urlDomus!);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  <LinkIcon size={16} />
+                  Link original L2L
+                </button>
+              )}
+            </div>
           </div>
         </>
       ) : (

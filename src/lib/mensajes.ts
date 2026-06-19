@@ -31,54 +31,50 @@ export function generarMensajeWS(config: MensajeWS): string {
     .filter(Boolean)
     .join(", ");
 
-  let mensaje = "";
+  // Saludo personalizado y humano
+  if (incluirSaludo) {
+    if (nombreCliente) {
+      mensaje = `¡Hola ${nombreCliente}! 👋 Soy ${agente.nombre} Vásquez, asesora de L2L Bienes Raíces.\n\nVi que tienes interés en el ${tipoLabel} que tenemos ${gestionLabel.toLowerCase()} en ${ubicacion}.\n\nAquí te comparto la ficha con todos los detalles y fotos:\n`;
+    } else {
+      mensaje = `¡Hola! 👋 Soy ${agente.nombre} Vásquez, asesora de L2L Bienes Raíces.\n\nTe comparto la ficha con todos los detalles y fotos de este ${tipoLabel} ${gestionLabel.toLowerCase()} en ${ubicacion}:\n`;
+    }
+  } else {
+    mensaje = `✨ ${tipoLabel} ${gestionLabel} en ${ubicacion}\n`;
+  }
 
-  // Título del inmueble
-  mensaje += `${tipoLabel} ${gestionLabel} en ${ubicacion}\n`;
+  // Link a la ficha (arriba para mejor CTR)
+  if (incluirLink && inmueble.urlDomus) {
+    mensaje += `${inmueble.urlDomus}\n\n`;
+  } else if (incluirLink && inmueble.urlL2L) {
+    mensaje += `${inmueble.urlL2L}\n\n`;
+  }
 
-  // Precio
+  // Detalles principales
   const precioFormato = formatNumero(inmueble.precio);
   if (inmueble.gestion === "venta") {
-    mensaje += `*Precio: ${precioFormato}*\n`;
+    mensaje += `💰 *Precio:* $${precioFormato}\n`;
   } else {
-    mensaje += `*Canon: $ ${precioFormato}*\n`;
+    mensaje += `💰 *Canon:* $${precioFormato}\n`;
   }
 
-  // Administración
   if (inmueble.administracion && inmueble.administracion > 0) {
-    mensaje += `Administración $ ${formatNumero(inmueble.administracion)}\n`;
+    mensaje += `🏢 Administración: $${formatNumero(inmueble.administracion)}\n`;
   }
 
-  // Área
   const areaCons = inmueble.areaConstruida || inmueble.areaTotal;
-  mensaje += `${areaCons} M2 (construída), ${inmueble.areaTotal} M2 (lote)\n`;
+  mensaje += `📐 Área: ${areaCons} m²\n`;
 
-  // Características
-  if (inmueble.habitaciones > 0) {
-    mensaje += `${inmueble.habitaciones} habitacion${inmueble.habitaciones !== 1 ? "es" : ""}\n`;
-  }
-  if (inmueble.banos > 0) {
-    mensaje += `${inmueble.banos} baño${inmueble.banos !== 1 ? "s" : ""}\n`;
-  }
-  if (inmueble.garajes > 0) {
-    mensaje += `${inmueble.garajes} garaje${inmueble.garajes !== 1 ? "s" : ""}\n`;
+  const caracteristicas = [];
+  if (inmueble.habitaciones > 0) caracteristicas.push(`🛏 ${inmueble.habitaciones} Hab`);
+  if (inmueble.banos > 0) caracteristicas.push(`🚿 ${inmueble.banos} Baños`);
+  if (inmueble.garajes > 0) caracteristicas.push(`🚗 ${inmueble.garajes} Garajes`);
+  
+  if (caracteristicas.length > 0) {
+    mensaje += `${caracteristicas.join(" | ")}\n`;
   }
 
-  // Link a la ficha
-  if (incluirLink && inmueble.urlDomus) {
-    mensaje += `Conoce más detalles aquí: ${inmueble.urlDomus}\n`;
-  } else if (incluirLink && inmueble.urlL2L) {
-    mensaje += `Conoce más detalles aquí: ${inmueble.urlL2L}\n`;
-  }
-
-  // Saludo personalizado
   if (incluirSaludo) {
-    mensaje += `\n`;
-    if (nombreCliente) {
-      mensaje += `Buen día ${nombreCliente}, mi nombre es ${agente.nombre} Vásquez asesora inmob..voy a dejarte aquí la ficha del inmueble. Por el cual aplicaste, quedo atenta a los comentarios.`;
-    } else {
-      mensaje += `Buen día, mi nombre es ${agente.nombre} Vásquez asesora inmob..te comparto la ficha de este inmueble, quedo atenta a tus comentarios.`;
-    }
+    mensaje += `\nÉchale un vistazo y me cuentas qué te parece. ¡Quedo súper atenta si quieres que agendemos una visita! ✨`;
   }
 
   return mensaje;
