@@ -31,6 +31,8 @@ export function generarMensajeWS(config: MensajeWS): string {
     .filter(Boolean)
     .join(", ");
 
+  let mensaje = "";
+
   // Saludo personalizado y humano
   if (incluirSaludo) {
     if (nombreCliente) {
