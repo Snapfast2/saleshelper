@@ -4,8 +4,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Instagram, Facebook, Copy, CheckCircle,
-  Download, Share2, ChevronLeft, ChevronRight, ImageIcon
+  Share, ImageIcon, Copy, CheckCircle,
+  Download, Share2, ChevronLeft, ChevronRight
 } from "lucide-react";
 import type { Inmueble } from "@/types";
 import { generarPostRedes } from "@/lib/mensajes";
@@ -158,8 +158,8 @@ export default function RedesPage() {
                 }}
               >
                 {r === "instagram"
-                  ? <Instagram size={18} />
-                  : <Facebook size={18} />}
+                  ? <ImageIcon size={18} />
+                  : <Share size={18} />}
                 {r === "instagram" ? "Instagram" : "Facebook"}
               </button>
             ))}
@@ -329,7 +329,7 @@ export default function RedesPage() {
                 fontWeight: 700, fontSize: 15, cursor: "pointer",
               }}
             >
-              {red === "instagram" ? <Instagram size={18} /> : <Facebook size={18} />}
+              {red === "instagram" ? <ImageIcon size={18} /> : <Share size={18} />}
               Abrir app
             </button>
           </div>
