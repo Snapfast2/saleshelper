@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
   return new ImageResponse(
     (
-      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden", borderRadius:64 }}>
+      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden" }}>
 
         {imagenSrc && (
           <img src={imagenSrc} width={1080} height={1080} style={{ position:"absolute", top:0, left:0, width:1080, height:1080, objectFit:"cover" }} />
@@ -65,7 +65,13 @@ export async function GET(req: NextRequest) {
 
         <div style={{ position:"absolute", top:0, left:0, right:0, height:340, background:"linear-gradient(to bottom,rgba(0,0,0,0.90) 0%,transparent 100%)", display:"flex" }} />
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
-        <div style={{ position:"absolute", left:0, top:0, bottom:0, width:14, background:L2L_RED, display:"flex" }} />
+        {/* Barra roja izquierda con curvas en esquinas — SVG path */}
+        <svg style={{ position:"absolute", left:0, top:0, overflow:"visible" }} width={60} height={1080}>
+          <path
+            d="M50,0 Q0,0 0,50 L0,1030 Q0,1080 50,1080 Q14,1080 14,1030 L14,50 Q14,0 50,0 Z"
+            fill="#de040b"
+          />
+        </svg>
 
         {/* TOP: logo blanco en esquina superior DERECHA, pegado al borde */}
         <div style={{ position:"absolute", top:44, right:24, display:"flex" }}>
@@ -110,7 +116,7 @@ export async function GET(req: NextRequest) {
 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.03em", textTransform:"uppercase" }}>Solicita informacion:</div>
+              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.03em", textTransform:"uppercase" }}>Solicita Información:</div>
               <div style={{ color:"white", fontSize:40, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
               <div style={{ color:"white", fontSize:34, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
               <div style={{ color:"rgba(255,255,255,0.50)", fontSize:22, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
