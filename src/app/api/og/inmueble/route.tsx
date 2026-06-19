@@ -1,4 +1,4 @@
-﻿// src/app/api/og/inmueble/route.tsx
+// src/app/api/og/inmueble/route.tsx
 // Genera una card branded 1080x1080 para Instagram/Facebook
 // Usa next/og (Satori) — Edge Runtime
 
@@ -36,13 +36,36 @@ export async function GET(req: NextRequest) {
   const gestionColor = esArriendo ? "#15803d" : "#1d4ed8";
   const precioStr    = fmt(precio);
 
+  // Fetch property image → base64 data URL
+  // (Satori/Edge Runtime requires ArrayBuffer for external images)
+  let imagenSrc = "";
+  if (imagen) {
+    try {
+      const r = await fetch(imagen, { headers: { "User-Agent": "SalesHelper-OG/1.0" } });
+      if (r.ok) {
+        const buf  = await r.arrayBuffer();
+        const mime = r.headers.get("content-type") ?? "image/jpeg";
+        // Edge Runtime: btoa via Uint8Array (no Node Buffer available)
+        const bytes = new Uint8Array(buf);
+        let binary  = "";
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        imagenSrc = `data:${mime};base64,${btoa(binary)}`;
+      }
+    } catch { /* sin foto → fondo degradado */ }
+  }
+
   return new ImageResponse(
     (
       <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0f172a", fontFamily:"sans-serif", overflow:"hidden" }}>
 
-        {/* Foto de fondo */}
-        {imagen ? (
-          <div style={{ position:"absolute", inset:0, backgroundImage:`url(${imagen})`, backgroundSize:"cover", backgroundPosition:"center", display:"flex" }} />
+        {/* Foto de fondo — <img> con posición absoluta (Satori requiere esto) */}
+        {imagenSrc ? (
+          <img
+            src={imagenSrc}
+            width={1080}
+            height={1080}
+            style={{ position:"absolute", top:0, left:0, width:1080, height:1080, objectFit:"cover" }}
+          />
         ) : (
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,#1e3a5f 0%,#0f172a 100%)", display:"flex" }} />
         )}
