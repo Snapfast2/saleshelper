@@ -1,4 +1,4 @@
-// src/app/api/og/inmueble/route.tsx
+﻿// src/app/api/og/inmueble/route.tsx
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
 
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
 
         <div style={{ position:"absolute", top:0, left:0, right:0, height:340, background:"linear-gradient(to bottom,rgba(0,0,0,0.90) 0%,transparent 100%)", display:"flex" }} />
         <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
-        {/* Barra roja — redondeada en extremos superior e inferior */}
+        {/* Barra roja â€” redondeada en extremos superior e inferior */}
         <div style={{ position:"absolute", left:0, top:0, bottom:0, width:14, background:L2L_RED, display:"flex", borderTopRightRadius:36, borderBottomRightRadius:36 }} />
 
         {/* TOP: logo blanco en esquina superior DERECHA, pegado al borde */}
@@ -111,12 +111,12 @@ export async function GET(req: NextRequest) {
 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end" }}>
             <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.08em", textTransform:"uppercase" }}>\u00a1Escr\u00edbeme!</div>
+              <div style={{ color:"rgba(255,255,255,0.55)", fontSize:22, fontWeight:400, display:"flex", letterSpacing:"0.08em", textTransform:"uppercase" }}>¡Escríbeme!</div>
               <div style={{ color:"white", fontSize:40, fontWeight:900, display:"flex", letterSpacing:"-0.01em" }}>{AGENTE_NOMBRE}</div>
               <div style={{ color:"white", fontSize:34, fontWeight:700, display:"flex" }}>{AGENTE_TEL}</div>
               <div style={{ color:"rgba(255,255,255,0.50)", fontSize:22, fontWeight:400, display:"flex" }}>{AGENTE_ROL}</div>
             </div>
-            {/* Solo URL en rojo — logo ya aparece arriba */}
+            {/* Solo URL en rojo â€” logo ya aparece arriba */}
             <div style={{ color:L2L_RED, fontSize:22, fontWeight:700, display:"flex", alignItems:"flex-end", letterSpacing:"0.01em" }}>{URL_WEB}</div>
           </div>
 
@@ -126,4 +126,5 @@ export async function GET(req: NextRequest) {
     { width:1080, height:1080 }
   );
 }
+
 
