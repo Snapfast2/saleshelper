@@ -14,7 +14,7 @@ const DOMUS_HOME_URL       = "https://v2.domus.la";
 const DOMUS_LOGIN_URL      = "https://v2.domus.la/auth-login";
 const DOMUS_FILTER_URL     = "https://v2.domus.la/properties/filter";
 
-const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v5";
+const INMUEBLES_REDIS_KEY  = "inmuebles_domus_v2_promotor_v6";
 const INMUEBLES_TTL        = 6 * 60 * 60;       // 6 horas (reduce llamadas a Domus de 24/día → 4/día)
 
 // Sesión propia de v2 (fallback si crmService no tiene sesión activa)
