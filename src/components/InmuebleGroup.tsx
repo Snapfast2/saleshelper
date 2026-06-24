@@ -34,6 +34,7 @@ function tiempoTranscurrido(iso: string) {
 
 function formatearPrecio(p: number) {
   if (p >= 1_000_000_000) return `$${(p / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
+  if (p >= 10_000_000) return `$${Math.round(p / 1_000_000)}M`;
   if (p >= 1_000_000) return `$${(p / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
   return `$${(p / 1_000).toFixed(0)}K`;
 }
