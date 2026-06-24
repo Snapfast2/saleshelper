@@ -83,14 +83,14 @@ export async function GET(req: NextRequest) {
 
   return new ImageResponse(
     (
-      <div style={{ width:1080, height:1080, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden" }}>
+      <div style={{ width:1080, height:H, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden" }}>
 
         {imagenSrc && (
-          <img src={imagenSrc} width={1080} height={1080} style={{ position:"absolute", top:0, left:0, width:1080, height:1080, objectFit:"cover" }} />
+          <img src={imagenSrc} width={1080} height={H} style={{ position:"absolute", top:0, left:0, width:1080, height:H, objectFit:"cover" }} />
         )}
 
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:340, background:"linear-gradient(to bottom,rgba(0,0,0,0.90) 0%,transparent 100%)", display:"flex" }} />
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:650, background:"linear-gradient(to top,rgba(0,0,0,0.97) 0%,rgba(0,0,0,0.90) 35%,rgba(0,0,0,0.55) 65%,transparent 100%)", display:"flex" }} />
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:topGradH, background:"linear-gradient(to bottom,rgba(0,0,0,0.70) 0%,transparent 100%)", display:"flex" }} />
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:botGradH, background:"linear-gradient(to top,rgba(0,0,0,0.78) 0%,rgba(0,0,0,0.65) 35%,rgba(0,0,0,0.30) 65%,transparent 100%)", display:"flex" }} />
         {/* Barra roja â€” redondeada en extremos superior e inferior */}
         <div style={{ position:"absolute", left:0, top:0, bottom:0, width:14, background:L2L_RED, display:"flex", borderTopRightRadius:36, borderBottomRightRadius:36 }} />
 
