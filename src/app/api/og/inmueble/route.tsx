@@ -13,9 +13,9 @@ const AGENTE_ROL    = "Asesora Inmobiliaria - L2L Bienes Raices";
 const URL_WEB       = "www.l2lbienesraices.com";
 
 function fmt(n: number): string {
-  if (n >= 1_000_000_000) return "$" + (n / 1_000_000_000).toFixed(1) + "B";
-  if (n >= 1_000_000)     return "$" + Math.round(n / 1_000_000) + "M";
-  return "$" + Math.round(n / 1_000) + "K";
+  if (n >= 1_000_000_000) return "$" + (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
+  if (n >= 1_000_000)     return "$" + (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  return "$" + (n / 1_000).toFixed(0) + "K";
 }
 
 async function toBase64(url: string): Promise<string> {

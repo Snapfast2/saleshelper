@@ -12,8 +12,8 @@ interface Props {
 }
 
 function formatPrecio(valor: number): string {
-  if (valor >= 1000000000) return `$${(valor / 1000000000).toFixed(1)} MIL M`;
-  if (valor >= 1000000) return `$${Math.round(valor / 1000000)} M`;
+  if (valor >= 1000000000) return `$${(valor / 1000000000).toFixed(1).replace(/\.0$/, "")} MIL M`;
+  if (valor >= 1000000) return `$${(valor / 1000000).toFixed(1).replace(/\.0$/, "")} M`;
   if (valor >= 1000) return `$${(valor / 1000).toFixed(0)}K`;
   return `$${valor}`;
 }
