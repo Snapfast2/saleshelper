@@ -207,7 +207,7 @@ export default function RedesPage() {
                 {inm.tipo} · {inm.barrio}
               </div>
               <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                {selectedIdx + 1} / {inmuebles.length} — {inm.precio >= 10_000_000 ? `$${Math.round(inm.precio / 1_000_000)}M` : `$${(inm.precio / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`}
+                {selectedIdx + 1} / {inmuebles.length} — {inm.precio >= 1_000_000_000 ? `$${(inm.precio / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} Mil M` : inm.precio >= 10_000_000 ? `$${Math.round(inm.precio / 1_000_000)}M` : `$${(inm.precio / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`}
               </div>
             </div>
             <button onClick={next} disabled={selectedIdx === inmuebles.length - 1}
