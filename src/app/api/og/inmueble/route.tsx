@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
       <div style={{ width:1080, height:H, display:"flex", position:"relative", backgroundColor:"#0a0a0a", fontFamily:"sans-serif", overflow:"hidden" }}>
 
         {imagenSrc && (
-          <img src={imagenSrc} width={1080} height={H} style={{ position:"absolute", top:0, left:0, width:1080, height:H, objectFit:"cover" }} />
+          <img src={imagenSrc} width={1080} height={H} style={{ position:"absolute", top:0, left:0, width:1080, height:H, objectFit:"cover", objectPosition:"center" }} />
         )}
 
         <div style={{ position:"absolute", top:0, left:0, right:0, height:topGradH, background:"linear-gradient(to bottom,rgba(28,28,32,0.72) 0%,transparent 100%)", display:"flex" }} />
