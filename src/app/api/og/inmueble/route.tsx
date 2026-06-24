@@ -89,8 +89,8 @@ export async function GET(req: NextRequest) {
           <img src={imagenSrc} width={1080} height={H} style={{ position:"absolute", top:0, left:0, width:1080, height:H, objectFit:"cover" }} />
         )}
 
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:topGradH, background:"linear-gradient(to bottom,rgba(0,0,0,0.70) 0%,transparent 100%)", display:"flex" }} />
-        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:botGradH, background:"linear-gradient(to top,rgba(0,0,0,0.78) 0%,rgba(0,0,0,0.65) 35%,rgba(0,0,0,0.30) 65%,transparent 100%)", display:"flex" }} />
+        <div style={{ position:"absolute", top:0, left:0, right:0, height:topGradH, background:"linear-gradient(to bottom,rgba(110,2,5,0.72) 0%,transparent 100%)", display:"flex" }} />
+        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:botGradH, background:"linear-gradient(to top,rgba(120,2,6,0.90) 0%,rgba(100,2,5,0.75) 35%,rgba(80,1,4,0.32) 65%,transparent 100%)", display:"flex" }} />
         {/* Barra roja â€” redondeada en extremos superior e inferior */}
         <div style={{ position:"absolute", left:0, top:0, bottom:0, width:14, background:L2L_RED, display:"flex", borderTopRightRadius:36, borderBottomRightRadius:36 }} />
 
