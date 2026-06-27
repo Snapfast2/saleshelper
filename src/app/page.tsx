@@ -50,13 +50,42 @@ export default function Home() {
     show: { opacity: 1, y: 0 },
   };
 
+  // --- Lógica Dinámica ---
+  const hora = new Date().getHours();
+  let saludo = "¡Hola";
+  let subtitulo = "¿Qué vamos a vender hoy?";
+  
+  if (hora < 12) {
+    saludo = "¡Buenos días";
+    subtitulo = "Un excelente día para cerrar tratos ☕";
+  } else if (hora < 18) {
+    saludo = "¡Buenas tardes";
+    subtitulo = "Sigue así, gran trabajo hoy ☀️";
+  } else {
+    saludo = "¡Buenas noches";
+    subtitulo = "Revisa tus métricas y descansa 🌙";
+  }
+
+  // Cálculos para Dashboard
+  const totalInmuebles = inmuebles.length;
+  const seguimientosActivos = recordatorios.length;
+  const valorTotal = inmuebles.reduce((acc, inm) => acc + inm.precio, 0);
+  
+  // Función helper para formatear valor del portafolio (reusando lógica probada)
+  const formatValor = (val: number) => {
+    if (val >= 1_000_000_000) return `$${(val / 1_000_000_000).toFixed(1).replace(/\.0$/, "")} Mil M`;
+    if (val >= 10_000_000) return `$${Math.round(val / 1_000_000)}M`;
+    if (val >= 1_000_000) return `$${(val / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+    return `$0`;
+  };
+
   return (
     <div className="page">
       {/* Header */}
       <header className="header">
         <div>
-          <h1 className="header-title">¡Hola, Patricia!</h1>
-          <p className="header-sub">¿Qué vamos a vender hoy?</p>
+          <h1 className="header-title">{saludo}, Patricia!</h1>
+          <p className="header-sub">{subtitulo}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <TestNotifButton />
@@ -67,7 +96,38 @@ export default function Home() {
       {/* Banner activar notificaciones */}
       <NotificationBanner />
 
-      {/* Hero / Perfil */}
+      {/* Mini Dashboard */}
+      <section className="dashboard-stats">
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(196,30,58,0.1)", color: "var(--red)" }}>
+            <Building2 size={18} />
+          </div>
+          <div>
+            <div className="stat-value">{isLoading ? "-" : totalInmuebles}</div>
+            <div className="stat-label">Inmuebles</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(251,191,36,0.1)", color: "#F59E0B" }}>
+            <Bell size={18} />
+          </div>
+          <div>
+            <div className="stat-value">{seguimientosActivos}</div>
+            <div className="stat-label">Pendientes</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: "rgba(34,197,94,0.1)", color: "#22C55E" }}>
+            <MessageSquareQuote size={18} />
+          </div>
+          <div>
+            <div className="stat-value">{isLoading ? "-" : formatValor(valorTotal)}</div>
+            <div className="stat-label">Portafolio</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Hero / Perfil (Glassmorphism) */}
       <motion.div
         className="agent-hero"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -229,10 +289,10 @@ export default function Home() {
         </motion.div>
       </motion.section>
 
-      {/* Recientes */}
+      {/* Recientes / Actividad */}
       <section>
         <div className="section-header">
-          <h2 className="section-title">Añadidos recientemente</h2>
+          <h2 className="section-title">Novedades del portafolio</h2>
           <button
             onClick={() => mutate()}
             className="section-link"
@@ -244,7 +304,7 @@ export default function Home() {
         </div>
 
         {isLoading ? (
-          <LoadingState text="Cargando inmuebles..." />
+          <LoadingState text="Cargando novedades..." />
         ) : inmuebles.length > 0 ? (
           <motion.div
             className="h-scroll"
