@@ -17,8 +17,8 @@ const TABS = [
 export default function BottomNav() {
   const pathname = usePathname();
 
-  // No mostrar en fichas públicas
-  if (pathname.startsWith("/ficha")) return null;
+  // No mostrar en fichas públicas ni en la pantalla de PIN
+  if (pathname.startsWith("/ficha") || pathname.startsWith("/pin")) return null;
 
   return (
     <nav className="bottom-nav">

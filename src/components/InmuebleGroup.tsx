@@ -194,7 +194,7 @@ function ClienteDetalleModal({ cliente, onClose }: { cliente: Cliente; onClose: 
   if (!mounted) return null;
 
   const tel = cliente.telefono
-    ? `${cliente.telefonoIndicativo.replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
+    ? `${(cliente.telefonoIndicativo || "+57").replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
     : "";
 
   const fechaLegible = (() => {
@@ -334,15 +334,16 @@ function ClienteRow({ cliente, showSeguimiento, inmueble, ultimaInteraccion }: {
   const [elegido, setElegido] = useState<string | null>(null);
 
   const tel = cliente.telefono
-    ? `${cliente.telefonoIndicativo.replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
+    ? `${(cliente.telefonoIndicativo || "+57").replace(/\D/g, "")}${cliente.telefono.replace(/\D/g, "")}`
     : "";
   const primerNombre = cliente.nombre.toLowerCase().split(" ")[0];
   const nombreCap = primerNombre.charAt(0).toUpperCase() + primerNombre.slice(1);
   const seg = showSeguimiento ? diasSeguimientoInfo(cliente.diasSeguimiento) : null;
   
-  const ms = Date.now() - new Date(cliente.fecha).getTime();
+  const parsedMs = new Date(cliente.fecha).getTime();
+  const ms = Number.isNaN(parsedMs) ? 0 : Math.max(0, Date.now() - parsedMs);
   const dias = Math.floor(ms / 86400000);
-  const esNuevo = ms < 5 * 60 * 60 * 1000;
+  const esNuevo = !Number.isNaN(parsedMs) && ms < 5 * 60 * 60 * 1000;
   const esCritico = dias >= 2;
   const esPeligro = dias >= 1 && dias < 2;
   const esFresco = dias < 1;
@@ -625,16 +626,18 @@ export default function InmuebleGroup({ codigoRef, inmueble, clientes, showSegui
 
   const LIMITE_VISIBLE = 3; // mostrar 3 por defecto, el resto colapsa
 
-  // Clasificar clientes
+  // Clasificar clientes (fechas inválidas se muestran en recientes para no ocultarlas)
   const clientesRecientes = clientes.filter(c => {
-    const ms = Date.now() - new Date(c.fecha).getTime();
-    const dias = Math.floor(ms / 86400000);
+    const t = new Date(c.fecha).getTime();
+    if (Number.isNaN(t)) return true;
+    const dias = Math.floor((Date.now() - t) / 86400000);
     return dias <= 7;
   });
 
   const clientesAntiguos = clientes.filter(c => {
-    const ms = Date.now() - new Date(c.fecha).getTime();
-    const dias = Math.floor(ms / 86400000);
+    const t = new Date(c.fecha).getTime();
+    if (Number.isNaN(t)) return false;
+    const dias = Math.floor((Date.now() - t) / 86400000);
     return dias > 7;
   });
 

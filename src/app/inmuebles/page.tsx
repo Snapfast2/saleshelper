@@ -50,10 +50,9 @@ export default function InmueblesPage() {
   const forceRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Borrar caché Redis del servidor
+      // Borrar caché Redis del servidor (autenticado por cookie de sesión)
       await fetch("/api/inmuebles", {
         method: "DELETE",
-        headers: { "x-refresh-secret": process.env.NEXT_PUBLIC_REFRESH_SECRET ?? "" },
       });
     } catch { /* si falla, igual pedimos datos frescos */ }
 

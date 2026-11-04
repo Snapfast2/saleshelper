@@ -1,33 +1,26 @@
 // src/app/api/cron/warmup-inmuebles/route.ts
-// Ruta invocada automáticamente por Vercel Cron cada día a las 3am (Colombia = UTC-5 → 8am UTC).
-// Pre-calienta el caché de Redis con los inmuebles de Domus para que la primera carga del día sea instantánea.
-// Protegida con CRON_SECRET para que nadie externo pueda dispararla.
-
 import { NextResponse } from "next/server";
-import { invalidateInmueblesCache, fetchDomusProperties } from "@/services/domusService";
+import { verifyCronAuth } from "@/lib/auth";
+import { fetchDomusProperties } from "@/services/domusService";
+import { humanDelay } from "@/services/crmService";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Vercel permite hasta 60s en el plan hobby
+export const maxDuration = 60;
 
 export async function GET(req: Request) {
-  // Verificar que viene de Vercel Cron o de nosotros mismos
-  const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!verifyCronAuth(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   try {
     const start = Date.now();
+    await humanDelay(1000, 3000);
 
-    // 1. Borrar caché vieja
-    await invalidateInmueblesCache();
-
-    // 2. Traer datos frescos de Domus (los guarda automáticamente en Redis 6h)
-    const result = await fetchDomusProperties();
-
+    // Sobrescribe la caché en Redis solo si Domus responde con éxito (no borra caché previa si falla)
+    const result = await fetchDomusProperties({ allowLogin: true, forceRefresh: true });
     const elapsed = ((Date.now() - start) / 1000).toFixed(1);
 
-    console.log(`[CRON warmup] ✅ ${result.total} inmuebles cargados en ${elapsed}s`);
+    console.log(`[CRON warmup] ${result.total} inmuebles actualizados en ${elapsed}s`);
 
     return NextResponse.json({
       ok: true,
@@ -37,7 +30,7 @@ export async function GET(req: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (err) {
-    console.error("[CRON warmup] ❌ Error:", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    console.error("[CRON warmup] Error:", err instanceof Error ? err.message : err);
+    return NextResponse.json({ ok: false, error: "No se pudo actualizar caché de Domus" }, { status: 500 });
   }
 }

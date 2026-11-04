@@ -7,24 +7,30 @@ import type { Cliente, Inmueble } from "@/types";
  * Registra una interacción en Firestore cada vez que se envía un WhatsApp.
  */
 export async function registrarInteraccionWS(
-  cliente: Cliente, 
-  inmueble: Inmueble | undefined, 
+  cliente: Cliente,
+  inmueble: Inmueble | undefined,
   tipoMensaje: string
 ) {
   try {
-    // Evitamos errores si no hay DB configurada aún (por ej. si faltan variables de entorno)
     if (!db) return;
+
+    const indicativo = (cliente.telefonoIndicativo || "+57").replace(/\D/g, "") || "57";
+    const localDigits = (cliente.telefono || "").replace(/\D/g, "");
+    const fullPhone = localDigits
+      ? localDigits.startsWith(indicativo) && localDigits.length > 10
+        ? localDigits
+        : `${indicativo}${localDigits}`
+      : "";
 
     await addDoc(collection(db, "interacciones_ws"), {
       cliente_nombre: cliente.nombre,
-      cliente_telefono: cliente.telefono || "",
+      cliente_telefono: fullPhone,
       inmueble_id: inmueble?.id || "sin-inmueble",
       inmueble_titulo: inmueble?.titulo || "Ninguno",
       tipo_mensaje: tipoMensaje,
       fecha: serverTimestamp(),
     });
-    console.log(`[Firebase] Interacción guardada: ${cliente.nombre} - ${tipoMensaje}`);
   } catch (error) {
-    console.error("[Firebase] Error al registrar interacción:", error);
+    console.error("[Firebase] Error al registrar interacción:", error instanceof Error ? error.message : error);
   }
 }

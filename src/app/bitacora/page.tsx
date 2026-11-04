@@ -66,8 +66,11 @@ export default function BitacoraPage() {
 
   const reanudarChat = (telefono: string) => {
     if (!telefono) return;
-    const num = telefono.replace(/\D/g, "");
-    window.open(`https://wa.me/${num}`, "_blank");
+    let num = telefono.replace(/\D/g, "");
+    if (num.length === 10 && num.startsWith("3")) {
+      num = `57${num}`;
+    }
+    window.open(`https://wa.me/${num}`, "_blank", "noopener,noreferrer");
   };
 
   return (

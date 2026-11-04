@@ -1,360 +1,678 @@
-import { Redis } from "@upstash/redis";
+// src/services/crmService.ts
 import { Cliente } from "../types";
+import { DOMUS_BROWSER_UA, DOMUS_SEC_CH_UA_HEADERS } from "../lib/auth";
+import { acquireRedisLock, getRedis, releaseRedisLock } from "../lib/redis";
 
-// ── Redis (Upstash) ────────────────────────────────────────────────────────
-let redis: Redis | null = null;
-function getRedis(): Redis | null {
-  if (redis) return redis;
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null; // local sin KV
-  try {
-    redis = Redis.fromEnv();
-    return redis;
-  } catch {
-    return null;
-  }
+if (typeof window !== "undefined") {
+  throw new Error("src/services/crmService.ts solo puede importarse en el servidor.");
 }
 
-const SESSION_KEY = "domus_session";
-const SESSION_TTL = 5 * 24 * 60 * 60; // 5 días en segundos
-const CLIENTS_TTL = 20 * 60;           // 20 min en segundos
+export const SESSION_KEY = "domus_session";
+const V2_SESSION_KEY = "domus_v2_session";
+const LOGIN_LOCK_KEY = "domus_login_lock";
+const LOGIN_BACKOFF_KEY = "domus_login_backoff";
 
-interface StoredSession {
+const SESSION_TTL = 5 * 24 * 60 * 60;       // 5 días
+const CLIENTS_TTL = 5 * 60;                 // 5 minutos (datos frescos en Redis)
+const CLIENTS_STALE_TTL = 48 * 60 * 60;     // 48 horas (respaldo ante caídas de Domus)
+const MEM_TTL_MS = 3 * 60 * 1000;           // 3 minutos en memoria de instancia caliente
+const LOGIN_BACKOFF_TTL = 10 * 60;          // 10 min de pausa si Domus rechaza credenciales
+
+const DEFAULT_CRM_ORIGIN = "https://crm.domus.la";
+const ALLOWED_CRM_HOSTS = new Set(["crm.domus.la", "crm.domusweb.co"]);
+
+export interface StoredSession {
   sessionCookie: string;
   authCookies: string;
+  v2Cookies?: string;
   crmSessionCookie: string;
+  crmOrigin?: string;
   ua: string;
   createdAt: number;
 }
 
-// ── User-Agent pool — 2 desktop + 2 mobile ────────────────────────────────
-const UA_POOL = [
-  // Desktop moderno — Chrome 124, Windows 11
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-  // Desktop generación anterior — Chrome 119, Windows 10
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-  // Mobile moderno — Pixel 8, Android 14, Chrome 124
-  "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-  // Mobile generación anterior — Samsung A53, Android 13, Chrome 119
-  "Mozilla/5.0 (Linux; Android 13; SM-A536B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
-];
-
-function pickUA(): string {
-  return UA_POOL[Math.floor(Math.random() * UA_POOL.length)];
+export interface FetchCrmOptions {
+  noCache?: boolean;
+  maxPages?: number;
 }
 
-// ── Cache en memoria (fallback si KV no está disponible) ──────────────────
+// Caché en memoria por instancia caliente
 const memCache: Record<string, Cliente[]> = {};
 const memCacheTs: Record<string, number> = {};
 
-function randomTTL() {
-  return (25 + Math.random() * 13) * 60 * 1000; // 25-38 min en ms
+// Promesa en vuelo para evitar logins paralelos en la misma instancia Node
+let inflightSessionPromise: Promise<StoredSession> | null = null;
+
+export function humanDelay(min = 500, max = 1600): Promise<void> {
+  return new Promise((r) => setTimeout(r, min + Math.random() * (max - min)));
 }
 
-function humanDelay(min = 600, max = 2200): Promise<void> {
-  return new Promise(r => setTimeout(r, min + Math.random() * (max - min)));
+function splitSetCookieHeader(raw: string): string[] {
+  // Evita partir las comas dentro de Expires=Wed, 04 Nov 2026 ...
+  return raw.split(/,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/g);
 }
 
-function extractCookies(headers: Headers, filterPrefix?: string): string {
-  let cookies: string[] = [];
-  if (typeof (headers as any).getSetCookie === "function") {
-    cookies = (headers as any).getSetCookie();
-  } else {
-    const raw = headers.get("set-cookie");
-    if (raw) cookies.push(...raw.split(","));
+function getRawSetCookies(headers: Headers): string[] {
+  const h = headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof h.getSetCookie === "function") {
+    return h.getSetCookie();
   }
-  return cookies
-    .map(c => c.split(";")[0].trim())
-    .filter(c => !filterPrefix || c.includes(filterPrefix))
-    .join("; ");
+  const raw = headers.get("set-cookie");
+  return raw ? splitSetCookieHeader(raw) : [];
 }
 
-// ── Auth completo contra Domus ────────────────────────────────────────────
-async function doFullLogin(ua: string): Promise<StoredSession | null> {
-  const username = process.env.DOMUS_USERNAME;
-  const password = process.env.DOMUS_PASSWORD;
-  if (!username || !password) throw new Error("Credenciales no configuradas");
+function mergeResponseCookiesIntoJar(headers: Headers, jar: Map<string, string>): string {
+  const added: string[] = [];
+  for (const rawCookie of getRawSetCookies(headers)) {
+    const segments = rawCookie.split(";").map((s) => s.trim());
+    const first = segments[0];
+    if (!first) continue;
+    const eqIdx = first.indexOf("=");
+    if (eqIdx <= 0) continue;
 
-  const ts = Date.now();
-  const logBase = `[CRM-LOGIN ${new Date().toISOString()}]`;
+    const name = first.slice(0, eqIdx).trim();
+    const val = first.slice(eqIdx + 1).trim();
 
-  // 1. CSRF + sesión inicial
-  console.log(`${logBase} Paso 1: obteniendo CSRF de Domus...`);
-  let homeRes: Response;
+    const maxAgeAttr = segments.find((s) => s.toLowerCase().startsWith("max-age="));
+    const maxAge = maxAgeAttr ? Number(maxAgeAttr.split("=")[1]) : undefined;
+    const isDeleted =
+      val === "" ||
+      val.toLowerCase() === "deleted" ||
+      (typeof maxAge === "number" && !Number.isNaN(maxAge) && maxAge <= 0);
+
+    if (isDeleted) {
+      jar.delete(name);
+    } else {
+      jar.set(name, val);
+      added.push(`${name}=${val}`);
+    }
+  }
+  return added.join("; ");
+}
+
+function serializeCookieJar(jar: Map<string, string>): string {
+  const parts: string[] = [];
+  for (const [k, v] of jar.entries()) {
+    parts.push(`${k}=${v}`);
+  }
+  return parts.join("; ");
+}
+
+function extractXsrfToken(cookieHeader: string): string | null {
+  for (const part of cookieHeader.split(";")) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith("XSRF-TOKEN=")) {
+      const rawVal = trimmed.slice("XSRF-TOKEN=".length);
+      try {
+        return decodeURIComponent(rawVal);
+      } catch {
+        return rawVal;
+      }
+    }
+  }
+  return null;
+}
+
+export function sanitizeCrmOrigin(origin?: string | null): string {
+  if (!origin) return DEFAULT_CRM_ORIGIN;
   try {
-    homeRes = await fetch(`https://v2.domus.la?t=${ts}`, {
-      headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
+    const parsed = new URL(origin);
+    if (
+      parsed.protocol === "https:" &&
+      parsed.port === "" &&
+      parsed.username === "" &&
+      parsed.password === "" &&
+      ALLOWED_CRM_HOSTS.has(parsed.hostname)
+    ) {
+      return parsed.origin;
+    }
+  } catch {
+    // Usar origen seguro por defecto
+  }
+  return DEFAULT_CRM_ORIGIN;
+}
+
+function validateCrmRedirectUrl(rawLocation: string): URL {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawLocation, "https://v2.domus.la");
+  } catch {
+    throw new Error("SSO_INVALID_REDIRECT");
+  }
+
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.port !== "" ||
+    parsed.username !== "" ||
+    parsed.password !== ""
+  ) {
+    throw new Error("SSO_INVALID_REDIRECT");
+  }
+
+  // Si v2.domus.la redirige a /login en sí mismo, la sesión v2 expiró
+  if (parsed.hostname === "v2.domus.la") {
+    throw new Error("V2_SESSION_EXPIRED");
+  }
+
+  if (!ALLOWED_CRM_HOSTS.has(parsed.hostname)) {
+    throw new Error("SSO_UNTRUSTED_HOST");
+  }
+
+  return parsed;
+}
+
+/**
+ * Ejecuta únicamente los pasos 3 y 4 (SSO desde v2.domus.la hacia Apperty CRM)
+ * reutilizando cookies v2 válidas sin reenviar usuario/contraseña.
+ */
+async function exchangeV2CookiesForCrmSession(
+  v2Cookies: string
+): Promise<{ crmSessionCookie: string; crmOrigin: string }> {
+  const crmAuthRes = await fetch("https://v2.domus.la/crm/new/ingreso", {
+    headers: {
+      "Cookie": v2Cookies,
+      "User-Agent": DOMUS_BROWSER_UA,
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "es-CO,es;q=0.9",
+      "Referer": "https://v2.domus.la/",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Dest": "document",
+      ...DOMUS_SEC_CH_UA_HEADERS,
+    },
+    redirect: "manual",
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+  await crmAuthRes.arrayBuffer().catch(() => null);
+
+  if (crmAuthRes.status < 300 || crmAuthRes.status >= 400) {
+    throw new Error("V2_SESSION_EXPIRED");
+  }
+
+  const rawLocation = crmAuthRes.headers.get("location");
+  if (!rawLocation) {
+    throw new Error("SSO_MISSING_LOCATION");
+  }
+
+  let currentUrl = validateCrmRedirectUrl(rawLocation);
+  const crmOrigin = currentUrl.origin;
+
+  await humanDelay(350, 850);
+
+  const crmJar = new Map<string, string>();
+
+  // Seguir hasta 3 saltos manuales dentro del mismo origen permitido (ej. /?params=... -> /dashboard)
+  for (let hop = 0; hop < 3; hop++) {
+    const cookieHeader = serializeCookieJar(crmJar);
+    const hopHeaders: Record<string, string> = {
+      "User-Agent": DOMUS_BROWSER_UA,
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "es-CO,es;q=0.9",
+      "Referer": hop === 0 ? "https://v2.domus.la/" : `${crmOrigin}/`,
+      "Sec-Fetch-Site": hop === 0 ? "same-site" : "same-origin",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Dest": "document",
+      ...DOMUS_SEC_CH_UA_HEADERS,
+    };
+    if (cookieHeader) {
+      hopHeaders["Cookie"] = cookieHeader;
+    }
+
+    const crmRes = await fetch(currentUrl.toString(), {
+      headers: hopHeaders,
+      redirect: "manual",
       cache: "no-store",
+      signal: AbortSignal.timeout(15000),
     });
-  } catch (e: any) {
-    console.error(`${logBase} ❌ Paso 1 FALLÓ — no se pudo conectar a Domus: ${e.message}`);
-    throw e;
-  }
-  const homeText = await homeRes.text();
-  const csrfToken = homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/)?.[1] ?? "";
-  const sessionCookie = extractCookies(homeRes.headers);
-  console.log(`${logBase} Paso 1 OK — HTTP ${homeRes.status}, CSRF: ${csrfToken ? "encontrado" : "❌ NO ENCONTRADO"}, cookie: ${sessionCookie ? "OK" : "❌ vacía"}`);
 
-  await humanDelay(800, 1800);
+    mergeResponseCookiesIntoJar(crmRes.headers, crmJar);
+    await crmRes.arrayBuffer().catch(() => null);
 
-  // 2. Login
-  console.log(`${logBase} Paso 2: haciendo login con usuario "${username?.slice(0, 4)}..."`);
-  let loginRes: Response;
-  try {
-    loginRes = await fetch("https://v2.domus.la/auth-login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json", "X-CSRF-TOKEN": csrfToken,
-        "Cookie": sessionCookie, "User-Agent": ua,
-        "Accept": "application/json", "Accept-Language": "es-CO,es;q=0.9",
-        "Referer": "https://v2.domus.la/",
-      },
-      body: JSON.stringify({ user: username, password }),
-      cache: "no-store",
-    });
-  } catch (e: any) {
-    console.error(`${logBase} ❌ Paso 2 FALLÓ — error de red en login: ${e.message}`);
-    throw e;
-  }
-  const loginData: any = await loginRes.json().catch(() => ({}));
-  console.log(`${logBase} Paso 2 respuesta — HTTP ${loginRes.status}, mensaje: "${loginData.mensaje}", camb_clave: ${loginData.camb_clave}`);
-  if (loginData.mensaje !== "Login exitoso" && loginData.camb_clave === undefined) {
-    console.error(`${logBase} ❌ Login rechazado por Domus. Respuesta completa: ${JSON.stringify(loginData).slice(0, 200)}`);
-    return null;
+    if (crmRes.status >= 300 && crmRes.status < 400) {
+      const nextLoc = crmRes.headers.get("location");
+      if (!nextLoc) break;
+      const nextUrl = new URL(nextLoc, crmOrigin);
+      if (nextUrl.origin !== crmOrigin || nextUrl.protocol !== "https:") {
+        break;
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
+    break;
   }
 
-  const authCookies = extractCookies(loginRes.headers);
-  const finalCookies = sessionCookie + "; " + authCookies;
-  console.log(`${logBase} Paso 2 OK — auth cookies: ${authCookies ? "OK" : "❌ vacías"}`);
+  const hasSessionCookie = Array.from(crmJar.keys()).some((k) =>
+    k.toLowerCase().includes("session")
+  );
+  const crmSessionCookie = serializeCookieJar(crmJar);
 
-  await humanDelay(600, 1500);
-
-  // 3. SSO → CRM
-  console.log(`${logBase} Paso 3: SSO hacia CRM...`);
-  let crmAuthRes: Response;
-  try {
-    crmAuthRes = await fetch(`https://v2.domus.la/crm/new/ingreso`, {
-      headers: { "Cookie": finalCookies, "User-Agent": ua, "Referer": "https://v2.domus.la/", "Accept-Language": "es-CO,es;q=0.9" },
-      redirect: "manual", cache: "no-store",
-    });
-  } catch (e: any) {
-    console.error(`${logBase} ❌ Paso 3 FALLÓ — error de red en SSO: ${e.message}`);
-    throw e;
-  }
-  console.log(`${logBase} Paso 3 respuesta — HTTP ${crmAuthRes.status}`);
-  if (crmAuthRes.status !== 302 && crmAuthRes.status !== 301) {
-    console.error(`${logBase} ❌ SSO no redirigió. Se esperaba 301/302, se recibió ${crmAuthRes.status}`);
-    return null;
-  }
-  let redirectUrl = crmAuthRes.headers.get("location");
-  if (!redirectUrl) {
-    console.error(`${logBase} ❌ SSO no devolvió URL de redirección`);
-    return null;
-  }
-  if (redirectUrl.startsWith("/")) {
-    redirectUrl = "https://v2.domus.la" + redirectUrl;
-  }
-  console.log(`${logBase} Paso 3 OK — redirige a: ${redirectUrl.slice(0, 80)}...`);
-
-  await humanDelay(500, 1200);
-
-  // 4. Token → sesión CRM
-  console.log(`${logBase} Paso 4: obteniendo sesión CRM...`);
-  let crmRes: Response;
-  try {
-    crmRes = await fetch(redirectUrl + (redirectUrl.includes("?") ? "&" : "?") + `t=${ts}`, {
-      headers: { "User-Agent": ua, "Accept": "text/html,application/xhtml+xml,*/*", "Accept-Language": "es-CO,es;q=0.9" },
-      redirect: "manual", cache: "no-store",
-    });
-  } catch (e: any) {
-    console.error(`${logBase} ❌ Paso 4 FALLÓ — error de red al obtener sesión CRM: ${e.message}`);
-    throw e;
-  }
-  const crmSessionCookie = extractCookies(crmRes.headers, "session");
-  console.log(`${logBase} Paso 4 — HTTP ${crmRes.status}, sesión CRM: ${crmSessionCookie ? "✅ OK" : "❌ NO ENCONTRADA"}`);
-
-  if (!crmSessionCookie) {
-    console.error(`${logBase} ❌ Login completo pero NO se obtuvo cookie de sesión CRM. El login no servirá.`);
-  } else {
-    console.log(`${logBase} ✅ Login exitoso en ${Date.now() - ts}ms`);
+  if (!hasSessionCookie || !crmSessionCookie) {
+    throw new Error("CRM_COOKIE_MISSING");
   }
 
-  return { sessionCookie, authCookies, crmSessionCookie, ua, createdAt: Date.now() };
+  return { crmSessionCookie, crmOrigin };
 }
 
-// ── Obtener sesión (KV → login si no hay) ─────────────────────────────────
-async function getSession(): Promise<StoredSession> {
+/**
+ * Login completo contra v2.domus.la + SSO hacia CRM Apperty.
+ * Protegido con backoff en Redis ante rechazo de credenciales.
+ */
+async function doFullLogin(): Promise<StoredSession> {
   const kv = getRedis();
-
   if (kv) {
-    const stored = await kv.get<StoredSession>(SESSION_KEY);
-    if (stored && stored.crmSessionCookie) {
-      return stored;
+    const inBackoff = await kv.get(LOGIN_BACKOFF_KEY).catch(() => null);
+    if (inBackoff) {
+      throw new Error("Login Domus en pausa preventiva (reintentará en unos minutos)");
     }
   }
 
-  // No hay sesión guardada — hacer login completo
-  await humanDelay(700, 2200);
-  const ua = pickUA();
-  const session = await doFullLogin(ua);
-  if (!session) throw new Error("Login a Domus fallido");
-
-  // Guardar en KV
-  if (kv) {
-    await kv.set(SESSION_KEY, session, { ex: SESSION_TTL });
+  const username = process.env.DOMUS_USERNAME?.trim();
+  const password = process.env.DOMUS_PASSWORD;
+  if (!username || !password) {
+    throw new Error("Credenciales Domus no configuradas");
   }
 
-  return session;
+  const t0 = Date.now();
+  const v2Jar = new Map<string, string>();
+
+  // 1. Obtener CSRF e iniciar cookies de v2.domus.la (sin ?t= artificial)
+  const homeRes = await fetch("https://v2.domus.la/", {
+    headers: {
+      "User-Agent": DOMUS_BROWSER_UA,
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "es-CO,es;q=0.9",
+      "Sec-Fetch-Site": "none",
+      "Sec-Fetch-Mode": "navigate",
+      "Sec-Fetch-Dest": "document",
+      ...DOMUS_SEC_CH_UA_HEADERS,
+    },
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+
+  const homeText = await homeRes.text();
+  const csrfToken =
+    homeText.match(/<meta name="csrf-token-login" content="([^"]+)"/)?.[1] ?? "";
+  const sessionCookie = mergeResponseCookiesIntoJar(homeRes.headers, v2Jar);
+
+  if (!csrfToken || !sessionCookie) {
+    throw new Error("No se pudo iniciar sesión base en Domus");
+  }
+
+  await humanDelay(650, 1400);
+
+  // 2. Autenticar en v2.domus.la/auth-login
+  const loginRes = await fetch("https://v2.domus.la/auth-login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-TOKEN": csrfToken,
+      "Cookie": serializeCookieJar(v2Jar),
+      "User-Agent": DOMUS_BROWSER_UA,
+      "Accept": "application/json",
+      "Accept-Language": "es-CO,es;q=0.9",
+      "Origin": "https://v2.domus.la",
+      "Referer": "https://v2.domus.la/",
+      "Sec-Fetch-Site": "same-origin",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Dest": "empty",
+      ...DOMUS_SEC_CH_UA_HEADERS,
+    },
+    body: JSON.stringify({ user: username, password }),
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+
+  const loginData = (await loginRes.json().catch(() => ({}))) as {
+    mensaje?: string;
+    camb_clave?: unknown;
+  };
+
+  if (loginData.mensaje !== "Login exitoso" && loginData.camb_clave === undefined) {
+    if (kv) {
+      await kv.set(LOGIN_BACKOFF_KEY, "1", { ex: LOGIN_BACKOFF_TTL }).catch(() => {});
+    }
+    console.error(`[CRM-LOGIN] Autenticación rechazada por Domus (HTTP ${loginRes.status}). Backoff activado por 10 min.`);
+    throw new Error("Autenticación rechazada por Domus");
+  }
+
+  const authCookies = mergeResponseCookiesIntoJar(loginRes.headers, v2Jar);
+  const v2Cookies = serializeCookieJar(v2Jar);
+
+  await humanDelay(500, 1100);
+
+  // 3 y 4. Intercambiar cookies v2 por sesión del CRM Apperty
+  const { crmSessionCookie, crmOrigin } = await exchangeV2CookiesForCrmSession(v2Cookies);
+
+  console.log(`[CRM-LOGIN] Sesión CRM renovada correctamente (${crmOrigin}) en ${Date.now() - t0}ms`);
+
+  return {
+    sessionCookie,
+    authCookies,
+    v2Cookies,
+    crmSessionCookie,
+    crmOrigin,
+    ua: DOMUS_BROWSER_UA,
+    createdAt: Date.now(),
+  };
+}
+
+/**
+ * Obtiene una sesión válida de Redis o coordina una única renovación entre peticiones concurrentes.
+ * Prioriza renovar por SSO (Paso 3) con las cookies v2 existentes antes de usar usuario/clave.
+ */
+async function getOrRefreshSession(forceRefresh = false): Promise<StoredSession> {
+  const kv = getRedis();
+
+  if (!forceRefresh && kv) {
+    try {
+      const stored = await kv.get<StoredSession>(SESSION_KEY);
+      if (stored?.crmSessionCookie) {
+        return {
+          ...stored,
+          crmOrigin: sanitizeCrmOrigin(stored.crmOrigin),
+          ua: DOMUS_BROWSER_UA,
+        };
+      }
+    } catch {
+      // Continuar a renovación si Redis falla
+    }
+  }
+
+  if (inflightSessionPromise) {
+    return inflightSessionPromise;
+  }
+
+  inflightSessionPromise = (async () => {
+    let lockAcquired = false;
+    try {
+      if (kv) {
+        const inBackoff = await kv.get(LOGIN_BACKOFF_KEY).catch(() => null);
+        if (inBackoff) {
+          throw new Error("Login Domus en pausa preventiva");
+        }
+      }
+
+      lockAcquired = await acquireRedisLock(LOGIN_LOCK_KEY, 30);
+
+      // Si otra instancia serverless está haciendo login ahora mismo, esperar su resultado
+      if (!lockAcquired && kv) {
+        for (let attempt = 0; attempt < 8; attempt++) {
+          await new Promise((r) => setTimeout(r, 750));
+          const fresh = await kv.get<StoredSession>(SESSION_KEY).catch(() => null);
+          if (fresh?.crmSessionCookie) {
+            return {
+              ...fresh,
+              crmOrigin: sanitizeCrmOrigin(fresh.crmOrigin),
+              ua: DOMUS_BROWSER_UA,
+            };
+          }
+        }
+      }
+
+      // Re-verificar Redis tras adquirir candado
+      const existing = kv
+        ? await kv.get<StoredSession>(SESSION_KEY).catch(() => null)
+        : null;
+
+      if (!forceRefresh && existing?.crmSessionCookie) {
+        return {
+          ...existing,
+          crmOrigin: sanitizeCrmOrigin(existing.crmOrigin),
+          ua: DOMUS_BROWSER_UA,
+        };
+      }
+
+      // Intento ligero primero: usar cookies v2 existentes para obtener nueva cookie de CRM sin enviar contraseña
+      const existingV2 =
+        existing?.v2Cookies ||
+        [existing?.sessionCookie, existing?.authCookies].filter(Boolean).join("; ");
+
+      if (existingV2) {
+        try {
+          const { crmSessionCookie, crmOrigin } = await exchangeV2CookiesForCrmSession(existingV2);
+          const renewed: StoredSession = {
+            sessionCookie: existing?.sessionCookie ?? "",
+            authCookies: existing?.authCookies ?? "",
+            v2Cookies: existingV2,
+            crmSessionCookie,
+            crmOrigin,
+            ua: DOMUS_BROWSER_UA,
+            createdAt: Date.now(),
+          };
+          if (kv) {
+            await kv.set(SESSION_KEY, renewed, { ex: SESSION_TTL }).catch(() => {});
+          }
+          console.log(`[CRM-LOGIN] Sesión CRM revalidada vía SSO ligero (${crmOrigin})`);
+          return renewed;
+        } catch {
+          // Cookies v2 expiradas: proceder a login completo
+        }
+      }
+
+      const fullSession = await doFullLogin();
+
+      if (kv) {
+        await Promise.all([
+          kv.set(SESSION_KEY, fullSession, { ex: SESSION_TTL }).catch(() => {}),
+          fullSession.v2Cookies
+            ? kv
+                .set(
+                  V2_SESSION_KEY,
+                  {
+                    cookies: fullSession.v2Cookies,
+                    ua: DOMUS_BROWSER_UA,
+                    createdAt: fullSession.createdAt,
+                  },
+                  { ex: SESSION_TTL }
+                )
+                .catch(() => {})
+            : Promise.resolve(),
+        ]);
+      }
+
+      return fullSession;
+    } finally {
+      if (lockAcquired) {
+        await releaseRedisLock(LOGIN_LOCK_KEY);
+      }
+      inflightSessionPromise = null;
+    }
+  })();
+
+  return inflightSessionPromise;
 }
 
 // ── Fetch principal de clientes ───────────────────────────────────────────
 export async function fetchCrmClients(
   statusType: number | string = 1,
-  options: { noCache?: boolean } = {}
+  options: FetchCrmOptions = {}
 ): Promise<Cliente[]> {
-  const { noCache = false } = options;
-  const now = Date.now();
-  const cacheKey = String(statusType);
-  const redisDataKey = `clients_${cacheKey}`;
+  const { noCache = false, maxPages = 8 } = options;
+  const rawStatus = String(statusType ?? "1").trim();
+  const safeStatus: "1" | "2" | "todos" =
+    rawStatus === "2" ? "2" : rawStatus === "todos" ? "todos" : "1";
 
-  // 1. Cache en memoria — instancia caliente (solo si no se pide datos frescos)
-  if (!noCache && memCache[cacheKey] && (now - memCacheTs[cacheKey]) < randomTTL()) {
-    return memCache[cacheKey];
+  const now = Date.now();
+  const redisDataKey = `clients_${safeStatus}`;
+  const redisStaleKey = `clients_stale_${safeStatus}`;
+
+  // 1. Caché rápido en memoria
+  if (!noCache && memCache[safeStatus] && now - (memCacheTs[safeStatus] ?? 0) < MEM_TTL_MS) {
+    return memCache[safeStatus];
   }
 
-  // 2. Redis data cache — persiste entre instancias y cold starts (skip si noCache)
+  // 2. Caché compartido en Redis (5 min)
   const kv = getRedis();
   if (!noCache && kv) {
     try {
       const cached = await kv.get<Cliente[]>(redisDataKey);
-      if (cached && cached.length > 0) {
-        memCache[cacheKey] = cached;
-        memCacheTs[cacheKey] = now;
+      if (Array.isArray(cached) && cached.length > 0) {
+        memCache[safeStatus] = cached;
+        memCacheTs[safeStatus] = now;
         return cached;
       }
-    } catch { /* Redis no disponible — continuar */ }
+    } catch {
+      // Continuar a Domus si Redis no responde
+    }
   }
 
-  // 3. Fetch desde Domus (directo cuando noCache=true, o cache miss)
-  const logFetch = `[CRM-FETCH status=${statusType} ${new Date().toISOString()}]`;
+  const logTag = `[CRM-FETCH status=${safeStatus}]`;
+
   try {
-    console.log(`${logFetch} Iniciando fetch de clientes...`);
-    let activeSession = await getSession();
-    console.log(`${logFetch} Sesión obtenida — cookie CRM: ${activeSession.crmSessionCookie ? "✅ presente" : "❌ VACÍA"}`);
+    let activeSession = await getOrRefreshSession(false);
 
     const fetchPage = async (page: number, s: StoredSession) => {
-      const url = statusType === "todos" || statusType === ""
-        ? `contacts?page=${page}&order=created_at_new`
-        : `contacts?page=${page}&contact_status_type=${statusType}&order=created_at_new`;
+      const origin = sanitizeCrmOrigin(s.crmOrigin);
+      const url =
+        safeStatus === "todos"
+          ? `contacts?page=${page}&perpage=24&order=created_at_new`
+          : `contacts?page=${page}&perpage=24&contact_status_type=${safeStatus}&order=created_at_new`;
 
-      console.log(`${logFetch} [Página ${page}] Llamando CRM API...`);
-      const apiRes = await fetch("https://crm.domusweb.co/api/get", {
+      const headers: Record<string, string> = {
+        "Cookie": s.crmSessionCookie,
+        "User-Agent": DOMUS_BROWSER_UA,
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Accept-Language": "es-CO,es;q=0.9",
+        "Origin": origin,
+        "Referer": `${origin}/contacts`,
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty",
+        ...DOMUS_SEC_CH_UA_HEADERS,
+      };
+
+      const xsrf = extractXsrfToken(s.crmSessionCookie);
+      if (xsrf) {
+        headers["X-XSRF-TOKEN"] = xsrf;
+      }
+
+      const apiRes = await fetch(`${origin}/api/get`, {
         method: "POST",
-        headers: {
-          "Cookie": s.crmSessionCookie,
-          "User-Agent": s.ua,
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Accept-Language": "es-CO,es;q=0.9",
-          "Referer": "https://crm.domusweb.co/",
-        },
+        headers,
         body: JSON.stringify({ url }),
         cache: "no-store",
+        signal: AbortSignal.timeout(15000),
       });
 
-      const apiData = await apiRes.json().catch(() => ({}));
-      const sessionExpired =
-        apiRes.status === 401 || apiRes.status === 403 ||
-        (apiData?.code === 403 || apiData?.code === 401);
+      const apiData = (await apiRes.json().catch(() => ({}))) as {
+        code?: number;
+        data?: unknown[];
+        last_page?: number;
+        total?: number;
+      };
 
-      if (sessionExpired) {
+      const sessionInvalid =
+        apiRes.status === 401 ||
+        apiRes.status === 403 ||
+        apiRes.status === 419 ||
+        apiRes.status === 405 ||
+        apiData?.code === 401 ||
+        apiData?.code === 403;
+
+      if (sessionInvalid) {
         throw new Error("SESSION_EXPIRED");
       }
+
+      if (!apiRes.ok) {
+        throw new Error(`CRM HTTP ${apiRes.status}`);
+      }
+
       return apiData;
     };
 
-    let firstPageData: any;
+    let firstPageData: { data?: unknown[]; last_page?: number; total?: number };
     try {
       firstPageData = await fetchPage(1, activeSession);
-    } catch (err: any) {
-      if (err.message === "SESSION_EXPIRED") {
-        console.warn(`${logFetch} ⚠️ Sesión rechazada en página 1 — limpiando KV y reintentando login...`);
-        if (kv) { await kv.del(SESSION_KEY); await kv.del(redisDataKey); }
-        activeSession = await getSession();
-        console.log(`${logFetch} Nueva sesión tras relogin — cookie: ${activeSession.crmSessionCookie ? "✅" : "❌ VACÍA"}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message === "SESSION_EXPIRED") {
+        activeSession = await getOrRefreshSession(true);
         firstPageData = await fetchPage(1, activeSession);
       } else {
         throw err;
       }
     }
 
-    if (!firstPageData?.data) {
-      console.error(`${logFetch} ❌ Respuesta inesperada del CRM. Claves recibidas: ${Object.keys(firstPageData || {}).join(", ")}`);
-      throw new Error("Respuesta inesperada del CRM");
+    if (!Array.isArray(firstPageData?.data)) {
+      throw new Error("Formato inesperado en respuesta del CRM");
     }
 
-    let allData = [...firstPageData.data];
-    const lastPage = firstPageData.last_page || 1;
-    const totalContacts = firstPageData.total || allData.length;
-    console.log(`${logFetch} ✅ Página 1: ${allData.length}/${totalContacts} clientes. Páginas totales: ${lastPage}`);
+    // Renovar TTL deslizante de la sesión activa
+    if (kv) {
+      kv.expire(SESSION_KEY, SESSION_TTL).catch(() => {});
+    }
 
-    if (lastPage > 1) {
-      console.log(`${logFetch} Cargando ${lastPage - 1} páginas restantes en paralelo...`);
-      const pagePromises: Promise<any[]>[] = [];
+    const allData: unknown[] = [...firstPageData.data];
+    const lastPage = Math.max(1, Number(firstPageData.last_page) || 1);
+    const safeMaxPages = Math.max(1, Math.min(maxPages, 15));
+    const effectiveLastPage = Math.min(lastPage, safeMaxPages);
+    const isPartialFetch = effectiveLastPage < lastPage;
 
-      for (let p = 2; p <= lastPage; p++) {
-        const fetchPageWithRetry = async (pageNum: number): Promise<any[]> => {
-          try {
-            const res = await fetchPage(pageNum, activeSession);
-            return res?.data || [];
-          } catch (err: any) {
-            if (err.message === "SESSION_EXPIRED") {
-              console.warn(`${logFetch} ⚠️ Sesión rechazada en página ${pageNum} — renovando sesión...`);
-              if (kv) { await kv.del(SESSION_KEY); }
-              activeSession = await getSession();
-              const res = await fetchPage(pageNum, activeSession);
-              return res?.data || [];
-            }
-            throw err;
+    // Paginación secuencial con pausa natural (nunca ráfagas en paralelo)
+    for (let p = 2; p <= effectiveLastPage; p++) {
+      await humanDelay(220, 480);
+      try {
+        const res = await fetchPage(p, activeSession);
+        if (Array.isArray(res?.data)) {
+          allData.push(...res.data);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (message === "SESSION_EXPIRED") {
+          activeSession = await getOrRefreshSession(true);
+          const retryRes = await fetchPage(p, activeSession);
+          if (Array.isArray(retryRes?.data)) {
+            allData.push(...retryRes.data);
           }
-        };
-
-        pagePromises.push(
-          fetchPageWithRetry(p).catch((err) => {
-            console.error(`${logFetch} ❌ Error cargando página ${p}:`, err);
-            return [];
-          })
-        );
+        } else {
+          console.warn(`${logTag} Aviso en página ${p}: ${message}`);
+          break;
+        }
       }
-
-      const results = await Promise.all(pagePromises);
-      for (const pageItems of results) {
-        allData.push(...pageItems);
-      }
-      console.log(`${logFetch} Carga de páginas completada. Total clientes reunidos: ${allData.length}`);
     }
 
     const clients = mapClients(allData);
-    memCache[cacheKey] = clients; memCacheTs[cacheKey] = now;
-    if (kv) await kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {});
-    return clients;
 
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error(`${logFetch} ❌ Error fatal en fetchCrmClients: ${msg}`);
-    if (memCache[cacheKey]) {
-      console.warn(`${logFetch} ⚠️ Devolviendo ${memCache[cacheKey].length} clientes desde caché en memoria (datos pueden ser viejos)`);
-      return memCache[cacheKey];
+    // Guardar caché completa solo si no truncamos páginas
+    if (!isPartialFetch) {
+      memCache[safeStatus] = clients;
+      memCacheTs[safeStatus] = Date.now();
+      if (kv) {
+        await Promise.all([
+          kv.set(redisDataKey, clients, { ex: CLIENTS_TTL }).catch(() => {}),
+          clients.length > 0
+            ? kv.set(redisStaleKey, clients, { ex: CLIENTS_STALE_TTL }).catch(() => {})
+            : Promise.resolve(),
+        ]);
+      }
     }
-    console.error(`${logFetch} ❌ Sin caché disponible — devolviendo lista vacía. ESTO CAUSA "No hay clientes"`);
+
+    return clients;
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`${logTag} Error obteniendo contactos: ${msg}`);
+
+    if (memCache[safeStatus]?.length) {
+      return memCache[safeStatus];
+    }
+
+    if (kv) {
+      const stale = await kv.get<Cliente[]>(redisStaleKey).catch(() => null);
+      if (Array.isArray(stale) && stale.length > 0) {
+        return stale;
+      }
+    }
+
     return [];
   }
 }
 
-function mapClients(data: any[]): Cliente[] {
-  return data.map((c: any) => {
-    // Si vino por Autoleads (integración con portales externos como Metrocuadrado),
-    // el portal específico solo está en el detalle individual del contacto.
-    // Mostramos "Autoleads" que coincide con lo que el CRM de Domus muestra.
+function mapClients(data: unknown[]): Cliente[] {
+  return data.map((raw) => {
+    const c = (raw ?? {}) as Record<string, any>;
     let origin = "Portal Web";
     if (c.source === 6) {
       origin = "Proppit";
@@ -367,14 +685,27 @@ function mapClients(data: any[]): Cliente[] {
     } else if (c.autoleads === 1) {
       origin = "Autoleads";
     }
+
+    const phones: any[] = Array.isArray(c.phones) ? c.phones : [];
+    const primaryPhone =
+      phones.find((p) => p?.phone_type_id === 3 && p?.phone) ||
+      phones.find((p) => p?.phone) ||
+      null;
+
+    const entities: any[] = Array.isArray(c.entities) ? c.entities : [];
+    const rawIndicative = String(primaryPhone?.phone_indicative || "+57").trim();
+    const normalizedIndicative = rawIndicative.startsWith("+")
+      ? rawIndicative
+      : `+${rawIndicative.replace(/\D/g, "") || "57"}`;
+
     return {
       id: c.code,
-      nombre: c.full_name || "Sin nombre",
-      email: c.email || "",
-      telefono: c.phones?.length > 0 ? c.phones[0].phone : "",
-      telefonoIndicativo: c.phones?.length > 0 ? c.phones[0].phone_indicative : "+57",
+      nombre: String(c.full_name || "Sin nombre").trim(),
+      email: String(c.email || "").trim(),
+      telefono: String(primaryPhone?.phone || "").trim(),
+      telefonoIndicativo: normalizedIndicative,
       estado: c.status?.name ?? "Desconocido",
-      inmuebleInteres: c.entities?.length > 0 ? c.entities[0].property_code : "N/A",
+      inmuebleInteres: entities.length > 0 && entities[0]?.property_code ? String(entities[0].property_code) : "N/A",
       origen: origin,
       fecha: c.created_at || new Date().toISOString(),
       diasSeguimiento: typeof c.next_follow_days === "number" ? c.next_follow_days : undefined,

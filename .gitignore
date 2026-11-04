@@ -30,7 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
 
 # vercel
@@ -40,19 +40,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# dev / test scratch files
+# dev / test / local data scratch files (never commit credentials or PII dumps)
+/scratch/
+/data/
 check-states.js
-crm-contacts.html
-domus-Contact.js
-domus-Request.js
-domus-contacts-data.json
-domus-contacts.html
-domus-dashboard.html
-domus-full-data.json
-domus-list.js
-domus-properties.html
-domus-sample-data.json
-test-crm.js
-test-login.js
-
-.vercel
+crm-*
+domus-*
+test-*
+temp*.json
+*.b64.txt

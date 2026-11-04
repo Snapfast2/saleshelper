@@ -19,17 +19,55 @@ function fmt(n: number): string {
   return "$" + (n / 1_000).toFixed(0) + "K";
 }
 
-async function toBase64(url: string): Promise<string> {
+const ALLOWED_IMG_HOSTS = [
+  "pictures.domus.la",
+  "s3-us-west-2.amazonaws.com",
+  "s3.amazonaws.com",
+  "www.l2lbienesraices.com",
+  "l2lbienesraices.com",
+];
+
+function isAllowedImageHost(rawUrl: string): boolean {
   try {
-    const r = await fetch(url, { headers: { "User-Agent": "SalesHelper-OG/1.0" } });
+    const parsed = new URL(rawUrl);
+    if (parsed.protocol !== "https:" || parsed.port !== "" || parsed.username !== "") {
+      return false;
+    }
+    const host = parsed.hostname.toLowerCase();
+    return (
+      ALLOWED_IMG_HOSTS.includes(host) ||
+      host.endsWith(".domus.la") ||
+      host.endsWith(".amazonaws.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function toBase64(url: string): Promise<string> {
+  if (!isAllowedImageHost(url)) return "";
+  try {
+    const r = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(6000),
+    });
     if (!r.ok) return "";
-    const buf   = await r.arrayBuffer();
-    const mime  = r.headers.get("content-type") ?? "image/jpeg";
+    const mime = (r.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+    if (!mime.startsWith("image/")) return "";
+    const buf = await r.arrayBuffer();
+    if (buf.byteLength === 0 || buf.byteLength > 6 * 1024 * 1024) return "";
     const bytes = new Uint8Array(buf);
-    let binary  = "";
+    let binary = "";
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
     return "data:" + mime + ";base64," + btoa(binary);
-  } catch { return ""; }
+  } catch {
+    return "";
+  }
 }
 
 export async function GET(req: NextRequest) {

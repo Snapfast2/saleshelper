@@ -1,5 +1,7 @@
 // src/app/api/inmuebles/route.ts
 import { NextResponse } from "next/server";
+import { verifyRequestSession } from "@/lib/auth";
+import { acquireRedisLock } from "@/lib/redis";
 import { scrapeL2L } from "@/services/l2lService";
 import { invalidateInmueblesCache } from "@/services/domusService";
 import { INMUEBLES_DEMO } from "@/lib/inmuebles-demo";
@@ -7,9 +9,11 @@ import { INMUEBLES_DEMO } from "@/lib/inmuebles-demo";
 export const dynamic = "force-dynamic";
 
 // ── GET: Catálogo de Olga Patricia ────────────────────────────────────────
-// Fuente: perfil público L2L paginado → exactamente sus 18 inmuebles
-// Fallback: demo estático
-export async function GET() {
+export async function GET(req: Request) {
+  if (!verifyRequestSession(req)) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   try {
     const l2lData = await scrapeL2L();
     if (l2lData?.inmuebles?.length > 0) {
@@ -22,19 +26,29 @@ export async function GET() {
       });
     }
   } catch (e) {
-    console.error("[/api/inmuebles] L2L error:", e);
+    console.error("[/api/inmuebles] L2L error:", e instanceof Error ? e.message : e);
   }
 
   const demoData = { inmuebles: INMUEBLES_DEMO, fuente: "demo", total: INMUEBLES_DEMO.length };
   return NextResponse.json(demoData, { headers: { "Cache-Control": "no-store" } });
 }
 
-// ── DELETE: Invalidar caché Redis (botón "Forzar actualización") ──────────
+// ── DELETE: Invalidar caché Redis (botón "Actualizar catálogo") ───────────
+// Autenticado mediante la cookie HttpOnly de sesión (sin exponer secretos en cliente)
 export async function DELETE(req: Request) {
-  const secret = req.headers.get("x-refresh-secret");
-  if (secret !== process.env.REFRESH_SECRET) {
+  if (!verifyRequestSession(req)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  const allowed = await acquireRedisLock("inmuebles_refresh_cd", 60);
+  if (!allowed) {
+    return NextResponse.json({
+      ok: true,
+      cached: true,
+      message: "El catálogo ya fue actualizado hace menos de un minuto.",
+    });
+  }
+
   try {
     await invalidateInmueblesCache();
     return NextResponse.json({ ok: true, message: "Caché invalidado." });

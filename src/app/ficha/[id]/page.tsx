@@ -6,12 +6,37 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MapPin, Maximize2, BedDouble, Bath, Car, Phone, Mail, ExternalLink } from "lucide-react";
 import { fetchDomusProperties } from "@/services/domusService";
+import { scrapeL2L } from "@/services/l2lService";
 import { AGENTE_PATRICIA } from "@/lib/agente";
+import type { Inmueble } from "@/types";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function formatPrecio(precio: number, gestion: string): string {
   const n = new Intl.NumberFormat("es-CO").format(precio);
   return `$ ${n}`;
+}
+
+/**
+ * Busca el inmueble primero en el perfil público de L2L y solo consulta la caché de Domus
+ * sin disparar inicios de sesión con credenciales desde una ruta pública.
+ */
+async function findPublicInmueble(id: string): Promise<Inmueble | undefined> {
+  if (!/^\d{1,12}$/.test(id)) return undefined;
+
+  try {
+    const l2l = await scrapeL2L();
+    const matchL2L = l2l.inmuebles.find((i) => i.id === id || i.codigoDomus === id);
+    if (matchL2L) return matchL2L;
+  } catch {
+    // Continuar a caché Domus
+  }
+
+  try {
+    const domus = await fetchDomusProperties({ allowLogin: false });
+    return domus.inmuebles.find((i) => i.id === id || i.codigoDomus === id);
+  } catch {
+    return undefined;
+  }
 }
 
 // ── Metadata para OG / WhatsApp preview ───────────────────────────────────
@@ -21,8 +46,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const { inmuebles } = await fetchDomusProperties();
-  const inm = inmuebles.find((i) => i.id === id || i.codigoDomus === id);
+  const inm = await findPublicInmueble(id);
 
   if (!inm) return { title: "Inmueble no encontrado" };
 
@@ -62,8 +86,7 @@ export default async function FichaPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { inmuebles } = await fetchDomusProperties();
-  const inm = inmuebles.find((i) => i.id === id || i.codigoDomus === id);
+  const inm = await findPublicInmueble(id);
 
   if (!inm) return notFound();
 

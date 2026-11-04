@@ -1,167 +1,139 @@
 // src/app/api/push/check-new-clients/route.ts
-// Vercel Cron Job — se ejecuta cada 15 minutos
-// Detecta clientes nuevos en Domus y manda push notification a Patricia
+// Revisa contactos nuevos en Domus (página 1) y envía notificación push real
 
 import webpush from "web-push";
-import { Redis } from "@upstash/redis";
-import { fetchCrmClients } from "@/services/crmService";
+import { verifyCronAuth, verifyRequestSession } from "@/lib/auth";
+import { acquireRedisLock, getRedis } from "@/lib/redis";
+import { fetchCrmClients, humanDelay } from "@/services/crmService";
 
-const redis = Redis.fromEnv();
+export const maxDuration = 60;
+
 const KNOWN_IDS_KEY = "known_client_ids";
-const SUBSCRIPTION_KEY = "push_subscription";
+const SUBSCRIPTIONS_KEY = "push_subscriptions_v2";
+const CHECK_LOCK_KEY = "check_new_clients_lock";
+const MAX_KNOWN_IDS = 2000;
 
-function initWebPush() {
-  webpush.setVapidDetails(
-    process.env.VAPID_EMAIL!,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-  );
+function initWebPush(): boolean {
+  const email = process.env.VAPID_EMAIL?.trim();
+  const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+  const priv = process.env.VAPID_PRIVATE_KEY?.trim();
+  if (!email || !pub || !priv) return false;
+  webpush.setVapidDetails(email, pub, priv);
+  return true;
 }
 
 export async function GET(req: Request) {
-  // Validar cron secret o parámetro por URL para facilitar cron-job.org
-  const cronSecret = process.env.CRON_SECRET;
-  const authHeader = req.headers.get("authorization");
-  
-  const url = new URL(req.url);
-  const querySecret = url.searchParams.get("cron");
+  const authorized =
+    verifyCronAuth(req, { allowQueryCron: true }) || verifyRequestSession(req);
 
-  // Permitir si viene el header de Vercel/GitHub o si trae el password en la URL
-  const isAuthorized = 
-    (cronSecret && authHeader === `Bearer ${cronSecret}`) || 
-    querySecret === "saleshelper";
-
-  if (!isAuthorized) {
+  if (!authorized) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  try {
-    initWebPush();
+  const kv = getRedis();
+  if (!kv) {
+    return Response.json({ ok: false, error: "Redis no disponible" }, { status: 503 });
+  }
 
-    // Ventana horaria: solo operar entre 7am y 7pm hora Colombia (UTC-5)
-    // Fuera de ese horario, un humano no estaría revisando el CRM
+  try {
+    // Ventana horaria laboral en Colombia (UTC-5): 7am a 9pm
     const horaCol = (new Date().getUTCHours() - 5 + 24) % 24;
     if (horaCol < 7 || horaCol >= 21) {
-      return Response.json({ skipped: true, reason: "Fuera de horario laboral (7am-9pm Col)" });
+      return Response.json({ ok: true, skipped: true });
     }
 
-    // Jitter aleatorio eliminado para evitar 504 Gateway Timeout en Vercel (límite 10s-60s)
+    // Candado estricto de 10 minutos para impedir ejecuciones repetidas o abuso externo
+    const lockAcquired = await acquireRedisLock(CHECK_LOCK_KEY, 600);
+    if (!lockAcquired) {
+      return Response.json({ ok: true, skipped: true });
+    }
 
-    // 1. Buscar suscripciones push
-    const subscriptions = await redis.get<any[]>("push_subscriptions_v2") || [];
+    if (!initWebPush()) {
+      return Response.json({ ok: false, error: "VAPID no configurado" }, { status: 503 });
+    }
+
+    const subscriptions = (await kv.get<any[]>(SUBSCRIPTIONS_KEY)) || [];
     if (subscriptions.length === 0) {
-      return Response.json({ skipped: true, reason: "Sin suscripciones push" });
+      return Response.json({ ok: true, skipped: true });
     }
 
-    // 2. Obtener clientes nuevos de Domus — siempre frescos, nunca del caché
-    // noCache:true garantiza que detectamos clientes que llegaron en los últimos 15 min
-    const clients = await fetchCrmClients(1, { noCache: true });
+    // Pequeña variación humana antes de consultar la página 1 del CRM (24 más recientes)
+    await humanDelay(1200, 3500);
+    const clients = await fetchCrmClients(1, { noCache: true, maxPages: 1 });
     if (!clients.length) {
-      return Response.json({ checked: 0, new: 0 });
+      return Response.json({ ok: true });
     }
 
-    const currentIds = new Set(clients.map(c => String(c.id)));
+    const currentIds = clients.map((c) => String(c.id)).filter(Boolean);
+    const knownIdsRaw = await kv.get<string[]>(KNOWN_IDS_KEY);
+    const knownIds = new Set<string>(Array.isArray(knownIdsRaw) ? knownIdsRaw.map(String) : []);
 
-    // 3. Comparar con IDs conocidos en Redis
-    const knownIdsRaw = await redis.get<string[]>(KNOWN_IDS_KEY);
-    const knownIds = new Set<string>(knownIdsRaw ?? []);
-
-    // Si es la primera vez, solo guardar sin notificar
-    if (!knownIdsRaw) {
-      await redis.set(KNOWN_IDS_KEY, Array.from(currentIds));
-      return Response.json({ checked: clients.length, new: 0, firstRun: true });
+    // Primera ejecución: inicializar línea base sin disparar notificaciones masivas
+    if (!knownIdsRaw || !Array.isArray(knownIdsRaw)) {
+      await kv.set(KNOWN_IDS_KEY, currentIds.slice(0, MAX_KNOWN_IDS));
+      return Response.json({ ok: true, initialized: true });
     }
 
-    // 4. Detectar IDs nuevos
-    const newIds = [...currentIds].filter(id => !knownIds.has(id));
-
+    const newIds = currentIds.filter((id) => !knownIds.has(id));
     let activeSubscriptions = [...subscriptions];
     let hasExpired = false;
 
-    // 5. Enviar notificación por cada cliente nuevo
     for (const newId of newIds) {
-      const client = clients.find(c => String(c.id) === newId);
+      const client = clients.find((c) => String(c.id) === newId);
       if (!client) continue;
 
-      // Filtro de seguridad máximo: si el cliente fue creado hace más de 24 horas,
-      // es un cliente viejo que el CRM movió de página (por ej. por una edición). No notificar.
-      const createdAt = new Date(client.fecha);
-      const horasDesdeCreacion = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60);
-      if (horasDesdeCreacion > 24) {
-        continue;
-      }
+      const createdAtMs = new Date(client.fecha).getTime();
+      if (Number.isNaN(createdAtMs)) continue;
 
-      const primerNombre = client.nombre.split(" ")[0];
-      const apellido     = client.nombre.split(" ")[1] || "";
-      const tel = client.telefono
-        ? `${client.telefonoIndicativo.replace(/\D/g, "")}${client.telefono.replace(/\D/g, "")}`
-        : "";
-      const ref   = client.inmuebleInteres !== "N/A" ? client.inmuebleInteres : null;
+      // Solo notificar clientes creados en las últimas 24 horas
+      const horasDesdeCreacion = (Date.now() - createdAtMs) / (1000 * 60 * 60);
+      if (horasDesdeCreacion > 24) continue;
+
+      const partesNombre = (client.nombre || "Cliente").trim().split(/\s+/);
+      const primerNombre = partesNombre[0] || "Cliente";
+      const apellido = partesNombre[1] || "";
+      const indicativo = (client.telefonoIndicativo || "+57").replace(/\D/g, "") || "57";
+      const numLocal = (client.telefono || "").replace(/\D/g, "");
+      const tel = numLocal ? `${indicativo}${numLocal}` : "";
+      const ref = client.inmuebleInteres && client.inmuebleInteres !== "N/A" ? client.inmuebleInteres : null;
       const waUrl = tel ? `https://wa.me/${tel}` : null;
 
       const nombreCorto = `${primerNombre}${apellido ? " " + apellido.charAt(0) + "." : ""}`;
       const payload = JSON.stringify({
         title: `Nuevo lead · ${client.origen}`,
-        body:  `${nombreCorto}${ref ? " · Ref " + ref : ""}`,
-        url:   "/clientes",
+        body: `${nombreCorto}${ref ? " · Ref " + ref : ""}`,
+        url: "/clientes?status=1",
         waUrl,
-        tag:   `nuevo-cliente-${newId}`,
-        actions: [
-          { action: "ver-cliente", title: "Ver Cliente" }
-        ]
+        tag: `nuevo-cliente-${newId}`,
+        actions: [{ action: "ver-cliente", title: "Ver Cliente" }],
       });
 
-      for (const sub of subscriptions) {
-        try {
-          await webpush.sendNotification(sub, payload);
-        } catch (err: any) {
-          if (err?.statusCode === 410) {
-            activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
-            hasExpired = true;
-          }
-        }
-      }
-    }
-
-    // 6. Actualizar IDs conocidos (manteniendo un historial infinito para no repetir si un viejo vuelve a la pag 1)
-    const updatedKnownIds = new Set([...knownIds, ...currentIds]);
-    await redis.set(KNOWN_IDS_KEY, Array.from(updatedKnownIds));
-
-    // TEMPORAL: Notificación de "Latido" para comprobar que sí está corriendo automáticamente
-    if (newIds.length === 0) {
-      const horaActual = new Date().toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: 'numeric', minute: '2-digit' });
-      const payload = JSON.stringify({
-        title: "🤖 Vigilante Activo",
-        body: `Revisión automática de las ${horaActual} completada. ${clients.length} clientes en total, 0 nuevos.`,
-        url: "/",
-        renotify: true,
-        tag: "cron-heartbeat"
-      });
       for (const sub of activeSubscriptions) {
         try {
           await webpush.sendNotification(sub, payload);
         } catch (err: any) {
-          if (err?.statusCode === 410) {
-            activeSubscriptions = activeSubscriptions.filter(s => s.endpoint !== sub.endpoint);
+          if (err?.statusCode === 410 || err?.statusCode === 404) {
+            activeSubscriptions = activeSubscriptions.filter((s) => s.endpoint !== sub.endpoint);
             hasExpired = true;
           }
         }
       }
     }
 
+    // Guardar historial acotado (conservando los más recientes)
+    const mergedIds = Array.from(new Set([...knownIds, ...currentIds])).slice(-MAX_KNOWN_IDS);
+    await kv.set(KNOWN_IDS_KEY, mergedIds);
+
     if (hasExpired) {
-      await redis.set("push_subscriptions_v2", activeSubscriptions);
+      await kv.set(SUBSCRIPTIONS_KEY, activeSubscriptions);
     }
 
     return Response.json({
-      checked: clients.length,
-      new: newIds.length,
-      notified: newIds,
+      ok: true,
       timestamp: new Date().toISOString(),
     });
-
   } catch (err) {
     console.error("[check-new-clients]", err instanceof Error ? err.message : err);
-    return Response.json({ error: "Error interno" }, { status: 500 });
+    return Response.json({ ok: false, error: "Error interno" }, { status: 500 });
   }
 }

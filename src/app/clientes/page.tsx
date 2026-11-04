@@ -3,19 +3,22 @@ import { fetchDomusProperties } from "@/services/domusService";
 import { scrapeL2L } from "@/services/l2lService";
 import EmptyState from "@/components/EmptyState";
 import InmuebleGroup from "@/components/InmuebleGroup";
+import RefreshCrmButton from "@/components/RefreshCrmButton";
 import Link from "next/link";
 import type { Inmueble, Cliente } from "@/types";
 
+export const maxDuration = 60;
+
 async function fetchInmueblesServer(): Promise<Inmueble[]> {
-  // L2L primero — misma fuente que /api/inmuebles (18 inmuebles exactos de Patricia)
+  // L2L primero — misma fuente que /api/inmuebles (inmuebles activos de Patricia)
   // Garantiza que el property_code del CRM coincida con los IDs del catálogo
   try {
     const l = await scrapeL2L();
     if (l?.inmuebles?.length > 0) return l.inmuebles;
   } catch {}
-  // Fallback: Domus directo (932 propiedades de toda la agencia)
+  // Fallback: caché Domus
   try {
-    const d = await fetchDomusProperties();
+    const d = await fetchDomusProperties({ allowLogin: false });
     if (d?.inmuebles?.length > 0) return d.inmuebles;
   } catch {}
   return [];
@@ -27,7 +30,7 @@ interface PageProps {
 
 export default async function ClientesPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
-  const currentStatus = resolvedParams.status || "1";
+  const currentStatus: "1" | "2" = resolvedParams.status === "2" ? "2" : "1";
   const isNuevos = currentStatus === "1";
 
   const [clientes, inmuebles] = await Promise.all([
@@ -44,8 +47,6 @@ export default async function ClientesPage({ searchParams }: PageProps) {
   let totalClientesFiltrados = 0;
 
   clientes.forEach((c) => {
-    // Si el inmueble de interés no está en el catálogo activo, se agrupa como "sin-inmueble"
-    // en lugar de descartarse — así se ven todos los leads (vendidos, archivados, otro asesor)
     const hasActiveInmueble =
       c.inmuebleInteres && c.inmuebleInteres !== "N/A" && inmuebleMap.has(String(c.inmuebleInteres));
     const key = hasActiveInmueble ? String(c.inmuebleInteres) : "sin-inmueble";
@@ -78,6 +79,7 @@ export default async function ClientesPage({ searchParams }: PageProps) {
               : "Leads y contactos de portales inmobiliarios."}
           </p>
         </div>
+        <RefreshCrmButton status={currentStatus} />
       </div>
 
       <div style={{ padding: "0 20px 16px" }}>
@@ -96,7 +98,6 @@ export default async function ClientesPage({ searchParams }: PageProps) {
           })}
         </div>
       </div>
-
 
       {totalClientesFiltrados === 0 ? (
         <div style={{ padding: "0 20px" }}>

@@ -11,8 +11,8 @@ import { AGENTE_PATRICIA } from "@/lib/agente";
 import { useInmuebles } from "@/hooks/useInmuebles";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
-import { getRecordatoriosPendientes, marcarCompletado, generarMensajeSeguimiento, type Recordatorio } from "@/lib/recordatorios";
-import NotificationBanner, { NotificationHeaderButton, TestNotifButton } from "@/components/NotificationBanner";
+import { getRecordatoriosPendientes, marcarCompletado, type Recordatorio } from "@/lib/recordatorios";
+import NotificationBanner, { NotificationHeaderButton } from "@/components/NotificationBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import WhatsAppModal from "@/components/WhatsAppModal";
 import type { Cliente } from "@/types";
@@ -39,6 +39,11 @@ export default function Home() {
   const handleCompletarRecordatorio = (id: string) => {
     marcarCompletado(id);
     setRecordatorios(getRecordatoriosPendientes());
+    fetch("/api/push/check-reminders", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => {});
   };
 
   const containerVariants = {
@@ -88,7 +93,6 @@ export default function Home() {
           <p className="header-sub">{subtitulo}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <TestNotifButton />
           <NotificationHeaderButton />
         </div>
       </header>
@@ -163,7 +167,7 @@ export default function Home() {
           </div>
           <div style={{ padding: "0 20px", display: "flex", flexDirection: "column", gap: 10 }}>
             {recordatorios.map((rec) => {
-              const telefonoCompleto = `${rec.telefonoIndicativo.replace(/\D/g, "")}${rec.telefono.replace(/\D/g, "")}`;
+              const telefonoCompleto = `${(rec.telefonoIndicativo || "+57").replace(/\D/g, "")}${(rec.telefono || "").replace(/\D/g, "")}`;
 
               return (
                 <motion.div
