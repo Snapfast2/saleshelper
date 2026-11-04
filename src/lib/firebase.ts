@@ -1,19 +1,36 @@
 // src/lib/firebase.ts
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+// Carga diferida (lazy) del SDK de Firebase/Firestore para reducir ~130KB gzip del bundle inicial
+
+import type { Firestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDpwiDs-V5XB_CgXpJOutxuP6ulMFH_AQM",
-  authDomain: "saleshelper-domus.firebaseapp.com",
-  projectId: "saleshelper-domus",
-  storageBucket: "saleshelper-domus.firebasestorage.app",
-  messagingSenderId: "289288394686",
-  appId: "1:289288394686:web:49ce7ec0840427ee924bef",
-  measurementId: "G-B36R57KWD3"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDpwiDs-V5XB_CgXpJOutxuP6ulMFH_AQM",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "saleshelper-domus.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "saleshelper-domus",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "saleshelper-domus.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "289288394686",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:289288394686:web:49ce7ec0840427ee924bef",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-B36R57KWD3",
 };
 
-// Initialize Firebase only once
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
+let dbPromise: Promise<Firestore | null> | null = null;
 
-export { app, db };
+export function getFirestoreDb(): Promise<Firestore | null> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (dbPromise) return dbPromise;
+
+  dbPromise = (async () => {
+    try {
+      const [{ initializeApp, getApps, getApp }, { getFirestore }] = await Promise.all([
+        import("firebase/app"),
+        import("firebase/firestore"),
+      ]);
+      const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+      return getFirestore(app);
+    } catch {
+      return null;
+    }
+  })();
+
+  return dbPromise;
+}

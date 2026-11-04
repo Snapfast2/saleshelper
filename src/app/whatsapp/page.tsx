@@ -8,6 +8,7 @@ import { MessageCircle, CheckCircle, Copy, Link as LinkIcon, User, ExternalLink 
 import PropCard from "@/components/PropCard";
 import type { Inmueble } from "@/types";
 import { generarMensajeWS, generarLinkWS } from "@/lib/mensajes";
+import { registrarInteraccionWS } from "@/lib/interacciones";
 import { useInmuebles } from "@/hooks/useInmuebles";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
@@ -34,6 +35,7 @@ function WhatsAppContent() {
   const [nombreCliente, setNombreCliente] = useState(clienteParam);
   const [copied, setCopied] = useState(false);
   const [copiedFicha, setCopiedFicha] = useState(false);
+  const [copiedOriginal, setCopiedOriginal] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -82,8 +84,18 @@ function WhatsAppContent() {
 
   const handleOpenWS = () => {
     if (!mensajeActual) return;
-    // Si viene el teléfono del cliente, se lo enviamos a él; si no, al de Patricia
     const destinoTel = telefonoParam || "";
+    if (destinoTel || nombreCliente.trim()) {
+      registrarInteraccionWS(
+        {
+          nombre: nombreCliente.trim() || clienteParam || "Cliente",
+          telefono: destinoTel,
+          telefonoIndicativo: "+57",
+        },
+        selectedInmueble,
+        "Ficha WhatsApp"
+      );
+    }
     const url = generarLinkWS(destinoTel, mensajeActual);
     window.open(url, "_blank");
   };
@@ -159,7 +171,7 @@ function WhatsAppContent() {
                 style={{
                   width: "100%", padding: "14px 16px", borderRadius: "12px",
                   background: "var(--bg-card)", border: "1px solid var(--border)",
-                  color: "var(--text-primary)", fontSize: "15px", outline: "none",
+                  color: "var(--text-primary)", fontSize: "16px", outline: "none",
                   transition: "all 0.2s"
                 }}
                 onFocus={(e) => e.target.style.borderColor = "var(--red)"}
@@ -262,12 +274,12 @@ function WhatsAppContent() {
                   }}
                   onClick={() => {
                     navigator.clipboard.writeText(selectedInmueble.urlDomus!);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
+                    setCopiedOriginal(true);
+                    setTimeout(() => setCopiedOriginal(false), 2000);
                   }}
                 >
-                  <LinkIcon size={16} />
-                  Link original L2L
+                  {copiedOriginal ? <CheckCircle size={16} color="#4ADE80" /> : <LinkIcon size={16} />}
+                  {copiedOriginal ? "Link L2L copiado" : "Link original L2L"}
                 </button>
               )}
             </div>

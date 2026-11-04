@@ -1,18 +1,20 @@
 // src/lib/interacciones.ts
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
+import { getFirestoreDb } from "./firebase";
 import type { Cliente, Inmueble } from "@/types";
 
 /**
- * Registra una interacción en Firestore cada vez que se envía un WhatsApp.
+ * Registra una interacción en Firestore cargando el SDK bajo demanda solo al enviar WhatsApp.
  */
 export async function registrarInteraccionWS(
-  cliente: Cliente,
-  inmueble: Inmueble | undefined,
+  cliente: Pick<Cliente, "nombre" | "telefono"> & { telefonoIndicativo?: string },
+  inmueble: Pick<Inmueble, "id" | "titulo"> | undefined,
   tipoMensaje: string
 ) {
   try {
+    const db = await getFirestoreDb();
     if (!db) return;
+
+    const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
 
     const indicativo = (cliente.telefonoIndicativo || "+57").replace(/\D/g, "") || "57";
     const localDigits = (cliente.telefono || "").replace(/\D/g, "");

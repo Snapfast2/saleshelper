@@ -1,4 +1,5 @@
 // src/services/crmService.ts
+import { after } from "next/server";
 import { Cliente } from "../types";
 import { DOMUS_BROWSER_UA, DOMUS_SEC_CH_UA_HEADERS } from "../lib/auth";
 import { acquireRedisLock, getRedis, releaseRedisLock } from "../lib/redis";
@@ -668,6 +669,98 @@ export async function fetchCrmClients(
 
     return [];
   }
+}
+
+/**
+ * Obtiene instantáneamente ambas pestañas ("Nuevos" y "Seguimiento") desde memoria/Redis
+ * en una sola lectura mget (<40ms) para permitir cambio de pestaña en 0ms en el cliente.
+ * Si una caché fresca expiró pero existe copia de respaldo (stale), responde al instante
+ * y agenda una renovación secuencial en segundo plano con after() sin bloquear la pantalla
+ * ni generar peticiones paralelas hacia Domus.
+ */
+export async function fetchBothCrmTabsSWR(
+  initialStatus: "1" | "2" = "1"
+): Promise<{ nuevos: Cliente[]; seguimiento: Cliente[] }> {
+  const now = Date.now();
+  const mem1 = memCache["1"] && now - (memCacheTs["1"] ?? 0) < MEM_TTL_MS ? memCache["1"] : null;
+  const mem2 = memCache["2"] && now - (memCacheTs["2"] ?? 0) < MEM_TTL_MS ? memCache["2"] : null;
+
+  if (mem1 && mem2) {
+    return { nuevos: mem1, seguimiento: mem2 };
+  }
+
+  const kv = getRedis();
+  let fresh1 = mem1;
+  let fresh2 = mem2;
+  let stale1: Cliente[] | null = null;
+  let stale2: Cliente[] | null = null;
+
+  if (kv) {
+    try {
+      const [rFresh1, rFresh2, rStale1, rStale2] = await kv.mget<
+        [Cliente[] | null, Cliente[] | null, Cliente[] | null, Cliente[] | null]
+      >("clients_1", "clients_2", "clients_stale_1", "clients_stale_2");
+
+      if (!fresh1 && Array.isArray(rFresh1) && rFresh1.length > 0) {
+        fresh1 = rFresh1;
+        memCache["1"] = rFresh1;
+        memCacheTs["1"] = now;
+      }
+      if (!fresh2 && Array.isArray(rFresh2) && rFresh2.length > 0) {
+        fresh2 = rFresh2;
+        memCache["2"] = rFresh2;
+        memCacheTs["2"] = now;
+      }
+      if (Array.isArray(rStale1) && rStale1.length > 0) stale1 = rStale1;
+      if (Array.isArray(rStale2) && rStale2.length > 0) stale2 = rStale2;
+    } catch {
+      // Si Redis falla, caerá al camino en vivo abajo
+    }
+  }
+
+  let nuevos = fresh1 ?? stale1;
+  let seguimiento = fresh2 ?? stale2;
+
+  const tabsToRevalidateInBg: ("1" | "2")[] = [];
+  if (!fresh1 && stale1) tabsToRevalidateInBg.push("1");
+  if (!fresh2 && stale2) tabsToRevalidateInBg.push("2");
+
+  // Si la pestaña inicial nunca ha sido cargada en Redis (arranque en frío absoluto),
+  // cargarla sincrónicamente y dejar la otra pestaña para segundo plano secuencial
+  if (initialStatus === "1" && !nuevos) {
+    nuevos = await fetchCrmClients("1");
+    if (!seguimiento) tabsToRevalidateInBg.push("2");
+  } else if (initialStatus === "2" && !seguimiento) {
+    seguimiento = await fetchCrmClients("2");
+    if (!nuevos) tabsToRevalidateInBg.push("1");
+  } else {
+    if (!nuevos) tabsToRevalidateInBg.push("1");
+    if (!seguimiento) tabsToRevalidateInBg.push("2");
+  }
+
+  if (tabsToRevalidateInBg.length > 0) {
+    try {
+      after(async () => {
+        const locked = await acquireRedisLock("crm_bg_swr_lock", 45);
+        if (!locked) return;
+        try {
+          for (const tab of tabsToRevalidateInBg) {
+            await fetchCrmClients(tab, { noCache: true }).catch(() => {});
+            await humanDelay(600, 1200);
+          }
+        } finally {
+          await releaseRedisLock("crm_bg_swr_lock");
+        }
+      });
+    } catch {
+      // Ignorar si se ejecuta fuera de request Next.js
+    }
+  }
+
+  return {
+    nuevos: nuevos ?? [],
+    seguimiento: seguimiento ?? [],
+  };
 }
 
 function mapClients(data: unknown[]): Cliente[] {

@@ -1,12 +1,10 @@
 'use client';
 // src/app/inmuebles/page.tsx
 
-import { useEffect, useState } from "react";
+import { useState, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { Search, Filter, RefreshCw } from "lucide-react";
+import { Search, Filter, RefreshCw, X } from "lucide-react";
 import PropCard from "@/components/PropCard";
-import type { Inmueble } from "@/types";
 import { useInmuebles } from "@/hooks/useInmuebles";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
@@ -14,56 +12,54 @@ import EmptyState from "@/components/EmptyState";
 export default function InmueblesPage() {
   const router = useRouter();
   const { inmuebles, isLoading, isOffline, mutate } = useInmuebles();
-  const [filtered, setFiltered] = useState<Inmueble[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filtros
   const [search, setSearch] = useState("");
   const [filtroGestion, setFiltroGestion] = useState<"todos" | "venta" | "arriendo">("todos");
 
-  useEffect(() => {
-    aplicarFiltros();
-  }, [inmuebles, search, filtroGestion]);
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
-  const aplicarFiltros = () => {
+  const filtered = useMemo(() => {
     let result = inmuebles;
-    
+
     if (filtroGestion !== "todos") {
-      result = result.filter(i => i.gestion === filtroGestion);
+      result = result.filter((i) => i.gestion === filtroGestion);
     }
-    
-    if (search) {
-      const q = search.toLowerCase();
+
+    if (deferredSearch) {
       result = result.filter(
-        i => 
-          i.barrio.toLowerCase().includes(q) || 
-          i.ciudad.toLowerCase().includes(q) || 
-          i.tipo.toLowerCase().includes(q) ||
-          i.id.includes(q)
+        (i) =>
+          i.barrio.toLowerCase().includes(deferredSearch) ||
+          i.ciudad.toLowerCase().includes(deferredSearch) ||
+          i.tipo.toLowerCase().includes(deferredSearch) ||
+          String(i.id).toLowerCase().includes(deferredSearch) ||
+          String(i.codigoDomus || "").toLowerCase().includes(deferredSearch)
       );
     }
-    
-    setFiltered(result);
-  };
 
-  // Forzar actualización: limpia Redis y pide datos frescos al servidor
+    return result;
+  }, [inmuebles, filtroGestion, deferredSearch]);
+
+  // Forzar actualización: limpia Redis (L2L + Domus) y pide datos frescos al servidor
   const forceRefresh = async () => {
     setIsRefreshing(true);
     try {
-      // Borrar caché Redis del servidor (autenticado por cookie de sesión)
-      await fetch("/api/inmuebles", {
-        method: "DELETE",
-      });
-    } catch { /* si falla, igual pedimos datos frescos */ }
+      await fetch("/api/inmuebles", { method: "DELETE" });
+    } catch {
+      // continuar aún si falla
+    }
 
-    // Pedir datos frescos al servidor (bypass caché del navegador)
-    await mutate(
-      fetch("/api/inmuebles", { cache: "no-store" }).then(r => r.json()),
-      { revalidate: false }
-    );
-    setIsRefreshing(false);
+    try {
+      await mutate(
+        fetch("/api/inmuebles", { cache: "no-store" }).then((r) => r.json()),
+        { revalidate: false }
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
+  const busy = isRefreshing || isLoading;
 
   return (
     <div className="page">
@@ -74,61 +70,131 @@ export default function InmueblesPage() {
             {isLoading ? "Cargando..." : `${filtered.length} inmuebles encontrados`}
           </p>
           {!isLoading && (
-            <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", marginTop: "6px", fontSize: "11px", fontWeight: "600", padding: "3px 10px", borderRadius: "20px", background: isOffline ? "rgba(217,119,6,0.1)" : "rgba(22,163,74,0.1)", color: isOffline ? "#D97706" : "#16a34a" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: isOffline ? "#D97706" : "#16a34a", display: "inline-block" }} />
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "5px",
+                marginTop: "6px",
+                fontSize: "11px",
+                fontWeight: "600",
+                padding: "3px 10px",
+                borderRadius: "20px",
+                background: isOffline ? "rgba(217,119,6,0.1)" : "rgba(22,163,74,0.1)",
+                color: isOffline ? "#D97706" : "#16a34a",
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: isOffline ? "#D97706" : "#16a34a",
+                  display: "inline-block",
+                }}
+              />
               {isOffline ? "Modo offline (catálogo guardado)" : "Catálogo sincronizado"}
             </div>
           )}
         </div>
-        <button 
+        <button
+          type="button"
           onClick={forceRefresh}
-          disabled={isRefreshing || isLoading}
-          title="Actualizar catálogo desde Domus"
-          style={{ 
-            width: 40, height: 40, borderRadius: 20, 
-            background: isRefreshing ? "var(--primary)" : "var(--bg-card)",
-            display: "flex", 
-            alignItems: "center", justifyContent: "center",
+          disabled={busy}
+          title="Actualizar catálogo"
+          aria-label="Actualizar catálogo"
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            background: isRefreshing ? "var(--red)" : "var(--bg-card)",
+            color: isRefreshing ? "#fff" : "var(--text-primary)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             border: "1px solid var(--border)",
-            transition: "background 0.2s",
-            opacity: (isRefreshing || isLoading) ? 0.7 : 1,
+            transition: "all 0.2s",
+            cursor: busy ? "default" : "pointer",
+            flexShrink: 0,
           }}
         >
-          <RefreshCw 
-            size={20} 
-            color={isRefreshing ? "white" : undefined}
-            className={(isRefreshing || isLoading) ? "spinner-icon" : ""} 
+          <RefreshCw
+            size={19}
+            color={isRefreshing ? "#fff" : "var(--text-primary)"}
+            style={{ animation: busy ? "spin 1s linear infinite" : "none" }}
           />
         </button>
       </div>
 
       <div style={{ padding: "0 20px 16px" }}>
         <div style={{ position: "relative", marginBottom: 12 }}>
-          <Search size={18} style={{ position: "absolute", left: 16, top: 15, color: "var(--text-muted)" }} />
-          <input 
-            type="text" 
-            className="form-input" 
-            placeholder="Buscar por barrio, código o ciudad..." 
-            style={{ paddingLeft: 44 }}
+          <Search
+            size={18}
+            style={{
+              position: "absolute",
+              left: 16,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "var(--text-muted)",
+              pointerEvents: "none",
+            }}
+          />
+          <input
+            type="search"
+            className="form-input"
+            placeholder="Buscar por barrio, código o ciudad..."
+            style={{
+              paddingLeft: 44,
+              paddingRight: search ? 40 : 14,
+              fontSize: 16,
+            }}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Limpiar búsqueda"
+              style={{
+                position: "absolute",
+                right: 10,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                border: "none",
+                background: "var(--bg-base)",
+                color: "var(--text-secondary)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+              }}
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
 
         <div className="tabs" style={{ padding: 0 }}>
-          <button 
+          <button
+            type="button"
             className={`tab-pill ${filtroGestion === "todos" ? "active" : ""}`}
             onClick={() => setFiltroGestion("todos")}
           >
             Todos
           </button>
-          <button 
+          <button
+            type="button"
             className={`tab-pill ${filtroGestion === "venta" ? "active" : ""}`}
             onClick={() => setFiltroGestion("venta")}
           >
             Ventas
           </button>
-          <button 
+          <button
+            type="button"
             className={`tab-pill ${filtroGestion === "arriendo" ? "active" : ""}`}
             onClick={() => setFiltroGestion("arriendo")}
           >
@@ -141,26 +207,21 @@ export default function InmueblesPage() {
         {isLoading ? (
           <LoadingState text="Cargando catálogo..." />
         ) : filtered.length > 0 ? (
-          filtered.map(inmueble => (
-            <PropCard 
-              key={inmueble.id} 
-              inmueble={inmueble} 
+          filtered.map((inmueble) => (
+            <PropCard
+              key={inmueble.id}
+              inmueble={inmueble}
               onClick={() => router.push(`/whatsapp?inmueble=${inmueble.id}`)}
             />
           ))
         ) : (
-          <EmptyState 
+          <EmptyState
             icon={<Filter size={48} />}
             title="No hay resultados"
             description="Intenta cambiar los filtros o el término de búsqueda."
           />
         )}
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .spinner-icon { animation: spin 1s linear infinite; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 0.8; } 100% { opacity: 0.5; } }
-      `}} />
     </div>
   );
 }

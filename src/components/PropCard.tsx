@@ -1,9 +1,10 @@
 'use client';
 // src/components/PropCard.tsx
 
-import { motion } from "framer-motion";
+import { memo, useMemo } from "react";
 import { BedDouble, Bath, Car, MapPin, Maximize2, Clock } from "lucide-react";
 import type { Inmueble } from "@/types";
+import ImageCarousel from "./ImageCarousel";
 
 interface Props {
   inmueble: Inmueble;
@@ -19,30 +20,27 @@ function formatPrecio(valor: number): string {
   return `$${valor}`;
 }
 
-import ImageCarousel from "./ImageCarousel";
-
-export default function PropCard({ inmueble, onClick, compact }: Props) {
-  // Combinar imagen principal con el array de imágenes
-  const allImages = [inmueble.imagen, ...(inmueble.imagenes || [])];
-  // Eliminar duplicados por si la imagen principal también viene en el array
-  const uniqueImages = Array.from(new Set(allImages));
+const PropCard = memo(function PropCard({ inmueble, onClick, compact }: Props) {
+  const uniqueImages = useMemo(() => {
+    const all = [inmueble.imagen, ...(inmueble.imagenes || [])].filter(Boolean);
+    return Array.from(new Set(all));
+  }, [inmueble.imagen, inmueble.imagenes]);
 
   return (
-    <motion.div
+    <div
       className="prop-card"
       style={{ width: compact ? 240 : "100%", overflow: "hidden" }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 400, damping: 28 }}
       onClick={() => onClick?.(inmueble)}
     >
       {/* Imagen */}
       <div style={{ position: "relative" }}>
-        <ImageCarousel 
-          images={uniqueImages} 
-          alt={inmueble.titulo} 
-          height={compact ? 140 : 180} 
+        <ImageCarousel
+          images={uniqueImages}
+          alt={inmueble.titulo}
+          height={compact ? 140 : 180}
+          compact={compact}
         />
-        
+
         {/* Badge Venta/Arriendo (Top Left) */}
         <span className={`prop-card-badge ${inmueble.gestion}`}>
           {inmueble.gestion === "venta" ? "Venta" : "Arriendo"}
@@ -50,16 +48,16 @@ export default function PropCard({ inmueble, onClick, compact }: Props) {
 
         {/* Badge En Proceso (Top Right) */}
         {inmueble.estado === "En proceso" && (
-          <span 
-            className="prop-card-badge" 
-            style={{ 
-              right: 12, 
-              left: 'auto', 
-              backgroundColor: '#F59E0B', // Amber/Orange
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
+          <span
+            className="prop-card-badge"
+            style={{
+              right: 12,
+              left: "auto",
+              backgroundColor: "#F59E0B",
+              color: "white",
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
             }}
           >
             <Clock size={12} />
@@ -72,7 +70,9 @@ export default function PropCard({ inmueble, onClick, compact }: Props) {
 
       {/* Body */}
       <div className="prop-card-body">
-        <div className="prop-card-tipo">{inmueble.tipo} • Cód: {inmueble.codigoDomus}</div>
+        <div className="prop-card-tipo">
+          {inmueble.tipo} • Cód: {inmueble.codigoDomus}
+        </div>
         <div className="prop-card-titulo">{inmueble.barrio}</div>
         <div className="prop-card-ciudad">
           <MapPin size={12} />
@@ -106,6 +106,8 @@ export default function PropCard({ inmueble, onClick, compact }: Props) {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
-}
+});
+
+export default PropCard;

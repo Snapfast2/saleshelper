@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, CheckCircle, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { generarLinkWS } from "@/lib/mensajes";
+import { registrarInteraccionWS } from "@/lib/interacciones";
 
 // ─── Objeciones definidas ────────────────────────────────────────────
 const OBJECIONES = [
@@ -76,7 +77,18 @@ function RespuestasContent() {
     }
   };
 
-  const handleEnviarWS = (texto: string) => {
+  const handleEnviarWS = (texto: string, pregunta: string) => {
+    if (telefonoParam || clienteParam) {
+      registrarInteraccionWS(
+        {
+          nombre: nombreMostrar,
+          telefono: telefonoParam,
+          telefonoIndicativo: "+57",
+        },
+        undefined,
+        `Objeción: ${pregunta}`
+      );
+    }
     const url = generarLinkWS(telefonoParam, texto);
     window.open(url, "_blank");
   };
@@ -195,7 +207,7 @@ function RespuestasContent() {
                         </button>
                         {telefonoParam && (
                           <button
-                            onClick={() => handleEnviarWS(texto)}
+                            onClick={() => handleEnviarWS(texto, obj.pregunta)}
                             className="btn-ws"
                             style={{ flex: 1, fontSize: "13px", padding: "10px 12px" }}
                           >

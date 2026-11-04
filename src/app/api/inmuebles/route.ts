@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { verifyRequestSession } from "@/lib/auth";
 import { acquireRedisLock } from "@/lib/redis";
-import { scrapeL2L } from "@/services/l2lService";
+import { scrapeL2L, invalidateL2LCache } from "@/services/l2lService";
 import { invalidateInmueblesCache } from "@/services/domusService";
 import { INMUEBLES_DEMO } from "@/lib/inmuebles-demo";
 
@@ -50,7 +50,7 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    await invalidateInmueblesCache();
+    await Promise.all([invalidateL2LCache(), invalidateInmueblesCache()]);
     return NextResponse.json({ ok: true, message: "Caché invalidado." });
   } catch {
     return NextResponse.json({ error: "Error al invalidar caché" }, { status: 500 });

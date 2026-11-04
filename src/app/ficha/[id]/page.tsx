@@ -2,6 +2,8 @@
 // Página pública de ficha de inmueble — sin autenticación requerida.
 // Genera OG tags para que WhatsApp muestre un preview lindo al pegar el link.
 
+import { cache } from "react";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MapPin, Maximize2, BedDouble, Bath, Car, Phone, Mail, ExternalLink } from "lucide-react";
@@ -17,10 +19,10 @@ function formatPrecio(precio: number, gestion: string): string {
 }
 
 /**
- * Busca el inmueble primero en el perfil público de L2L y solo consulta la caché de Domus
- * sin disparar inicios de sesión con credenciales desde una ruta pública.
+ * Deduplica la búsqueda entre generateMetadata y FichaPage en la misma petición,
+ * leyendo desde la caché Redis de L2L (<30ms) y sin disparar logins a Domus.
  */
-async function findPublicInmueble(id: string): Promise<Inmueble | undefined> {
+const findPublicInmueble = cache(async (id: string): Promise<Inmueble | undefined> => {
   if (!/^\d{1,12}$/.test(id)) return undefined;
 
   try {
@@ -37,7 +39,7 @@ async function findPublicInmueble(id: string): Promise<Inmueble | undefined> {
   } catch {
     return undefined;
   }
-}
+});
 
 // ── Metadata para OG / WhatsApp preview ───────────────────────────────────
 export async function generateMetadata({
@@ -121,11 +123,13 @@ export default async function FichaPage({
       {/* ── Hero ── */}
       <div style={{ position: "relative", width: "100%", height: 300, background: "#e8e8e8", overflow: "hidden" }}>
         {hasImg ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
+          <Image
             src={inm.imagen}
             alt={inm.titulo}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            fill
+            priority
+            sizes="(max-width: 520px) 100vw, 480px"
+            style={{ objectFit: "cover" }}
           />
         ) : (
           <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#bbb", fontSize: 15 }}>

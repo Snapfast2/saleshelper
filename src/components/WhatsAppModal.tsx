@@ -136,7 +136,11 @@ export default function WhatsAppModal({
                   <motion.button
                     key={t.id}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => { setSeleccionado(t.id); setTextoEditado(t.texto); setEditando(false); }}
+                    onClick={() => {
+                      setSeleccionado(t.id);
+                      setTextoEditado(t.texto);
+                      setEditando(t.texto.includes("[DÍA]") || t.texto.includes("[HORA]"));
+                    }}
                     style={{
                       display: "flex", alignItems: "center", gap: 14,
                       padding: "14px 16px", borderRadius: 14,
@@ -178,7 +182,7 @@ export default function WhatsAppModal({
                     style={{
                       width: "100%", minHeight: 160, padding: "14px", borderRadius: 14,
                       border: "1px solid var(--border)", background: "var(--bg-base)",
-                      color: "var(--text-primary)", fontSize: 15, lineHeight: 1.6,
+                      color: "var(--text-primary)", fontSize: 16, lineHeight: 1.6,
                       resize: "vertical", fontFamily: "inherit", outline: "none",
                       boxSizing: "border-box",
                     }}
@@ -199,10 +203,10 @@ export default function WhatsAppModal({
                     <button
                       onClick={() => setTextoEditado(prev => prev + `\n\nPuedes ver las fotos y la ficha técnica aquí:\n${inmueble.urlDomus}`)}
                       style={{
-                        padding: "10px 14px", borderRadius: 10,
-                        border: "1px dashed var(--brand-primary)", background: "rgba(225,29,72,0.05)",
+                        padding: "11px 14px", borderRadius: 10, minHeight: 44,
+                        border: "1px dashed var(--red)", background: "var(--red-glow)",
                         cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                        fontSize: 14, fontWeight: 700, color: "var(--brand-primary)", width: "100%"
+                        fontSize: 14, fontWeight: 700, color: "var(--red)", width: "100%"
                       }}
                     >
                       <Paperclip size={16} />

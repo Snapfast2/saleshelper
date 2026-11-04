@@ -1,52 +1,63 @@
 'use client';
 // src/components/PushAutoSubscribe.tsx
-// Se ejecuta silenciosamente al abrir la app.
-// Si el usuario ya dio permiso → refresca la suscripción en Redis.
-// Sin UI, sin popups, sin llamadas a Domus.
+// Sincroniza la suscripción Push con Redis solo cuando aún no está registrada o cambió el endpoint.
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
+import { getSharedSwRegistration, urlBase64ToUint8Array } from "@/hooks/usePushNotifications";
 
-function urlBase64ToUint8Array(base64: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
-  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = window.atob(b64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
+const PUSH_SYNC_KEY = "sh_push_ep";
 
 export default function PushAutoSubscribe() {
   useEffect(() => {
-    // Solo actúa si ya tiene permiso — nunca vuelve a preguntar
-    if (!('serviceWorker' in navigator)) return;
-    if (!('PushManager' in window)) return;
-    if (Notification.permission !== 'granted') return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (Notification.permission !== "granted") return;
 
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapidKey) return;
 
-    async function refresh() {
+    async function syncIfNeeded() {
       try {
-        const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        await navigator.serviceWorker.ready;
+        const reg = await getSharedSwRegistration();
+        if (!reg) return;
 
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey!) as any,
-        });
+        let sub = await reg.pushManager.getSubscription();
+        if (!sub) {
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(vapidKey!),
+          });
+        }
 
-        await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const syncedEndpoint = (() => {
+          try {
+            return localStorage.getItem(PUSH_SYNC_KEY);
+          } catch {
+            return null;
+          }
+        })();
+
+        if (syncedEndpoint === sub.endpoint) {
+          return;
+        }
+
+        const res = await fetch("/api/push/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ subscription: sub }),
         });
+
+        if (res.ok) {
+          try {
+            localStorage.setItem(PUSH_SYNC_KEY, sub.endpoint);
+          } catch {}
+        }
       } catch {
         // Silencioso — no interrumpir la UX si algo falla
       }
     }
 
-    refresh();
+    syncIfNeeded();
   }, []);
 
-  return null; // Sin UI
+  return null;
 }

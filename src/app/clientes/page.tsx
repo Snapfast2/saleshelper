@@ -1,22 +1,18 @@
-import { fetchCrmClients } from "@/services/crmService";
+import { fetchBothCrmTabsSWR } from "@/services/crmService";
 import { fetchDomusProperties } from "@/services/domusService";
 import { scrapeL2L } from "@/services/l2lService";
-import EmptyState from "@/components/EmptyState";
-import InmuebleGroup from "@/components/InmuebleGroup";
-import RefreshCrmButton from "@/components/RefreshCrmButton";
-import Link from "next/link";
-import type { Inmueble, Cliente } from "@/types";
+import ClientesView from "@/components/ClientesView";
+import type { Inmueble } from "@/types";
 
 export const maxDuration = 60;
 
 async function fetchInmueblesServer(): Promise<Inmueble[]> {
-  // L2L primero — misma fuente que /api/inmuebles (inmuebles activos de Patricia)
-  // Garantiza que el property_code del CRM coincida con los IDs del catálogo
+  // L2L primero — misma fuente que /api/inmuebles (con caché memoria + Redis SWR)
   try {
     const l = await scrapeL2L();
     if (l?.inmuebles?.length > 0) return l.inmuebles;
   } catch {}
-  // Fallback: caché Domus
+  // Fallback: caché Domus sin disparar login
   try {
     const d = await fetchDomusProperties({ allowLogin: false });
     if (d?.inmuebles?.length > 0) return d.inmuebles;
@@ -31,94 +27,18 @@ interface PageProps {
 export default async function ClientesPage({ searchParams }: PageProps) {
   const resolvedParams = await searchParams;
   const currentStatus: "1" | "2" = resolvedParams.status === "2" ? "2" : "1";
-  const isNuevos = currentStatus === "1";
 
-  const [clientes, inmuebles] = await Promise.all([
-    fetchCrmClients(currentStatus),
+  const [tabs, inmuebles] = await Promise.all([
+    fetchBothCrmTabsSWR(currentStatus),
     fetchInmueblesServer(),
   ]);
 
-  // Lookup map: codigo -> Inmueble
-  const inmuebleMap = new Map<string, Inmueble>();
-  inmuebles.forEach((i) => inmuebleMap.set(i.id, i));
-
-  // Filtrar y agrupar clientes por inmuebleInteres
-  const grupos = new Map<string, Cliente[]>();
-  let totalClientesFiltrados = 0;
-
-  clientes.forEach((c) => {
-    const hasActiveInmueble =
-      c.inmuebleInteres && c.inmuebleInteres !== "N/A" && inmuebleMap.has(String(c.inmuebleInteres));
-    const key = hasActiveInmueble ? String(c.inmuebleInteres) : "sin-inmueble";
-
-    if (!grupos.has(key)) grupos.set(key, []);
-    grupos.get(key)!.push(c);
-    totalClientesFiltrados++;
-  });
-
-  // Ordenar: grupos con más clientes primero, "sin-inmueble" al final
-  const gruposOrdenados = Array.from(grupos.entries()).sort(([keyA, a], [keyB, b]) => {
-    if (keyA === "sin-inmueble") return 1;
-    if (keyB === "sin-inmueble") return -1;
-    return b.length - a.length;
-  });
-
-  const tabsList = [
-    { label: "Nuevos", value: "1" },
-    { label: "Seguimiento", value: "2" },
-  ];
-
   return (
-    <div className="page" style={{ paddingBottom: "100px" }}>
-      <div className="header" style={{ paddingBottom: 12 }}>
-        <div>
-          <h1 className="header-title">Clientes CRM</h1>
-          <p className="header-sub">
-            {totalClientesFiltrados > 0
-              ? `${totalClientesFiltrados} contacto${totalClientesFiltrados !== 1 ? "s" : ""} · ${gruposOrdenados.length} inmueble${gruposOrdenados.length !== 1 ? "s" : ""}`
-              : "Leads y contactos de portales inmobiliarios."}
-          </p>
-        </div>
-        <RefreshCrmButton status={currentStatus} />
-      </div>
-
-      <div style={{ padding: "0 20px 16px" }}>
-        <div className="tabs" style={{ padding: 0 }}>
-          {tabsList.map((tab) => {
-            const isActive = currentStatus === tab.value;
-            return (
-              <Link
-                key={tab.value}
-                href={`/clientes?status=${tab.value}`}
-                className={`tab-pill ${isActive ? "active" : ""}`}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {totalClientesFiltrados === 0 ? (
-        <div style={{ padding: "0 20px" }}>
-          <EmptyState
-            title="No hay clientes"
-            description="No se encontraron contactos en esta categoría en este momento."
-          />
-        </div>
-      ) : (
-        <div className="grid-1">
-          {gruposOrdenados.map(([codigo, grupoClientes]) => (
-            <InmuebleGroup
-              key={codigo}
-              codigoRef={codigo}
-              inmueble={inmuebleMap.get(codigo)}
-              clientes={grupoClientes}
-              showSeguimiento={!isNuevos}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <ClientesView
+      initialStatus={currentStatus}
+      nuevos={tabs.nuevos}
+      seguimiento={tabs.seguimiento}
+      inmuebles={inmuebles}
+    />
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import useSWR from "swr";
 import type { Inmueble } from "@/types";
 
@@ -5,14 +6,43 @@ interface APIResponse {
   inmuebles: Inmueble[];
   fuente: string;
   total: number;
+  cachedAt?: number;
 }
 
 const CACHE_KEY_LS = "saleshelper_inmuebles_v1";
+const MAX_LOCAL_AGE_MS = 2 * 60 * 60_000;
+
+let parsedLocalCache: APIResponse | null | undefined = undefined;
+
+function readLocalCacheOnce(): APIResponse | undefined {
+  if (typeof window === "undefined") return undefined;
+  if (parsedLocalCache !== undefined) {
+    return parsedLocalCache ?? undefined;
+  }
+
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_LS);
+    if (!raw) {
+      parsedLocalCache = null;
+      return undefined;
+    }
+    const cached = JSON.parse(raw) as APIResponse;
+    const age = Date.now() - (cached.cachedAt || 0);
+    if (!Array.isArray(cached.inmuebles) || cached.inmuebles.length === 0 || age > MAX_LOCAL_AGE_MS) {
+      parsedLocalCache = null;
+      return undefined;
+    }
+    parsedLocalCache = { ...cached, fuente: "offline" };
+    return parsedLocalCache;
+  } catch {
+    parsedLocalCache = null;
+    return undefined;
+  }
+}
 
 const fetcher = async (url: string): Promise<APIResponse> => {
   try {
     const controller = new AbortController();
-    // Timeout de 10s — si el servidor tarda más, usamos caché local
     const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
     const res = await fetch(url, { signal: controller.signal });
@@ -21,26 +51,20 @@ const fetcher = async (url: string): Promise<APIResponse> => {
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data: APIResponse = await res.json();
 
-    // Persistir en localStorage solo si tiene datos reales
     if (data.inmuebles?.length > 0 && data.fuente !== "demo") {
+      const payload: APIResponse = { ...data, cachedAt: Date.now() };
+      parsedLocalCache = { ...payload, fuente: "offline" };
       try {
-        localStorage.setItem(CACHE_KEY_LS, JSON.stringify({
-          ...data,
-          cachedAt: Date.now(),
-        }));
-      } catch (_) { /* storage lleno */ }
+        localStorage.setItem(CACHE_KEY_LS, JSON.stringify(payload));
+      } catch {
+        // storage lleno
+      }
     }
 
     return data;
-  } catch (err: any) {
-    // Timeout o error de red → intentar localStorage
-    try {
-      const raw = localStorage.getItem(CACHE_KEY_LS);
-      if (raw) {
-        const cached = JSON.parse(raw);
-        return { ...cached, fuente: "offline" };
-      }
-    } catch (_) { /* nada */ }
+  } catch (err) {
+    const fallback = readLocalCacheOnce();
+    if (fallback) return fallback;
     throw err;
   }
 };
@@ -50,34 +74,29 @@ export function useInmuebles() {
     "/api/inmuebles",
     fetcher,
     {
-      revalidateOnFocus: false,       // No re-fetch al volver de otra app
-      revalidateOnReconnect: true,    // Sí re-fetch al recuperar red
-      dedupingInterval: 30 * 60_000, // Deduplicar requests en 30 min
-      refreshInterval: 0,            // Sin polling automático
-      // Cargar desde localStorage como fallback inicial inmediato
-      fallbackData: (() => {
-        if (typeof window === "undefined") return undefined;
-        try {
-          const raw = localStorage.getItem(CACHE_KEY_LS);
-          if (!raw) return undefined;
-          const cached = JSON.parse(raw);
-          // Solo usar si es reciente (< 2 horas)
-          const age = Date.now() - (cached.cachedAt || 0);
-          if (age > 2 * 60 * 60_000) return undefined;
-          return { ...cached, fuente: "offline" };
-        } catch {
-          return undefined;
-        }
-      })(),
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+      dedupingInterval: 30 * 60_000,
+      refreshInterval: 0,
+      keepPreviousData: true,
     }
   );
+
+  // Hidratar caché local una sola vez tras montar para evitar mismatch SSR/cliente
+  useEffect(() => {
+    if (data) return;
+    const local = readLocalCacheOnce();
+    if (local) {
+      mutate(local, { revalidate: true });
+    }
+  }, [data, mutate]);
 
   return {
     inmuebles: data?.inmuebles || [],
     fuente: data?.fuente || "",
     total: data?.total || 0,
     isOffline: data?.fuente === "offline",
-    isLoading,
+    isLoading: isLoading && !data,
     isError: error,
     mutate,
   };

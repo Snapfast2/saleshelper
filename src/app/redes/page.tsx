@@ -83,6 +83,16 @@ export default function RedesPage() {
     if (!ogUrl || !inm) return;
     setSharing(true);
     try {
+      // Auto-copiar el texto antes de abrir el menú de compartir:
+      // Instagram en Android ignora `text` al adjuntar imagen, así queda listo para pegar.
+      if (postText) {
+        try {
+          await navigator.clipboard.writeText(postText);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 3000);
+        } catch {}
+      }
+
       const res = await fetch(ogUrl);
       const blob = await res.blob();
       const file = new File([blob], `post-${inm.id}.png`, { type: "image/png" });

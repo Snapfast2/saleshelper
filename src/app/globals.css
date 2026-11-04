@@ -18,10 +18,10 @@
   --bg-overlay: rgba(255, 255, 255, 0.95);
   --bg-input: #FFFFFF;
 
-  /* Text */
+  /* Text (contraste WCAG AA optimizado para lectura exterior bajo sol) */
   --text-primary: #111827;
-  --text-secondary: #4B5563;
-  --text-muted: #9CA3AF;
+  --text-secondary: #374151;
+  --text-muted: #6B7280;
 
   /* Borders */
   --border: #E5E7EB;
@@ -293,17 +293,45 @@ img { max-width: 100%; display: block; }
 .agent-hero::before {
   content: "";
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(196, 30, 58, 0.05) 0%, transparent 60%);
-  animation: rotateGlow 15s linear infinite;
+  inset: 0;
+  background: radial-gradient(circle at 15% 20%, rgba(196, 30, 58, 0.06) 0%, transparent 65%);
+  pointer-events: none;
   z-index: -1;
 }
-@keyframes rotateGlow {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+
+/* ─── Performance Utilities & Skeletons ───────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.animate-pulse {
+  animation: skeleton-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0.01;
+    transform: translate3d(0, 5px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+.page-enter {
+  animation: page-fade-in 140ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.cliente-row-nuevo {
+  box-shadow: inset 3px 0 0 #16a34a;
+  background: linear-gradient(90deg, rgba(22, 163, 74, 0.04) 0%, transparent 35%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .animate-pulse {
+    animation: none !important;
+  }
 }
 
 /* ─── Mini Dashboard ──────────────────────────────────── */
