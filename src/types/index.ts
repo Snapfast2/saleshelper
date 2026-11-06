@@ -84,3 +84,23 @@ export interface BrokerTeamMember {
   esCuentaActiva?: boolean;
   esDemo: boolean;
 }
+
+
+export interface InformePropietarioPayload {
+  inmuebleId: string;
+  codigoDomus?: string;
+  mesClave: string;           // ej. "2026-11"
+  mesEtiqueta: string;        // ej. "Noviembre 2026"
+  nombrePropietario?: string; // ej. "Sr. Jorge Ramírez"
+  vistasFincaRaiz: number;
+  contactosFincaRaiz: number;
+  vistasMetrocuadrado: number;
+  contactosMetrocuadrado: number;
+  contactosOtrosPortales: number;
+  vistasFichaDigital: number;
+  citasRealizadas: number;
+  seguimientosEnviados: number;
+  observaciones: string;
+  recomendacion: string;
+  creadoEn: string;
+}

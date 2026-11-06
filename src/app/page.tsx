@@ -13,6 +13,7 @@ import {
   Send,
   Share2,
   BookOpen,
+  FileText,
   MessageCircle,
   Check,
   CheckCircle2,
@@ -593,6 +594,95 @@ export default function Home() {
           <h2 className="section-title" style={{ fontSize: 18 }}>
             Herramientas comerciales
           </h2>
+        </div>
+
+        {/* Acceso directo destacado: Informe Mensual a Propietarios */}
+        <div style={{ padding: "0 20px 12px" }}>
+          <Link
+            href="/informes"
+            className="card"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
+              padding: "15px 16px",
+              border: "1px solid var(--border-red)",
+              background: "var(--bg-card)",
+              boxShadow: "0 4px 16px rgba(196, 30, 58, 0.05)",
+              textDecoration: "none",
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: "rgba(196, 30, 58, 0.08)",
+                border: "1px solid rgba(196, 30, 58, 0.2)",
+                color: "var(--red)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              <FileText size={21} />
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 15.5,
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  Informe Mensual a Propietarios
+                </span>
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 999,
+                    background: "var(--red)",
+                    color: "#FFFFFF",
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Nuevo
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--text-secondary)",
+                  marginTop: 3,
+                  lineHeight: 1.35,
+                }}
+              >
+                Estadística de Finca Raíz, Metrocuadrado y citas lista para enviar en PDF o WhatsApp
+              </div>
+            </div>
+
+            <ArrowRight
+              size={18}
+              color="var(--red)"
+              style={{ flexShrink: 0 }}
+            />
+          </Link>
         </div>
 
         <div className="quick-actions">

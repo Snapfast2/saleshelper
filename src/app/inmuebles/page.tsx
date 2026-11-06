@@ -1,7 +1,7 @@
 'use client';
 // src/app/inmuebles/page.tsx
 
-import { useState, useMemo, useDeferredValue } from "react";
+import { useState, useMemo, useDeferredValue, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Search, RefreshCw, X, Building2 } from "lucide-react";
@@ -10,6 +10,7 @@ import { useInmuebles } from "@/hooks/useInmuebles";
 import { useFichaViews } from "@/hooks/useFichaViews";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
+import type { Inmueble } from "@/types";
 
 export default function InmueblesPage() {
   const router = useRouter();
@@ -23,6 +24,20 @@ export default function InmueblesPage() {
   >("todos");
 
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+
+  const handleOpenFicha = useCallback(
+    (inm: Inmueble) => {
+      router.push(`/whatsapp?inmueble=${inm.id}`);
+    },
+    [router]
+  );
+
+  const handleOpenReport = useCallback(
+    (inm: Inmueble) => {
+      router.push(`/informes?inmueble=${inm.id}`);
+    },
+    [router]
+  );
 
   const filtered = useMemo(() => {
     let result = inmuebles;
@@ -237,7 +252,8 @@ export default function InmueblesPage() {
               key={inm.id}
               inmueble={inm}
               viewsCount={views[inm.id] ?? 0}
-              onClick={() => router.push(`/whatsapp?inmueble=${inm.id}`)}
+              onClick={handleOpenFicha}
+              onReportClick={handleOpenReport}
             />
           ))}
         </div>

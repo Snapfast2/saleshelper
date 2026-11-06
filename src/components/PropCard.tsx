@@ -2,13 +2,24 @@
 // src/components/PropCard.tsx
 
 import { memo, useMemo, useState } from "react";
-import { BedDouble, Bath, Car, MapPin, Maximize2, Clock, Eye } from "lucide-react";
+import {
+  BedDouble,
+  Bath,
+  Car,
+  MapPin,
+  Maximize2,
+  Clock,
+  Eye,
+  Send,
+  FileText,
+} from "lucide-react";
 import type { Inmueble } from "@/types";
 import ImageCarousel from "./ImageCarousel";
 
 interface Props {
   inmueble: Inmueble;
   onClick?: (inmueble: Inmueble) => void;
+  onReportClick?: (inmueble: Inmueble) => void;
   compact?: boolean;
   viewsCount?: number;
 }
@@ -32,10 +43,12 @@ function formatPrecio(valor: number): string {
 const PropCard = memo(function PropCard({
   inmueble,
   onClick,
+  onReportClick,
   compact,
   viewsCount,
 }: Props) {
   const [hovered, setHovered] = useState(false);
+  const [reportHovered, setReportHovered] = useState(false);
 
   const uniqueImages = useMemo(() => {
     const all = [inmueble.imagen, ...(inmueble.imagenes || [])].filter(Boolean);
@@ -187,6 +200,78 @@ const PropCard = memo(function PropCard({
             </div>
           )}
         </div>
+
+        {!compact && onReportClick && (
+          <div
+            style={{
+              borderTop: "1px solid var(--border)",
+              marginTop: 12,
+              paddingTop: 10,
+              display: "flex",
+              gap: 8,
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick?.(inmueble);
+              }}
+              style={{
+                flex: 1,
+                minHeight: 36,
+                padding: "6px 10px",
+                borderRadius: 9,
+                background: "var(--bg-base)",
+                border: "1px solid var(--border)",
+                color: "var(--text-primary)",
+                fontSize: 12.5,
+                fontWeight: 600,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                cursor: "pointer",
+                transition: "background 0.15s, border-color 0.15s",
+              }}
+            >
+              <Send size={13} color="var(--text-secondary)" />
+              <span>Enviar ficha</span>
+            </button>
+
+            <button
+              type="button"
+              onMouseEnter={() => setReportHovered(true)}
+              onMouseLeave={() => setReportHovered(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReportClick(inmueble);
+              }}
+              style={{
+                flex: 1,
+                minHeight: 36,
+                padding: "6px 10px",
+                borderRadius: 9,
+                background: reportHovered
+                  ? "rgba(196, 30, 58, 0.12)"
+                  : "rgba(196, 30, 58, 0.06)",
+                border: "1px solid rgba(196, 30, 58, 0.24)",
+                color: "var(--red)",
+                fontSize: 12.5,
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                cursor: "pointer",
+                transition: "background 0.15s, border-color 0.15s",
+              }}
+            >
+              <FileText size={13} color="var(--red)" />
+              <span>Informe dueño</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

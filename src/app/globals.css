@@ -1050,3 +1050,93 @@ img { max-width: 100%; display: block; }
     align-items: start;
   }
 }
+
+
+/* ─── Owner Monthly Report Builder & Print Sheet ──────── */
+.report-builder-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  padding: 0 20px;
+}
+
+@media (min-width: 980px) {
+  .report-builder-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(390px, 460px);
+    gap: 24px;
+    align-items: start;
+  }
+  .report-preview-sticky {
+    position: sticky;
+    top: 20px;
+  }
+}
+
+.owner-report-sheet {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.05);
+}
+
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.stepper-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+}
+.stepper-btn:active {
+  transform: scale(0.96);
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  html, body {
+    background: #FFFFFF !important;
+    font-size: 14px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .desktop-sidebar,
+  .bottom-nav,
+  .no-print,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .app-shell,
+  .app-main,
+  .page,
+  .page-enter,
+  .report-builder-grid {
+    display: block !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #FFFFFF !important;
+  }
+  .owner-report-sheet {
+    border: 1px solid #E5E7EB !important;
+    box-shadow: none !important;
+    border-radius: 12px !important;
+    break-inside: avoid;
+  }
+}
