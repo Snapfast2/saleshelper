@@ -81,8 +81,8 @@ function obtenerEstiloTipo(tipoMensaje: string) {
     return {
       Icon: FileText,
       color: "var(--red)",
-      bg: "rgba(196, 30, 58, 0.09)",
-      border: "rgba(196, 30, 58, 0.22)",
+      bg: "rgba(184, 15, 18, 0.09)",
+      border: "rgba(184, 15, 18, 0.22)",
     };
   }
   if (t.includes("visita") || t.includes("cita")) {

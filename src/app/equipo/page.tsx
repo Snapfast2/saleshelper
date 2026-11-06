@@ -15,6 +15,7 @@ import {
   Users,
 } from "lucide-react";
 
+import L2LLogo from "@/components/L2LLogo";
 import { AGENCIA_L2L, EQUIPO_DEMO_L2L, AGENTE_PATRICIA } from "@/lib/agente";
 import { useInmuebles } from "@/hooks/useInmuebles";
 import {
@@ -134,19 +135,31 @@ export default function EquipoAgencyPage() {
           <div>
             <div
               style={{
-                display: "inline-flex",
+                display: "flex",
+                flexWrap: "wrap",
                 alignItems: "center",
-                gap: 6,
-                fontSize: 11.5,
-                fontWeight: 700,
-                color: "var(--red)",
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                marginBottom: 3,
+                gap: 10,
+                marginBottom: 6,
               }}
             >
-              <Building2 size={13} />
-              <span>{AGENCIA_L2L.plan}</span>
+              <L2LLogo height={32} />
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--red)",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  paddingLeft: 10,
+                  borderLeft: "1px solid var(--border)",
+                }}
+              >
+                <Building2 size={13} />
+                <span>{AGENCIA_L2L.plan}</span>
+              </span>
             </div>
             <h1
               style={{
@@ -325,7 +338,7 @@ export default function EquipoAgencyPage() {
                 style={{
                   background: "var(--bg-card)",
                   border: esVivo
-                    ? "1.5px solid rgba(196, 30, 58, 0.28)"
+                    ? "1.5px solid rgba(184, 15, 18, 0.28)"
                     : "1px solid var(--border)",
                   borderRadius: 16,
                   padding: "16px",
@@ -373,7 +386,7 @@ export default function EquipoAgencyPage() {
                           height: 44,
                           borderRadius: "50%",
                           background: esVivo
-                            ? "rgba(196, 30, 58, 0.1)"
+                            ? "rgba(184, 15, 18, 0.1)"
                             : "var(--bg-base)",
                           border: esVivo
                             ? "1.5px solid var(--border-red)"
@@ -820,7 +833,7 @@ export default function EquipoAgencyPage() {
                 gap: 6,
                 padding: "3px 9px",
                 borderRadius: 999,
-                background: "rgba(196, 30, 58, 0.08)",
+                background: "rgba(184, 15, 18, 0.08)",
                 color: "var(--red)",
                 fontSize: 11,
                 fontWeight: 700,

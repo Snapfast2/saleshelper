@@ -1,13 +1,13 @@
 {
-  "name": "SalesHelper — Patricia Vásquez",
-  "short_name": "SalesHelper",
-  "description": "Asistente de ventas inmobiliarias para Patricia Vásquez - L2L Bienes Raíces",
+  "name": "L2L Bienes Raíces · Copiloto Comercial",
+  "short_name": "L2L Copiloto",
+  "description": "Copiloto comercial inmobiliario para asesores de L2L Bienes Raíces SAS",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
-  "background_color": "#F9FAFB",
-  "theme_color": "#C41E3A",
+  "background_color": "#F5F7FA",
+  "theme_color": "#B80F12",
   "orientation": "portrait-primary",
   "icons": [
     {

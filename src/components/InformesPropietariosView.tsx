@@ -938,8 +938,8 @@ export default function InformesPropietariosView({
               gap: 5,
               padding: "3px 9px",
               borderRadius: 999,
-              background: "rgba(196, 30, 58, 0.08)",
-              border: "1px solid rgba(196, 30, 58, 0.2)",
+              background: "rgba(184, 15, 18, 0.08)",
+              border: "1px solid rgba(184, 15, 18, 0.2)",
               color: "var(--red)",
               fontSize: 11,
               fontWeight: 700,
@@ -1023,7 +1023,7 @@ export default function InformesPropietariosView({
                 fontWeight: 800,
                 background:
                   mobileTab === "preview"
-                    ? "rgba(196, 30, 58, 0.1)"
+                    ? "rgba(184, 15, 18, 0.1)"
                     : "rgba(17, 24, 39, 0.07)",
                 color:
                   mobileTab === "preview"
@@ -1116,7 +1116,7 @@ export default function InformesPropietariosView({
                     width: "100%",
                     padding: "9px 11px",
                     borderRadius: 11,
-                    background: "rgba(196, 30, 58, 0.06)",
+                    background: "rgba(184, 15, 18, 0.06)",
                     border: "1px solid var(--border-red)",
                     display: "flex",
                     alignItems: "center",
@@ -1249,7 +1249,7 @@ export default function InformesPropietariosView({
                   color: "var(--red)",
                   padding: "4px 8px",
                   borderRadius: 8,
-                  background: "rgba(196, 30, 58, 0.06)",
+                  background: "rgba(184, 15, 18, 0.06)",
                   cursor: "pointer",
                   flexShrink: 0,
                 }}
@@ -1300,7 +1300,7 @@ export default function InformesPropietariosView({
                     background:
                       formState.contactosFincaRaiz === null
                         ? "rgba(22, 163, 74, 0.1)"
-                        : "rgba(196, 30, 58, 0.08)",
+                        : "rgba(184, 15, 18, 0.08)",
                     color:
                       formState.contactosFincaRaiz === null
                         ? "#15803D"
@@ -1527,7 +1527,7 @@ export default function InformesPropietariosView({
                     background:
                       formState.contactosMetrocuadrado === null
                         ? "rgba(22, 163, 74, 0.1)"
-                        : "rgba(196, 30, 58, 0.08)",
+                        : "rgba(184, 15, 18, 0.08)",
                     color:
                       formState.contactosMetrocuadrado === null
                         ? "#15803D"
@@ -2075,7 +2075,7 @@ export default function InformesPropietariosView({
                       fontSize: 10.5,
                       fontWeight: 700,
                       background: isConceptoEdited
-                        ? "rgba(196, 30, 58, 0.08)"
+                        ? "rgba(184, 15, 18, 0.08)"
                         : "rgba(22, 163, 74, 0.1)",
                       color: isConceptoEdited ? "var(--red)" : "#15803D",
                     }}
@@ -2095,7 +2095,7 @@ export default function InformesPropietariosView({
                   color: "var(--red)",
                   padding: "4px 9px",
                   borderRadius: 8,
-                  background: "rgba(196, 30, 58, 0.06)",
+                  background: "rgba(184, 15, 18, 0.06)",
                   flexShrink: 0,
                 }}
               >

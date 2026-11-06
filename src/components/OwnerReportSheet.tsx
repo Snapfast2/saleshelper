@@ -20,6 +20,7 @@ import {
   Phone,
   Users,
 } from "lucide-react";
+import L2LLogo from "@/components/L2LLogo";
 import { AGENTE_PATRICIA } from "@/lib/agente";
 import type { InformePropietarioPayload, Inmueble } from "@/types";
 
@@ -183,13 +184,13 @@ export default function OwnerReportSheet({
         fontFamily: "var(--font-inter, 'Inter', system-ui, sans-serif)",
       }}
     >
-      {/* Franja superior arquitectónica L2L */}
+      {/* Franja superior arquitectónica bicolor oficial L2L */}
       <div
         aria-hidden="true"
         style={{
           height: 4,
           width: "100%",
-          background: "var(--red)",
+          background: "var(--l2l-ribbon)",
         }}
       />
 
@@ -208,54 +209,25 @@ export default function OwnerReportSheet({
             <div
               style={{
                 display: "flex",
+                flexWrap: "wrap",
                 alignItems: "center",
-                gap: 8,
-                marginBottom: 6,
+                gap: 10,
+                marginBottom: 8,
               }}
             >
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 8,
-                  background: "var(--red)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M4 20V9.5L12 4L20 9.5V20H14.5V14H9.5V20H4Z"
-                    stroke="#FFFFFF"
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M12 4V10"
-                    stroke="rgba(255,255,255,0.7)"
-                    strokeWidth="1.75"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
+              <L2LLogo height={36} />
               <span
                 style={{
                   fontSize: 10.5,
                   fontWeight: 800,
                   letterSpacing: "0.06em",
-                  color: "var(--red)",
+                  color: "var(--l2l-slate)",
                   lineHeight: 1.2,
+                  paddingLeft: 10,
+                  borderLeft: "1px solid var(--border)",
                 }}
               >
-                L2L BIENES RAÍCES · GESTIÓN DE ACTIVOS
+                GESTIÓN DE ACTIVOS INMOBILIARIOS
               </span>
             </div>
 
@@ -323,7 +295,7 @@ export default function OwnerReportSheet({
                     background:
                       inmueble?.gestion === "arriendo"
                         ? "rgba(22, 163, 74, 0.9)"
-                        : "rgba(196, 30, 58, 0.9)",
+                        : "rgba(184, 15, 18, 0.9)",
                     color: "#FFFFFF",
                     fontSize: 11,
                     fontWeight: 800,
@@ -770,11 +742,11 @@ export default function OwnerReportSheet({
                         borderRadius: 999,
                         background:
                           portal.contactos > 0
-                            ? "rgba(196, 30, 58, 0.08)"
+                            ? "rgba(184, 15, 18, 0.08)"
                             : "#FFFFFF",
                         border:
                           portal.contactos > 0
-                            ? "1px solid rgba(196, 30, 58, 0.22)"
+                            ? "1px solid rgba(184, 15, 18, 0.22)"
                             : "1px solid var(--border)",
                         fontSize: 11.5,
                         fontWeight: 700,
@@ -965,7 +937,7 @@ export default function OwnerReportSheet({
                 width: 46,
                 height: 46,
                 borderRadius: "50%",
-                background: "rgba(196, 30, 58, 0.1)",
+                background: "rgba(184, 15, 18, 0.1)",
                 border: "1.5px solid var(--border-red)",
                 color: "var(--red)",
                 display: "flex",

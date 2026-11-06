@@ -461,7 +461,7 @@ function ClienteDetalleModal({
                 height: 48,
                 borderRadius: "50%",
                 flexShrink: 0,
-                background: "linear-gradient(135deg, rgba(196,30,58,0.16), rgba(196,30,58,0.05))",
+                background: "linear-gradient(135deg, rgba(184, 15, 18,0.16), rgba(184, 15, 18,0.05))",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",

@@ -138,7 +138,7 @@ function WhatsAppContent() {
             margin: "0 20px 18px",
             padding: "12px 16px",
             borderRadius: 12,
-            background: "rgba(196, 30, 58, 0.06)",
+            background: "rgba(184, 15, 18, 0.06)",
             border: "1px solid var(--border-red)",
             display: "flex",
             alignItems: "center",

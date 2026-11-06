@@ -168,7 +168,7 @@ export default function PropertyPickerDrawer({
                     borderRadius: 999,
                     background:
                       selected.gestion === "venta"
-                        ? "rgba(196, 30, 58, 0.1)"
+                        ? "rgba(184, 15, 18, 0.1)"
                         : "rgba(22, 163, 74, 0.12)",
                     color:
                       selected.gestion === "venta" ? "var(--red)" : "#16a34a",
@@ -440,7 +440,7 @@ export default function PropertyPickerDrawer({
                               gap: 3,
                               padding: "1px 7px",
                               borderRadius: 999,
-                              background: "rgba(196, 30, 58, 0.08)",
+                              background: "rgba(184, 15, 18, 0.08)",
                               color: "var(--red)",
                               fontSize: 11,
                               fontWeight: 700,

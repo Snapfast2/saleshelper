@@ -65,8 +65,8 @@ export default function NotificationBanner() {
         style={{ margin: "0 20px 16px" }}
       >
         <div style={{
-          background: "linear-gradient(135deg, rgba(196,30,58,0.08) 0%, rgba(196,30,58,0.04) 100%)",
-          border: "1px solid rgba(196,30,58,0.25)",
+          background: "linear-gradient(135deg, rgba(184, 15, 18,0.08) 0%, rgba(184, 15, 18,0.04) 100%)",
+          border: "1px solid rgba(184, 15, 18,0.25)",
           borderRadius: "16px",
           padding: "16px",
           position: "relative",
@@ -80,7 +80,7 @@ export default function NotificationBanner() {
             <X size={16} />
           </button>
           <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(196,30,58,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <div style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(184, 15, 18,0.1)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Bell size={20} color="var(--red)" />
             </div>
             <div style={{ flex: 1 }}>
@@ -129,7 +129,7 @@ export function NotificationHeaderButton() {
       title={label}
       aria-label={label}
       style={{
-        background: isSubscribed ? "rgba(22,163,74,0.1)" : "rgba(196,30,58,0.1)",
+        background: isSubscribed ? "rgba(22,163,74,0.1)" : "rgba(184, 15, 18,0.1)",
         border: "none",
         borderRadius: "50%",
         width: 38,
@@ -194,7 +194,7 @@ export function TestNotifButton() {
           ? "rgba(22,163,74,0.12)"
           : sending
             ? "rgba(234,179,8,0.1)"
-            : "rgba(196,30,58,0.08)",
+            : "rgba(184, 15, 18,0.08)",
         border: "none",
         borderRadius: "50%",
         width: 38,

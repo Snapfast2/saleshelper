@@ -21,6 +21,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import L2LLogo from "@/components/L2LLogo";
 import PropCard from "@/components/PropCard";
 import EmptyState from "@/components/EmptyState";
 import NotificationBanner, {
@@ -143,6 +144,26 @@ export default function Home() {
 
   return (
     <div className="page">
+      {/* Barra Corporativa Móvil L2L (< 900px; en escritorio vive en DesktopSidebar) */}
+      <div className="mobile-brand-bar">
+        <L2LLogo height={34} />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+          <Link
+            href="/equipo"
+            className="workspace-pill"
+            style={{
+              minHeight: 36,
+              padding: "5px 11px",
+              textDecoration: "none",
+            }}
+          >
+            <Building2 size={14} color="var(--red)" />
+            <span>Agencia</span>
+          </Link>
+          <NotificationHeaderButton />
+        </div>
+      </div>
+
       {/* Top Workspace Bar */}
       <div className="workspace-bar">
         <a
@@ -180,7 +201,7 @@ export default function Home() {
                 width: 38,
                 height: 38,
                 borderRadius: "50%",
-                background: "rgba(196, 30, 58, 0.1)",
+                background: "rgba(184, 15, 18, 0.1)",
                 border: "1.5px solid var(--border-red)",
                 color: "var(--red)",
                 display: "flex",
@@ -226,19 +247,50 @@ export default function Home() {
         </a>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <Link
-            href="/equipo"
-            className="workspace-pill"
+          <div
+            className="desktop-only-inline"
+            style={{ alignItems: "center", gap: 8, flexShrink: 0 }}
+          >
+            <Link
+              href="/equipo"
+              className="workspace-pill"
+              style={{
+                minHeight: 38,
+                padding: "6px 12px",
+                textDecoration: "none",
+              }}
+            >
+              <Building2 size={14} color="var(--red)" />
+              <span>Agencia</span>
+            </Link>
+            <NotificationHeaderButton />
+          </div>
+
+          <span
             style={{
-              minHeight: 38,
-              padding: "6px 12px",
-              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "4px 9px",
+              borderRadius: 999,
+              background: "rgba(22, 163, 74, 0.08)",
+              border: "1px solid rgba(22, 163, 74, 0.2)",
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#15803D",
+              flexShrink: 0,
             }}
           >
-            <Building2 size={14} />
-            <span>Agencia</span>
-          </Link>
-          <NotificationHeaderButton />
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "#16A34A",
+              }}
+            />
+            <span>En línea</span>
+          </span>
         </div>
       </div>
 
@@ -609,7 +661,7 @@ export default function Home() {
               padding: "15px 16px",
               border: "1px solid var(--border-red)",
               background: "var(--bg-card)",
-              boxShadow: "0 4px 16px rgba(196, 30, 58, 0.05)",
+              boxShadow: "0 4px 16px rgba(184, 15, 18, 0.05)",
               textDecoration: "none",
             }}
           >
@@ -618,8 +670,8 @@ export default function Home() {
                 width: 44,
                 height: 44,
                 borderRadius: 12,
-                background: "rgba(196, 30, 58, 0.08)",
-                border: "1px solid rgba(196, 30, 58, 0.2)",
+                background: "rgba(184, 15, 18, 0.08)",
+                border: "1px solid rgba(184, 15, 18, 0.2)",
                 color: "var(--red)",
                 display: "flex",
                 alignItems: "center",
@@ -694,8 +746,8 @@ export default function Home() {
             <div
               className="qa-icon"
               style={{
-                background: "rgba(196, 30, 58, 0.07)",
-                border: "1px solid rgba(196, 30, 58, 0.18)",
+                background: "rgba(184, 15, 18, 0.07)",
+                border: "1px solid rgba(184, 15, 18, 0.18)",
                 color: "var(--red)",
               }}
             >

@@ -58,7 +58,7 @@ export function buildTemplates(nombre: string, inmueble?: Inmueble) {
       subtitulo: "Información detallada del inmueble",
       Icon: FileText,
       iconColor: "var(--red)",
-      iconBg: "rgba(196, 30, 58, 0.1)",
+      iconBg: "rgba(184, 15, 18, 0.1)",
       texto: `Hola ${n2}, con mucho gusto te comparto la información completa${desc ? ` de ${desc}` : ""}. Aquí puedes ver todos los detalles: precio, área, ubicación y características. Cualquier duda me preguntas con toda confianza 🏡`,
     },
     {

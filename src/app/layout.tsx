@@ -16,9 +16,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SalesHelper · L2L Bienes Raíces",
-  description: "Copiloto comercial inmobiliario para L2L Bienes Raíces.",
+  title: "L2L Bienes Raíces · Copiloto Comercial",
+  description: "Copiloto comercial inmobiliario para L2L Bienes Raíces SAS.",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
+  },
   robots: {
     index: false,
     follow: false,
@@ -27,12 +31,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SalesHelper",
+    title: "L2L Copiloto",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#C41E3A",
+  themeColor: "#B80F12",
   width: "device-width",
   initialScale: 1,
 };

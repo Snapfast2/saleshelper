@@ -253,9 +253,9 @@ const PropCard = memo(function PropCard({
                 padding: "6px 10px",
                 borderRadius: 9,
                 background: reportHovered
-                  ? "rgba(196, 30, 58, 0.12)"
-                  : "rgba(196, 30, 58, 0.06)",
-                border: "1px solid rgba(196, 30, 58, 0.24)",
+                  ? "rgba(184, 15, 18, 0.12)"
+                  : "rgba(184, 15, 18, 0.06)",
+                border: "1px solid rgba(184, 15, 18, 0.24)",
                 color: "var(--red)",
                 fontSize: 12.5,
                 fontWeight: 700,

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { fetchDomusProperties } from "@/services/domusService";
 import { scrapeL2L } from "@/services/l2lService";
+import L2LLogo from "@/components/L2LLogo";
 import { AGENTE_PATRICIA } from "@/lib/agente";
 import ImageCarousel from "@/components/ImageCarousel";
 import FichaViewTracker from "@/components/FichaViewTracker";
@@ -184,7 +185,7 @@ export default async function FichaPage({
       style={{
         width: "100%",
         minHeight: "100dvh",
-        background: "#F9FAFB",
+        background: "var(--bg-base)",
         paddingBottom: 100,
         fontFamily: "var(--font-inter, -apple-system, system-ui, sans-serif)",
       }}
@@ -203,48 +204,49 @@ export default async function FichaPage({
           boxShadow: "0 10px 34px rgba(17, 24, 39, 0.05)",
         }}
       >
-        {/* ── Barra Superior Co-Branded ── */}
+        {/* ── Cinta Arquitectónica Bicolor L2L ── */}
+        <div
+          aria-hidden="true"
+          style={{
+            height: 4,
+            width: "100%",
+            background: "var(--l2l-ribbon)",
+          }}
+        />
+
+        {/* ── Barra Superior Corporativa L2L ── */}
         <header
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 12,
-            padding: "14px 20px",
+            padding: "13px 18px",
             borderBottom: "1px solid var(--border)",
             background: "var(--bg-card)",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 11, minWidth: 0 }}>
+            <L2LLogo height={34} />
             <div
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 9,
-                background: "rgba(196, 30, 58, 0.1)",
-                color: "var(--red)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                minWidth: 0,
+                paddingLeft: 10,
+                borderLeft: "1px solid var(--border)",
               }}
             >
-              <Building2 size={18} />
-            </div>
-            <div style={{ minWidth: 0 }}>
               <div
                 style={{
-                  fontSize: 15,
-                  fontWeight: 800,
+                  fontSize: 12,
+                  fontWeight: 700,
                   color: "var(--text-primary)",
-                  letterSpacing: "-0.01em",
                   lineHeight: 1.2,
                 }}
               >
-                L2L Bienes Raíces
+                Ficha Comercial
               </div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 500 }}>
-                Ficha Comercial Verificada
+              <div style={{ fontSize: 11, color: "var(--l2l-slate)", fontWeight: 600 }}>
+                Portafolio Verificado
               </div>
             </div>
           </div>
@@ -305,7 +307,7 @@ export default async function FichaPage({
               letterSpacing: "0.04em",
               textTransform: "uppercase",
               color: "#fff",
-              background: esVenta ? "rgba(196, 30, 58, 0.9)" : "rgba(22, 163, 74, 0.9)",
+              background: esVenta ? "rgba(184, 15, 18, 0.9)" : "rgba(22, 163, 74, 0.9)",
               backdropFilter: "blur(8px)",
               pointerEvents: "none",
             }}

@@ -77,7 +77,7 @@ export default function LoadingClientes() {
                 borderTop: "1px solid var(--border)",
               }}
             >
-              <div className="animate-pulse" style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(196,30,58,0.1)", marginRight: 8 }} />
+              <div className="animate-pulse" style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(184, 15, 18,0.1)", marginRight: 8 }} />
               <div className="animate-pulse" style={{ height: 16, width: 140, borderRadius: 4, background: "var(--bg-card-hover)" }} />
             </div>
 
