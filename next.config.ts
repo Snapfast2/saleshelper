@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     },
     optimizePackageImports: ["framer-motion"],
   },
-  allowedDevOrigins: ["192.168.1.3"],
+  allowedDevOrigins: ["192.168.1.3", "192.168.0.17", "localhost"],
 };
 
 export default nextConfig;
