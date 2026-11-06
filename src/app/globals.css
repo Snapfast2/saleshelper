@@ -1053,17 +1053,116 @@ img { max-width: 100%; display: block; }
 
 
 /* ─── Owner Monthly Report Builder & Print Sheet ──────── */
+.report-page {
+  padding-bottom: calc(184px + env(safe-area-inset-bottom, 0px));
+}
+
+.report-mobile-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 65;
+  padding: 6px 16px 10px;
+  background: rgba(249, 250, 251, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.report-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 13px;
+  background: #E5E7EB;
+}
+
+.report-seg-btn {
+  min-height: 40px;
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.report-seg-btn.active {
+  background: #FFFFFF;
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.08);
+}
+
 .report-builder-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
-  padding: 0 20px;
+  gap: 14px;
+  padding: 2px 16px 0;
+}
+
+.report-col-hidden-mobile {
+  display: none !important;
+}
+
+.report-desktop-actions {
+  display: none !important;
+}
+
+.report-mobile-actionbar {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(66px + env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 520px;
+  z-index: 95;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(17, 24, 39, 0.08);
+  padding: 9px 14px 10px;
+}
+
+@media (min-width: 900px) and (max-width: 979px) {
+  .report-mobile-actionbar {
+    bottom: 0;
+    left: 256px;
+    right: 0;
+    transform: none;
+    max-width: none;
+    width: auto;
+  }
+}
+
+.report-portal-inputs-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
 }
 
 @media (min-width: 980px) {
+  .report-page {
+    padding-bottom: 56px;
+  }
+  .report-mobile-tabs,
+  .report-mobile-actionbar {
+    display: none !important;
+  }
+  .report-col-hidden-mobile {
+    display: flex !important;
+  }
+  .report-desktop-actions {
+    display: flex !important;
+  }
   .report-builder-grid {
     grid-template-columns: minmax(0, 1fr) minmax(390px, 460px);
     gap: 24px;
+    padding: 0 20px;
     align-items: start;
   }
   .report-preview-sticky {
@@ -1072,12 +1171,202 @@ img { max-width: 100%; display: block; }
   }
 }
 
+/* ─── Owner Report Sheet (Mobile-First + Executive Print) ── */
 .owner-report-sheet {
   background: #FFFFFF;
   border: 1px solid var(--border);
   border-radius: 18px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(17, 24, 39, 0.05);
+}
+
+.ors-header {
+  padding: 16px 16px 15px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.ors-subbanner {
+  padding: 9px 16px;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.ors-section {
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+  break-inside: avoid;
+}
+
+.ors-footer {
+  padding: 15px 16px;
+  background: var(--bg-base);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  break-inside: avoid;
+}
+
+.ors-prop-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ors-prop-cover {
+  position: relative;
+  width: 100%;
+  height: 178px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  flex-shrink: 0;
+}
+
+.ors-prop-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ors-prop-cover-overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.ors-prop-fallback {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-muted);
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.ors-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ors-kpi-card {
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ors-kpi-hero {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, rgba(196, 30, 58, 0.05) 0%, #FFFFFF 100%);
+  border-color: rgba(196, 30, 58, 0.22);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+}
+
+.ors-portal-card {
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ors-contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ors-contact-link:hover {
+  border-color: var(--border-red);
+  color: var(--red);
+}
+
+@media (min-width: 540px) {
+  .ors-header {
+    padding: 20px 22px 18px;
+  }
+  .ors-subbanner {
+    padding: 10px 22px;
+  }
+  .ors-section {
+    padding: 18px 22px;
+  }
+  .ors-footer {
+    padding: 16px 22px;
+  }
+  .ors-prop-layout {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .ors-prop-cover {
+    width: 124px;
+    height: 90px;
+    border-radius: 10px;
+  }
+  .ors-prop-cover-overlay {
+    display: none !important;
+  }
+  .ors-prop-fallback {
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    width: 120px;
+    height: 88px;
+    padding: 8px;
+  }
+  .ors-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .ors-kpi-hero {
+    grid-column: auto;
+    background: var(--bg-base);
+    border-color: var(--border);
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 4px;
+    padding: 12px 13px;
+  }
 }
 
 .stepper-btn {
@@ -1124,8 +1413,11 @@ img { max-width: 100%; display: block; }
   .app-shell,
   .app-main,
   .page,
+  .report-page,
   .page-enter,
-  .report-builder-grid {
+  .report-builder-grid,
+  .report-preview-col,
+  .report-preview-col.report-col-hidden-mobile {
     display: block !important;
     max-width: 100% !important;
     width: 100% !important;
@@ -1138,5 +1430,49 @@ img { max-width: 100%; display: block; }
     box-shadow: none !important;
     border-radius: 12px !important;
     break-inside: avoid;
+  }
+  .ors-header,
+  .ors-section,
+  .ors-footer {
+    padding: 14px 20px !important;
+  }
+  .ors-subbanner {
+    padding: 8px 20px !important;
+  }
+  .ors-prop-layout {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+  }
+  .ors-prop-cover {
+    width: 116px !important;
+    height: 84px !important;
+    border-radius: 10px !important;
+  }
+  .ors-prop-cover-overlay {
+    display: none !important;
+  }
+  .ors-prop-fallback {
+    flex-direction: column !important;
+    justify-content: center !important;
+    width: 116px !important;
+    height: 84px !important;
+  }
+  .ors-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .ors-kpi-hero {
+    grid-column: auto !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    background: #F9FAFB !important;
+    border-color: #E5E7EB !important;
+    padding: 11px 12px !important;
+  }
+  .ors-contact-link {
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
   }
 }

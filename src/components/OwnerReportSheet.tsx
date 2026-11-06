@@ -1,7 +1,8 @@
 'use client';
 // src/components/OwnerReportSheet.tsx
 // Hoja ejecutiva de Informe Mensual de Gestión Comercial para propietarios (L2L Bienes Raíces).
-// Compatible con vista móvil, escritorio y exportación directa a PDF A4 (@media print).
+// Optimizada mobile-first (portada panorámica + KPIs 1+2 + portales con píldoras limpias + firma tocable)
+// y exportación directa a PDF A4 en una sola hoja (@media print).
 
 import { useState } from "react";
 import {
@@ -11,11 +12,13 @@ import {
   Calendar,
   Car,
   Compass,
+  Eye,
   Mail,
   MapPin,
   Maximize2,
   MessageCircle,
   Phone,
+  Users,
 } from "lucide-react";
 import { AGENTE_PATRICIA } from "@/lib/agente";
 import type { InformePropietarioPayload, Inmueble } from "@/types";
@@ -84,16 +87,41 @@ export default function OwnerReportSheet({
     report.mesEtiqueta?.trim() || report.mesClave?.trim() || "Periodo actual";
 
   // Métricas sanitizadas
-  const vistasFincaRaiz = Math.max(0, Math.round(Number(report.vistasFincaRaiz) || 0));
-  const contactosFincaRaiz = Math.max(0, Math.round(Number(report.contactosFincaRaiz) || 0));
-  const vistasMetrocuadrado = Math.max(0, Math.round(Number(report.vistasMetrocuadrado) || 0));
-  const contactosMetrocuadrado = Math.max(0, Math.round(Number(report.contactosMetrocuadrado) || 0));
-  const vistasFichaDigital = Math.max(0, Math.round(Number(report.vistasFichaDigital) || 0));
-  const contactosOtrosPortales = Math.max(0, Math.round(Number(report.contactosOtrosPortales) || 0));
-  const citasRealizadas = Math.max(0, Math.round(Number(report.citasRealizadas) || 0));
-  const seguimientosEnviados = Math.max(0, Math.round(Number(report.seguimientosEnviados) || 0));
+  const vistasFincaRaiz = Math.max(
+    0,
+    Math.round(Number(report.vistasFincaRaiz) || 0)
+  );
+  const contactosFincaRaiz = Math.max(
+    0,
+    Math.round(Number(report.contactosFincaRaiz) || 0)
+  );
+  const vistasMetrocuadrado = Math.max(
+    0,
+    Math.round(Number(report.vistasMetrocuadrado) || 0)
+  );
+  const contactosMetrocuadrado = Math.max(
+    0,
+    Math.round(Number(report.contactosMetrocuadrado) || 0)
+  );
+  const vistasFichaDigital = Math.max(
+    0,
+    Math.round(Number(report.vistasFichaDigital) || 0)
+  );
+  const contactosOtrosPortales = Math.max(
+    0,
+    Math.round(Number(report.contactosOtrosPortales) || 0)
+  );
+  const citasRealizadas = Math.max(
+    0,
+    Math.round(Number(report.citasRealizadas) || 0)
+  );
+  const seguimientosEnviados = Math.max(
+    0,
+    Math.round(Number(report.seguimientosEnviados) || 0)
+  );
 
-  const totalVistas = vistasFincaRaiz + vistasMetrocuadrado + vistasFichaDigital;
+  const totalVistas =
+    vistasFincaRaiz + vistasMetrocuadrado + vistasFichaDigital;
   const totalContactos =
     contactosFincaRaiz + contactosMetrocuadrado + contactosOtrosPortales;
 
@@ -108,23 +136,37 @@ export default function OwnerReportSheet({
     {
       id: "fincaraiz",
       nombre: "Finca Raíz",
+      subtitulo: null as string | null,
       vistas: vistasFincaRaiz,
-      vistasTexto: `${vistasFincaRaiz.toLocaleString("es-CO")} vistas al aviso`,
-      contactosTexto: `${contactosFincaRaiz.toLocaleString("es-CO")} interesados`,
+      vistasPill: `${vistasFincaRaiz.toLocaleString("es-CO")} vistas`,
+      contactos: contactosFincaRaiz,
+      contactosPill: `${contactosFincaRaiz.toLocaleString("es-CO")} ${
+        contactosFincaRaiz === 1 ? "interesado" : "interesados"
+      }`,
     },
     {
       id: "metrocuadrado",
       nombre: "Metrocuadrado",
+      subtitulo: null as string | null,
       vistas: vistasMetrocuadrado,
-      vistasTexto: `${vistasMetrocuadrado.toLocaleString("es-CO")} vistas al aviso`,
-      contactosTexto: `${contactosMetrocuadrado.toLocaleString("es-CO")} interesados`,
+      vistasPill: `${vistasMetrocuadrado.toLocaleString("es-CO")} vistas`,
+      contactos: contactosMetrocuadrado,
+      contactosPill: `${contactosMetrocuadrado.toLocaleString("es-CO")} ${
+        contactosMetrocuadrado === 1 ? "interesado" : "interesados"
+      }`,
     },
     {
       id: "red-l2l",
-      nombre: "Red L2L / Proppit / Ficha Directa",
+      nombre: "Red L2L y Ficha Digital",
+      subtitulo: "Proppit · Ciencuadras · Web L2L",
       vistas: vistasFichaDigital,
-      vistasTexto: `${vistasFichaDigital.toLocaleString("es-CO")} aperturas de ficha`,
-      contactosTexto: `${contactosOtrosPortales.toLocaleString("es-CO")} interesados`,
+      vistasPill: `${vistasFichaDigital.toLocaleString("es-CO")} ${
+        vistasFichaDigital === 1 ? "apertura" : "aperturas"
+      }`,
+      contactos: contactosOtrosPortales,
+      contactosPill: `${contactosOtrosPortales.toLocaleString("es-CO")} ${
+        contactosOtrosPortales === 1 ? "interesado" : "interesados"
+      }`,
     },
   ];
 
@@ -152,36 +194,30 @@ export default function OwnerReportSheet({
       />
 
       {/* 1. Encabezado Co-Branded */}
-      <header
-        style={{
-          padding: "20px 22px 18px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-card)",
-        }}
-      >
+      <header className="ors-header">
         <div
           style={{
             display: "flex",
             flexWrap: "wrap",
             alignItems: "flex-start",
             justifyContent: "space-between",
-            gap: 12,
+            gap: 10,
           }}
         >
-          <div style={{ minWidth: 0, flex: "1 1 240px" }}>
+          <div style={{ minWidth: 0, flex: "1 1 210px" }}>
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 10,
-                marginBottom: 8,
+                gap: 8,
+                marginBottom: 6,
               }}
             >
               <div
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 9,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 8,
                   background: "var(--red)",
                   display: "flex",
                   alignItems: "center",
@@ -190,8 +226,8 @@ export default function OwnerReportSheet({
                 }}
               >
                 <svg
-                  width="18"
-                  height="18"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   aria-hidden="true"
@@ -212,11 +248,11 @@ export default function OwnerReportSheet({
               </div>
               <span
                 style={{
-                  fontSize: 11,
-                  fontWeight: 700,
+                  fontSize: 10.5,
+                  fontWeight: 800,
                   letterSpacing: "0.06em",
                   color: "var(--red)",
-                  lineHeight: 1.25,
+                  lineHeight: 1.2,
                 }}
               >
                 L2L BIENES RAÍCES · GESTIÓN DE ACTIVOS
@@ -225,7 +261,7 @@ export default function OwnerReportSheet({
 
             <h1
               style={{
-                fontSize: 21,
+                fontSize: "clamp(18px, 4.8vw, 21px)",
                 fontWeight: 800,
                 color: "var(--text-primary)",
                 letterSpacing: "-0.02em",
@@ -241,11 +277,11 @@ export default function OwnerReportSheet({
               display: "inline-flex",
               alignItems: "center",
               gap: 6,
-              padding: "6px 12px",
+              padding: "5px 11px",
               borderRadius: 999,
               background: "var(--bg-base)",
               border: "1px solid var(--border)",
-              fontSize: 12.5,
+              fontSize: 12,
               fontWeight: 700,
               color: "var(--text-primary)",
               whiteSpace: "nowrap",
@@ -260,79 +296,72 @@ export default function OwnerReportSheet({
 
       {/* Sub-franja personalizada para el propietario */}
       {propietarioNombre && (
-        <div
-          style={{
-            padding: "10px 22px",
-            background: "var(--bg-base)",
-            borderBottom: "1px solid var(--border)",
-            fontSize: 13,
-            color: "var(--text-secondary)",
-            lineHeight: 1.4,
-          }}
-        >
-          Preparado especialmente para:{" "}
+        <div className="ors-subbanner">
+          Preparado para:{" "}
           <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>
             {propietarioNombre}
           </strong>
         </div>
       )}
 
-      {/* 2. Tarjeta de Identificación del Inmueble */}
-      <section
-        aria-label="Identificación del inmueble"
-        style={{
-          padding: "18px 22px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-card)",
-          breakInside: "avoid",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
+      {/* 2. Tarjeta de Identificación del Inmueble (Portada móvil / Fila ejecutiva en PC y PDF) */}
+      <section className="ors-section" aria-label="Identificación del inmueble">
+        <div className="ors-prop-layout">
           {showPropImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={rawPropImg}
-              alt={inmueble?.titulo || `${tipoLabel} Ref. #${refCode}`}
-              onError={() => setFailedPropImg(rawPropImg)}
-              style={{
-                width: 116,
-                height: 86,
-                borderRadius: 10,
-                objectFit: "cover",
-                border: "1px solid var(--border)",
-                background: "var(--bg-base)",
-                flexShrink: 0,
-              }}
-            />
+            <div className="ors-prop-cover">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={rawPropImg}
+                alt={inmueble?.titulo || `${tipoLabel} Ref. #${refCode}`}
+                onError={() => setFailedPropImg(rawPropImg)}
+              />
+              <div className="ors-prop-cover-overlay">
+                <span
+                  style={{
+                    padding: "4px 10px",
+                    borderRadius: 999,
+                    background:
+                      inmueble?.gestion === "arriendo"
+                        ? "rgba(22, 163, 74, 0.9)"
+                        : "rgba(196, 30, 58, 0.9)",
+                    color: "#FFFFFF",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  {gestionLabel}
+                </span>
+                <span
+                  style={{
+                    padding: "4px 9px",
+                    borderRadius: 999,
+                    background: "rgba(17, 24, 39, 0.78)",
+                    color: "#FFFFFF",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    fontVariantNumeric: "tabular-nums",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  Ref. #{refCode}
+                </span>
+              </div>
+            </div>
           ) : (
-            <div
-              style={{
-                width: 116,
-                height: 86,
-                borderRadius: 10,
-                border: "1px solid var(--border)",
-                background: "var(--bg-base)",
-                color: "var(--text-muted)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                flexShrink: 0,
-              }}
-            >
-              <Building2 size={22} color="var(--red)" />
+            <div className="ors-prop-fallback">
+              <Building2
+                size={22}
+                color="var(--red)"
+                style={{ flexShrink: 0 }}
+              />
               <span
                 style={{
-                  fontSize: 11,
-                  fontWeight: 600,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--text-secondary)",
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
@@ -341,13 +370,13 @@ export default function OwnerReportSheet({
             </div>
           )}
 
-          <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
-                gap: 8,
+                gap: 7,
                 marginBottom: 4,
               }}
             >
@@ -377,7 +406,7 @@ export default function OwnerReportSheet({
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
-                Código Ref. #{refCode}
+                Ref. #{refCode}
               </span>
             </div>
 
@@ -406,13 +435,13 @@ export default function OwnerReportSheet({
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
-                gap: "6px 8px",
+                gap: "6px 7px",
               }}
             >
               {inmueble && inmueble.precio > 0 && (
                 <span
                   style={{
-                    fontSize: 15.5,
+                    fontSize: 16,
                     fontWeight: 800,
                     color: "var(--red)",
                     fontVariantNumeric: "tabular-nums",
@@ -513,15 +542,10 @@ export default function OwnerReportSheet({
         </div>
       </section>
 
-      {/* 3. Resumen Ejecutivo de Alcance Digital (KPI Strip) */}
+      {/* 3. Resumen Ejecutivo de Alcance Digital (1 protagonista + 2 en móvil · 3 col en PC/PDF) */}
       <section
+        className="ors-section"
         aria-label="Resumen ejecutivo de alcance digital"
-        style={{
-          padding: "18px 22px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-card)",
-          breakInside: "avoid",
-        }}
       >
         <h2
           style={{
@@ -529,77 +553,54 @@ export default function OwnerReportSheet({
             fontWeight: 700,
             color: "var(--text-primary)",
             letterSpacing: "-0.01em",
-            marginBottom: 12,
+            marginBottom: 11,
           }}
         >
           Resumen Ejecutivo de Alcance Digital
         </h2>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-            gap: 1,
-            background: "var(--border)",
-            border: "1px solid var(--border)",
-            borderRadius: 12,
-            overflow: "hidden",
-          }}
-        >
-          <div
-            style={{
-              background: "var(--bg-card)",
-              padding: "13px 12px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              minWidth: 0,
-            }}
-          >
+        <div className="ors-kpi-grid">
+          <div className="ors-kpi-card ors-kpi-hero">
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--text-primary)",
+                  lineHeight: 1.25,
+                }}
+              >
+                Exposición total
+              </div>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  fontWeight: 500,
+                  color: "var(--text-secondary)",
+                  lineHeight: 1.3,
+                  marginTop: 2,
+                }}
+              >
+                Visualizaciones en portales y ficha
+              </div>
+            </div>
+
             <span
               style={{
-                fontSize: 11.5,
-                fontWeight: 600,
-                color: "var(--text-muted)",
-                lineHeight: 1.25,
-              }}
-            >
-              Exposición total
-            </span>
-            <span
-              style={{
-                fontSize: "clamp(19px, 4.2vw, 25px)",
+                fontSize: "clamp(24px, 6.2vw, 28px)",
                 fontWeight: 800,
                 color: "var(--text-primary)",
-                lineHeight: 1.1,
+                lineHeight: 1.05,
                 letterSpacing: "-0.02em",
                 fontVariantNumeric: "tabular-nums",
+                flexShrink: 0,
               }}
             >
               {totalVistas.toLocaleString("es-CO")}
             </span>
-            <span
-              style={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: "var(--text-secondary)",
-                lineHeight: 1.25,
-              }}
-            >
-              Visualizaciones del inmueble
-            </span>
           </div>
 
-          <div
-            style={{
-              background: "var(--bg-card)",
-              padding: "13px 12px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              minWidth: 0,
-            }}
-          >
+          <div className="ors-kpi-card">
             <span
               style={{
                 fontSize: 11.5,
@@ -608,11 +609,11 @@ export default function OwnerReportSheet({
                 lineHeight: 1.25,
               }}
             >
-              Clientes interesados
+              Interesados
             </span>
             <span
               style={{
-                fontSize: "clamp(19px, 4.2vw, 25px)",
+                fontSize: "clamp(22px, 5.5vw, 26px)",
                 fontWeight: 800,
                 color: "var(--text-primary)",
                 lineHeight: 1.1,
@@ -624,7 +625,7 @@ export default function OwnerReportSheet({
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: 500,
                 color: "var(--text-secondary)",
                 lineHeight: 1.25,
@@ -634,16 +635,7 @@ export default function OwnerReportSheet({
             </span>
           </div>
 
-          <div
-            style={{
-              background: "var(--bg-card)",
-              padding: "13px 12px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              minWidth: 0,
-            }}
-          >
+          <div className="ors-kpi-card">
             <span
               style={{
                 fontSize: 11.5,
@@ -652,11 +644,11 @@ export default function OwnerReportSheet({
                 lineHeight: 1.25,
               }}
             >
-              Visitas realizadas
+              Visitas al inmueble
             </span>
             <span
               style={{
-                fontSize: "clamp(19px, 4.2vw, 25px)",
+                fontSize: "clamp(22px, 5.5vw, 26px)",
                 fontWeight: 800,
                 color: "var(--red)",
                 lineHeight: 1.1,
@@ -668,27 +660,22 @@ export default function OwnerReportSheet({
             </span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: 500,
                 color: "var(--text-secondary)",
                 lineHeight: 1.25,
               }}
             >
-              Citas en el inmueble
+              Citas presenciales
             </span>
           </div>
         </div>
       </section>
 
-      {/* 4. Desglose por Portal Inmobiliario */}
+      {/* 4. Desglose por Portal Inmobiliario (Tarjetas escaneables con píldoras limpias) */}
       <section
+        className="ors-section"
         aria-label="Desglose por portal inmobiliario"
-        style={{
-          padding: "18px 22px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-card)",
-          breakInside: "avoid",
-        }}
       >
         <h2
           style={{
@@ -696,62 +683,119 @@ export default function OwnerReportSheet({
             fontWeight: 700,
             color: "var(--text-primary)",
             letterSpacing: "-0.01em",
-            marginBottom: 14,
+            marginBottom: 11,
           }}
         >
           Desglose por Portal Inmobiliario
         </h2>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           {portales.map((portal) => {
             const widthPct =
               portal.vistas > 0
-                ? Math.max(5, Math.round((portal.vistas / maxPortalVistas) * 100))
+                ? Math.max(
+                    6,
+                    Math.round((portal.vistas / maxPortalVistas) * 100)
+                  )
                 : 0;
 
             return (
-              <div key={portal.id}>
+              <div key={portal.id} className="ors-portal-card">
                 <div
                   style={{
                     display: "flex",
                     flexWrap: "wrap",
-                    alignItems: "baseline",
+                    alignItems: "center",
                     justifyContent: "space-between",
-                    gap: "2px 10px",
-                    marginBottom: 6,
+                    gap: "6px 10px",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 13.5,
-                      fontWeight: 700,
-                      color: "var(--text-primary)",
-                    }}
-                  >
-                    {portal.nombre}
-                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        color: "var(--text-primary)",
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {portal.nombre}
+                    </div>
+                    {portal.subtitulo && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--text-muted)",
+                          marginTop: 1,
+                        }}
+                      >
+                        {portal.subtitulo}
+                      </div>
+                    )}
+                  </div>
 
-                  <span
+                  <div
                     style={{
-                      fontSize: 12.5,
-                      fontWeight: 600,
-                      color: "var(--text-secondary)",
+                      display: "flex",
+                      flexWrap: "wrap",
+                      alignItems: "center",
+                      gap: 6,
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    <strong style={{ color: "var(--text-primary)" }}>
-                      {portal.vistasTexto}
-                    </strong>{" "}
-                    · {portal.contactosTexto}
-                  </span>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        background: "#FFFFFF",
+                        border: "1px solid var(--border)",
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: "var(--text-primary)",
+                      }}
+                    >
+                      <Eye size={11.5} color="var(--text-muted)" />
+                      <span>{portal.vistasPill}</span>
+                    </span>
+
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        padding: "3px 8px",
+                        borderRadius: 999,
+                        background:
+                          portal.contactos > 0
+                            ? "rgba(196, 30, 58, 0.08)"
+                            : "#FFFFFF",
+                        border:
+                          portal.contactos > 0
+                            ? "1px solid rgba(196, 30, 58, 0.22)"
+                            : "1px solid var(--border)",
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color:
+                          portal.contactos > 0
+                            ? "var(--red)"
+                            : "var(--text-secondary)",
+                      }}
+                    >
+                      <Users size={11.5} />
+                      <span>{portal.contactosPill}</span>
+                    </span>
+                  </div>
                 </div>
 
                 <div
                   style={{
                     width: "100%",
-                    height: 7,
+                    height: 6,
                     borderRadius: 999,
-                    background: "var(--bg-base)",
+                    background: "#FFFFFF",
                     border: "1px solid var(--border)",
                     overflow: "hidden",
                   }}
@@ -774,15 +818,15 @@ export default function OwnerReportSheet({
         {/* Línea compacta de gestiones directas por WhatsApp */}
         <div
           style={{
-            marginTop: 15,
-            padding: "10px 12px",
+            marginTop: 10,
+            padding: "9px 12px",
             borderRadius: 10,
             background: "var(--bg-base)",
             border: "1px solid var(--border)",
             display: "flex",
             alignItems: "center",
-            gap: 9,
-            fontSize: 12.5,
+            gap: 8,
+            fontSize: 12,
             color: "var(--text-secondary)",
             lineHeight: 1.4,
             fontVariantNumeric: "tabular-nums",
@@ -795,23 +839,21 @@ export default function OwnerReportSheet({
           />
           <div>
             <strong style={{ color: "var(--text-primary)", fontWeight: 700 }}>
-              Gestiones de seguimiento WhatsApp realizadas:
+              Seguimiento comercial directo:
             </strong>{" "}
-            {seguimientosEnviados.toLocaleString("es-CO")} contactos y
-            seguimientos directos realizados por la asesora.
+            {seguimientosEnviados.toLocaleString("es-CO")}{" "}
+            {seguimientosEnviados === 1
+              ? "atención y ficha enviada"
+              : "atenciones y fichas enviadas"}{" "}
+            por WhatsApp y teléfono.
           </div>
         </div>
       </section>
 
       {/* 5. Concepto Comercial y Retroalimentación de Interesados */}
       <section
+        className="ors-section"
         aria-label="Concepto comercial y retroalimentación"
-        style={{
-          padding: "18px 22px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-card)",
-          breakInside: "avoid",
-        }}
       >
         <h2
           style={{
@@ -819,17 +861,17 @@ export default function OwnerReportSheet({
             fontWeight: 700,
             color: "var(--text-primary)",
             letterSpacing: "-0.01em",
-            marginBottom: 10,
+            marginBottom: 8,
           }}
         >
-          Concepto Comercial y Retroalimentación de Interesados
+          Concepto Comercial y Retroalimentación
         </h2>
 
         {observacionesTexto ? (
           <p
             style={{
-              fontSize: 14,
-              lineHeight: 1.62,
+              fontSize: 13.8,
+              lineHeight: 1.58,
               color: "var(--text-secondary)",
               whiteSpace: "pre-line",
             }}
@@ -853,8 +895,8 @@ export default function OwnerReportSheet({
         {recomendacionTexto && (
           <div
             style={{
-              marginTop: 14,
-              padding: "12px 14px",
+              marginTop: 12,
+              padding: "11px 13px",
               background: "var(--bg-base)",
               border: "1px solid var(--border)",
               borderLeft: "3px solid var(--red)",
@@ -866,20 +908,20 @@ export default function OwnerReportSheet({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                fontSize: 12.5,
-                fontWeight: 700,
+                fontSize: 12,
+                fontWeight: 800,
                 color: "var(--red)",
                 marginBottom: 4,
               }}
             >
-              <Compass size={14} style={{ flexShrink: 0 }} />
+              <Compass size={13.5} style={{ flexShrink: 0 }} />
               <span>Recomendación Estratégica</span>
             </div>
 
             <p
               style={{
                 fontSize: 13.5,
-                lineHeight: 1.58,
+                lineHeight: 1.55,
                 color: "var(--text-primary)",
                 whiteSpace: "pre-line",
               }}
@@ -890,26 +932,15 @@ export default function OwnerReportSheet({
         )}
       </section>
 
-      {/* 6. Firma de Asesora Comercial */}
-      <footer
-        style={{
-          padding: "16px 22px",
-          background: "var(--bg-base)",
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 14,
-          breakInside: "avoid",
-        }}
-      >
+      {/* 6. Firma de Asesora Comercial (con enlaces directos tocables en móvil) */}
+      <footer className="ors-footer">
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: 12,
             minWidth: 0,
-            flex: "1 1 260px",
+            flex: "1 1 250px",
           }}
         >
           {showAvatarImg ? (
@@ -919,8 +950,8 @@ export default function OwnerReportSheet({
               alt="Olga Patricia Vásquez Barrios"
               onError={() => setFailedAvatarImg(rawAvatarImg)}
               style={{
-                width: 48,
-                height: 48,
+                width: 46,
+                height: 46,
                 borderRadius: "50%",
                 objectFit: "cover",
                 border: "1.5px solid var(--red)",
@@ -931,8 +962,8 @@ export default function OwnerReportSheet({
           ) : (
             <div
               style={{
-                width: 48,
-                height: 48,
+                width: 46,
+                height: 46,
                 borderRadius: "50%",
                 background: "rgba(196, 30, 58, 0.1)",
                 border: "1.5px solid var(--border-red)",
@@ -949,7 +980,7 @@ export default function OwnerReportSheet({
             </div>
           )}
 
-          <div style={{ minWidth: 0 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
                 fontSize: 14.5,
@@ -962,7 +993,7 @@ export default function OwnerReportSheet({
             </div>
             <div
               style={{
-                fontSize: 12.5,
+                fontSize: 12,
                 fontWeight: 600,
                 color: "var(--red)",
                 marginTop: 2,
@@ -976,33 +1007,23 @@ export default function OwnerReportSheet({
                 display: "flex",
                 flexWrap: "wrap",
                 alignItems: "center",
-                gap: "4px 12px",
-                marginTop: 5,
-                fontSize: 12,
-                color: "var(--text-secondary)",
+                gap: 6,
+                marginTop: 8,
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
-              >
+              <a href="tel:+573154672851" className="ors-contact-link">
                 <Phone size={12} color="var(--red)" />
-                6017041705 / +57 315 467 2851
-              </span>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                }}
+                <span>+57 315 467 2851</span>
+              </a>
+
+              <a
+                href="mailto:opvasquez@l2lbienesraices.com"
+                className="ors-contact-link"
               >
                 <Mail size={12} color="var(--red)" />
-                opvasquez@l2lbienesraices.com
-              </span>
+                <span>opvasquez@l2lbienesraices.com</span>
+              </a>
             </div>
           </div>
         </div>
@@ -1017,7 +1038,7 @@ export default function OwnerReportSheet({
         >
           <div>Emitido el {fechaEmision}</div>
           <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>
-            Bogotá D.C. · www.l2lbienesraices.com
+            PBX 601 704 1705 · Bogotá D.C.
           </div>
         </div>
       </footer>

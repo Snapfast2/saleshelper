@@ -1,6 +1,6 @@
 // src/app/ficha/informe/[token]/page.tsx
 // Micrositio público ejecutivo del Informe Mensual de Gestión Comercial para propietarios.
-// Accesible vía /ficha/* sin autenticación; optimizado para preview en WhatsApp y exportación A4 PDF.
+// Accesible vía /ficha/* sin autenticación; optimizado para celular, WhatsApp OpenGraph y exportación A4 PDF.
 
 import { cache } from "react";
 import { notFound } from "next/navigation";
@@ -172,14 +172,17 @@ export default async function OwnerReportPublicPage({
         style={{
           maxWidth: 680,
           margin: "0 auto",
-          padding: "20px 16px 110px",
+          padding: "12px 12px 104px",
           minHeight: "auto",
         }}
       >
         <OwnerReportSheet report={report} inmueble={inmueble} />
       </main>
 
-      <PrintReportButton wsUrl={wsUrl} />
+      <PrintReportButton
+        wsUrl={wsUrl}
+        shareTitle={`Informe de Gestión · ${report.mesEtiqueta} | L2L Bienes Raíces`}
+      />
     </div>
   );
 }

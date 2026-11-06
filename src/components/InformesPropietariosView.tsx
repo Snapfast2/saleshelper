@@ -1,5 +1,8 @@
 'use client';
 // src/components/InformesPropietariosView.tsx
+// Estudio interactivo mobile-first + B2B escritorio para Informe Mensual a Propietarios.
+// En móvil (< 980px): pestañas superiores (1. Datos | 2. Vista previa), filas 1fr auto en portales,
+// concepto comercial colapsable ("Modo rápido") y barra fija inferior al pulgar.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -9,6 +12,8 @@ import {
   Building2,
   CalendarCheck,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Eye,
   FileText,
@@ -19,6 +24,7 @@ import {
   Printer,
   RotateCcw,
   Send,
+  SlidersHorizontal,
   Sparkles,
   User,
 } from "lucide-react";
@@ -39,6 +45,7 @@ export interface InformesPropietariosViewProps {
 interface PeriodOption {
   mesClave: string;
   mesEtiqueta: string;
+  chipEtiqueta: string;
 }
 
 interface FirestoreTimestampLike {
@@ -91,7 +98,7 @@ const MESES_ES = [
 const OBSERVACION_CHIPS = [
   {
     id: "flujo-portales",
-    label: "Buen flujo de consultas en portales",
+    label: "Buen flujo en portales",
     sentence:
       "Durante el periodo se registró flujo constante de consultas a través de Finca Raíz y Metrocuadrado.",
   },
@@ -130,7 +137,7 @@ const OBSERVACION_CHIPS = [
 const RECOMENDACION_CHIPS = [
   {
     id: "mantener-difusion",
-    label: "Mantener estrategia y reforzar difusión",
+    label: "Mantener estrategia y difusión",
     sentence:
       "Mantener las condiciones comerciales actuales y reforzar la difusión digital junto al seguimiento directo de los candidatos perfilados.",
   },
@@ -193,9 +200,21 @@ function buildPeriodOptions(): PeriodOption[] {
   const prevEtiqueta = `${MESES_ES[prevMonthIndex]} ${prevYear}`;
 
   return [
-    { mesClave: currClave, mesEtiqueta: currEtiqueta },
-    { mesClave: prevClave, mesEtiqueta: prevEtiqueta },
-    { mesClave: "acumulado", mesEtiqueta: "Gestión acumulada" },
+    {
+      mesClave: currClave,
+      mesEtiqueta: currEtiqueta,
+      chipEtiqueta: currEtiqueta,
+    },
+    {
+      mesClave: prevClave,
+      mesEtiqueta: prevEtiqueta,
+      chipEtiqueta: prevEtiqueta,
+    },
+    {
+      mesClave: "acumulado",
+      mesEtiqueta: "Gestión acumulada",
+      chipEtiqueta: "Acumulado",
+    },
   ];
 }
 
@@ -363,6 +382,9 @@ export default function InformesPropietariosView({
     () => periodOptions[0]?.mesClave ?? "acumulado"
   );
 
+  const [mobileTab, setMobileTab] = useState<"datos" | "preview">("datos");
+  const [conceptoExpanded, setConceptoExpanded] = useState(false);
+
   const [interaccionesWS, setInteraccionesWS] = useState<InteraccionWSRecord[]>(
     []
   );
@@ -377,6 +399,13 @@ export default function InformesPropietariosView({
   const [copiedLink, setCopiedLink] = useState(false);
 
   const dirtySessionRef = useRef(false);
+
+  const switchMobileTab = (nextTab: "datos" | "preview") => {
+    setMobileTab(nextTab);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   // Sincronizar si cambia ?inmueble= en la URL
   useEffect(() => {
@@ -478,7 +507,6 @@ export default function InformesPropietariosView({
         const serverDraft = data?.draft;
         if (!serverDraft || dirtySessionRef.current) return;
 
-        // Si no había borrador local o el borrador del servidor es más reciente, hidratar
         const serverTs = Date.parse(serverDraft.creadoEn || "");
         const localTs = localDraft ? Date.parse(localDraft.savedAt || "") : 0;
 
@@ -490,7 +518,10 @@ export default function InformesPropietariosView({
           }
           setFormState({
             nombrePropietario: ownerToUse,
-            vistasFincaRaiz: Math.max(0, Number(serverDraft.vistasFincaRaiz) || 0),
+            vistasFincaRaiz: Math.max(
+              0,
+              Number(serverDraft.vistasFincaRaiz) || 0
+            ),
             contactosFincaRaiz: Math.max(
               0,
               Number(serverDraft.contactosFincaRaiz) || 0
@@ -630,9 +661,14 @@ export default function InformesPropietariosView({
       autoSeguimientosWS,
       vistasFichaDigital,
     };
-  }, [matchedClientesInPeriod, interaccionesWS, selectedInmueble, mesClave, views]);
+  }, [
+    matchedClientesInPeriod,
+    interaccionesWS,
+    selectedInmueble,
+    mesClave,
+    views,
+  ]);
 
-  // Mutador con auto-guardado instantáneo en localStorage
   const updateForm = useCallback(
     (updater: (prev: EditableFormState) => EditableFormState) => {
       dirtySessionRef.current = true;
@@ -708,6 +744,17 @@ export default function InformesPropietariosView({
   const effectiveSeguimientos =
     formState.seguimientosEnviados ?? autoMetrics.autoSeguimientosWS;
 
+  const liveTotalVistas =
+    formState.vistasFincaRaiz +
+    formState.vistasMetrocuadrado +
+    autoMetrics.vistasFichaDigital;
+  const liveTotalContactos =
+    effectiveContactosFR + effectiveContactosM2 + effectiveContactosOtros;
+
+  const isConceptoEdited =
+    formState.observaciones.trim() !== DEFAULT_OBSERVACION ||
+    formState.recomendacion.trim() !== DEFAULT_RECOMENDACION;
+
   const currentPayload: InformePropietarioPayload = useMemo(
     () => ({
       inmuebleId: selectedInmueble?.id ?? "",
@@ -780,22 +827,14 @@ export default function InformesPropietariosView({
         : "Cordial saludo, estimado(a) propietario(a).";
 
       const refLabel = selectedInmueble.codigoDomus || selectedInmueble.id;
-      const totalVistas =
-        currentPayload.vistasFincaRaiz +
-        currentPayload.vistasMetrocuadrado +
-        currentPayload.vistasFichaDigital;
-      const totalContactos =
-        currentPayload.contactosFincaRaiz +
-        currentPayload.contactosMetrocuadrado +
-        currentPayload.contactosOtrosPortales;
 
       const msg = [
         saludoLinea,
         "",
         `Le comparto el *Informe Ejecutivo de Gestión Comercial (${currentPayload.mesEtiqueta})* de su inmueble *${selectedInmueble.tipo} en ${selectedInmueble.barrio}* (Ref. #${refLabel}):`,
         "",
-        `• Visualizaciones totales: *${totalVistas.toLocaleString("es-CO")}*`,
-        `• Interesados atendidos: *${totalContactos}*`,
+        `• Visualizaciones totales: *${liveTotalVistas.toLocaleString("es-CO")}*`,
+        `• Interesados atendidos: *${liveTotalContactos}*`,
         `• Visitas realizadas al inmueble: *${currentPayload.citasRealizadas}*`,
         "",
         "Puede consultar y descargar su informe completo en el siguiente enlace:",
@@ -813,7 +852,9 @@ export default function InformesPropietariosView({
         window.location.href = waUrl;
       }
     } catch {
-      toast.error("No se pudo generar el enlace del informe. Intenta nuevamente.");
+      toast.error(
+        "No se pudo generar el enlace del informe. Intenta nuevamente."
+      );
     } finally {
       setBusyAction(null);
     }
@@ -879,43 +920,50 @@ export default function InformesPropietariosView({
   }
 
   return (
-    <div className="page">
-      {/* Cabecera de página (oculta al imprimir A4) */}
+    <div className="page report-page">
+      {/* Cabecera compacta (oculta al imprimir A4) */}
       <header
         className="header no-print"
         style={{
-          paddingBottom: 14,
+          padding: "16px 16px 8px",
           flexWrap: "wrap",
-          gap: 12,
+          gap: 10,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0, flex: "1 1 230px" }}>
           <div
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
-              padding: "3px 10px",
+              gap: 5,
+              padding: "3px 9px",
               borderRadius: 999,
               background: "rgba(196, 30, 58, 0.08)",
               border: "1px solid rgba(196, 30, 58, 0.2)",
               color: "var(--red)",
-              fontSize: 11.5,
+              fontSize: 11,
               fontWeight: 700,
-              marginBottom: 6,
+              marginBottom: 5,
             }}
           >
-            <FileText size={13} />
-            <span>Gestión de Propietarios · L2L Bienes Raíces</span>
+            <FileText size={12} />
+            <span>Gestión de Propietarios · L2L</span>
           </div>
           <h1
             className="header-title"
-            style={{ fontSize: 27, letterSpacing: "-0.02em" }}
+            style={{
+              fontSize: "clamp(22px, 5.8vw, 27px)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1.18,
+            }}
           >
             Informe Mensual a Propietarios
           </h1>
-          <p className="header-sub" style={{ fontSize: 14.5, marginTop: 3 }}>
-            Consolida estadísticas de Finca Raíz, Metrocuadrado, citas y concepto comercial en un toque
+          <p
+            className="header-sub"
+            style={{ fontSize: 13.5, marginTop: 2, lineHeight: 1.35 }}
+          >
+            Portales, visitas del mes y concepto comercial en un toque
           </p>
         </div>
 
@@ -926,32 +974,81 @@ export default function InformesPropietariosView({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 6,
-              padding: "8px 12px",
+              gap: 5,
+              padding: "7px 11px",
               borderRadius: 10,
               background: "var(--bg-card)",
               border: "1px solid var(--border)",
               color: "var(--text-secondary)",
-              fontSize: 12.5,
-              fontWeight: 600,
+              fontSize: 12,
+              fontWeight: 700,
               cursor: "pointer",
+              flexShrink: 0,
             }}
           >
-            <RotateCcw size={14} color="var(--red)" />
-            <span>Restaurar datos automáticos</span>
+            <RotateCcw size={13} color="var(--red)" />
+            <span>Restaurar auto</span>
           </button>
         )}
       </header>
 
-      {/* Grilla responsiva: Controles a la izquierda + Vista previa ejecutiva sticky a la derecha */}
+      {/* Selector fijo superior en móvil (< 980px): 1. Datos | 2. Vista previa */}
+      <div className="report-mobile-tabs no-print">
+        <div className="report-segmented" role="tablist" aria-label="Modo del informe">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileTab === "datos"}
+            className={`report-seg-btn ${mobileTab === "datos" ? "active" : ""}`}
+            onClick={() => switchMobileTab("datos")}
+          >
+            <SlidersHorizontal size={15} />
+            <span>1. Completar datos</span>
+          </button>
+
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mobileTab === "preview"}
+            className={`report-seg-btn ${mobileTab === "preview" ? "active" : ""}`}
+            onClick={() => switchMobileTab("preview")}
+          >
+            <Eye size={15} />
+            <span>2. Vista previa</span>
+            <span
+              style={{
+                padding: "1px 6px",
+                borderRadius: 999,
+                fontSize: 10.5,
+                fontWeight: 800,
+                background:
+                  mobileTab === "preview"
+                    ? "rgba(196, 30, 58, 0.1)"
+                    : "rgba(17, 24, 39, 0.07)",
+                color:
+                  mobileTab === "preview"
+                    ? "var(--red)"
+                    : "var(--text-secondary)",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {liveTotalVistas}v · {liveTotalContactos}c
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grilla responsiva: Pestañas en móvil / Lado a lado en escritorio */}
       <div className="report-builder-grid">
         {/* COLUMNA IZQUIERDA: Controles ergonómicos (.no-print) */}
         <div
-          className="no-print"
+          className={`no-print ${
+            mobileTab === "preview" ? "report-col-hidden-mobile" : ""
+          }`}
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 16,
+            gap: 14,
             minWidth: 0,
           }}
         >
@@ -959,14 +1056,14 @@ export default function InformesPropietariosView({
           <section
             className="card"
             style={{
-              padding: 18,
+              padding: 15,
               display: "flex",
               flexDirection: "column",
-              gap: 16,
+              gap: 14,
             }}
           >
             <div>
-              <label className="form-label" style={{ fontSize: 12.5 }}>
+              <label className="form-label" style={{ fontSize: 12, marginBottom: 6 }}>
                 1. Inmueble a reportar
               </label>
               <PropertyPickerDrawer
@@ -978,10 +1075,16 @@ export default function InformesPropietariosView({
             </div>
 
             <div>
-              <label className="form-label" style={{ fontSize: 12.5 }}>
+              <label className="form-label" style={{ fontSize: 12, marginBottom: 6 }}>
                 2. Periodo del informe
               </label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                }}
+              >
                 {periodOptions.map((opt) => {
                   const active = opt.mesClave === mesClave;
                   return (
@@ -990,8 +1093,15 @@ export default function InformesPropietariosView({
                       type="button"
                       onClick={() => setMesClave(opt.mesClave)}
                       className={`quick-chip ${active ? "active" : ""}`}
+                      style={{
+                        flex: "1 1 auto",
+                        justifyContent: "center",
+                        padding: "6px 10px",
+                        fontSize: 12.5,
+                        minHeight: 36,
+                      }}
                     >
-                      <span>{opt.mesEtiqueta}</span>
+                      <span>{opt.chipEtiqueta}</span>
                     </button>
                   );
                 })}
@@ -1002,16 +1112,16 @@ export default function InformesPropietariosView({
                   type="button"
                   onClick={() => setMesClave("acumulado")}
                   style={{
-                    marginTop: 10,
+                    marginTop: 8,
                     width: "100%",
-                    padding: "10px 12px",
-                    borderRadius: 12,
+                    padding: "9px 11px",
+                    borderRadius: 11,
                     background: "rgba(196, 30, 58, 0.06)",
                     border: "1px solid var(--border-red)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    gap: 10,
+                    gap: 8,
                     textAlign: "left",
                     cursor: "pointer",
                   }}
@@ -1020,30 +1130,30 @@ export default function InformesPropietariosView({
                     style={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 8,
-                      fontSize: 12.5,
+                      gap: 7,
+                      fontSize: 12,
                       fontWeight: 600,
                       color: "var(--text-primary)",
                       lineHeight: 1.35,
                     }}
                   >
                     <Info
-                      size={16}
+                      size={15}
                       color="var(--red)"
                       style={{ flexShrink: 0 }}
                     />
                     <span>
-                      Hay {matchedClientesAllPeriods.length}{" "}
+                      {matchedClientesAllPeriods.length}{" "}
                       {matchedClientesAllPeriods.length === 1
                         ? "interesado activo"
                         : "interesados activos"}{" "}
-                      en el histórico de este inmueble
+                      en el histórico
                     </span>
                   </span>
                   <span
                     style={{
-                      fontSize: 12,
-                      fontWeight: 700,
+                      fontSize: 11.5,
+                      fontWeight: 800,
                       color: "var(--red)",
                       whiteSpace: "nowrap",
                       flexShrink: 0,
@@ -1060,13 +1170,14 @@ export default function InformesPropietariosView({
                 className="form-label"
                 htmlFor="owner-name-input"
                 style={{
-                  fontSize: 12.5,
+                  fontSize: 12,
+                  marginBottom: 6,
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
+                  gap: 5,
                 }}
               >
-                <User size={14} color="var(--text-muted)" />
+                <User size={13} color="var(--text-muted)" />
                 <span>Nombre del propietario (opcional)</span>
               </label>
               <input
@@ -1074,30 +1185,21 @@ export default function InformesPropietariosView({
                 type="text"
                 className="form-input"
                 placeholder="Ej: Don Jorge Ramírez / Sra. María"
-                style={{ fontSize: 15.5, padding: "11px 14px" }}
+                style={{ fontSize: 15, padding: "10px 12px" }}
                 value={formState.nombrePropietario}
                 onChange={(e) => handleOwnerNameChange(e.target.value)}
               />
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-muted)",
-                  marginTop: 5,
-                }}
-              >
-                Queda guardado en este dispositivo para próximos informes del inmueble.
-              </p>
             </div>
           </section>
 
-          {/* PASO 2: Estadística de Portales (Finca Raíz, Metrocuadrado y Red L2L) */}
+          {/* PASO 2: Estadística de Portales (1 sola fila por portal en móvil) */}
           <section
             className="card"
             style={{
-              padding: 18,
+              padding: 15,
               display: "flex",
               flexDirection: "column",
-              gap: 14,
+              gap: 12,
             }}
           >
             <div
@@ -1105,7 +1207,7 @@ export default function InformesPropietariosView({
                 display: "flex",
                 alignItems: "flex-start",
                 justifyContent: "space-between",
-                gap: 10,
+                gap: 8,
               }}
             >
               <div>
@@ -1113,24 +1215,24 @@ export default function InformesPropietariosView({
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 7,
-                    fontSize: 16,
+                    gap: 6,
+                    fontSize: 15.5,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                   }}
                 >
-                  <BarChart3 size={18} color="var(--red)" />
+                  <BarChart3 size={17} color="var(--red)" />
                   <span>Estadística de portales</span>
                 </div>
                 <p
                   style={{
-                    fontSize: 13,
+                    fontSize: 12.5,
                     color: "var(--text-secondary)",
-                    marginTop: 4,
-                    lineHeight: 1.4,
+                    marginTop: 2,
+                    lineHeight: 1.35,
                   }}
                 >
-                  Los contactos de Domus ya se sumaron solos. Ingresa las visualizaciones del aviso en cada portal:
+                  Contactos Domus sumados solos. Anota las vistas de cada aviso:
                 </p>
               </div>
 
@@ -1142,7 +1244,7 @@ export default function InformesPropietariosView({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: 700,
                   color: "var(--red)",
                   padding: "4px 8px",
@@ -1152,7 +1254,7 @@ export default function InformesPropietariosView({
                   flexShrink: 0,
                 }}
               >
-                <RotateCcw size={12} />
+                <RotateCcw size={11.5} />
                 <span>Auto</span>
               </button>
             </div>
@@ -1160,13 +1262,13 @@ export default function InformesPropietariosView({
             {/* Bloque Finca Raíz */}
             <div
               style={{
-                padding: 14,
-                borderRadius: 14,
+                padding: 12,
+                borderRadius: 13,
                 background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 display: "flex",
                 flexDirection: "column",
-                gap: 12,
+                gap: 10,
               }}
             >
               <div
@@ -1174,13 +1276,12 @@ export default function InformesPropietariosView({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: 8,
-                  flexWrap: "wrap",
+                  gap: 6,
                 }}
               >
                 <span
                   style={{
-                    fontSize: 14.5,
+                    fontSize: 14,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                   }}
@@ -1192,9 +1293,9 @@ export default function InformesPropietariosView({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 4,
-                    padding: "2px 8px",
+                    padding: "2px 7px",
                     borderRadius: 999,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: 700,
                     background:
                       formState.contactosFincaRaiz === null
@@ -1206,35 +1307,28 @@ export default function InformesPropietariosView({
                         : "var(--red)",
                   }}
                 >
-                  <Sparkles size={11} />
+                  <Sparkles size={10.5} />
                   <span>
                     {formState.contactosFincaRaiz === null
                       ? "Auto Domus"
-                      : `Ajustado · Domus: ${autoMetrics.autoContactosFR}`}
+                      : `Domus: ${autoMetrics.autoContactosFR}`}
                   </span>
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  alignItems: "flex-end",
-                }}
-              >
-                <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+              <div className="report-portal-inputs-row">
+                <div>
                   <label
                     htmlFor="vistas-fr-input"
                     style={{
                       display: "block",
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: 600,
                       color: "var(--text-secondary)",
-                      marginBottom: 6,
+                      marginBottom: 5,
                     }}
                   >
-                    Vistas en Finca Raíz
+                    Vistas al aviso
                   </label>
                   <input
                     id="vistas-fr-input"
@@ -1245,9 +1339,9 @@ export default function InformesPropietariosView({
                     placeholder="0"
                     style={{
                       fontSize: 17,
-                      fontWeight: 700,
-                      padding: "9px 12px",
-                      height: 42,
+                      fontWeight: 800,
+                      padding: "8px 11px",
+                      height: 40,
                       fontVariantNumeric: "tabular-nums",
                     }}
                     value={
@@ -1263,30 +1357,31 @@ export default function InformesPropietariosView({
                   />
                 </div>
 
-                <div style={{ flex: "0 0 auto" }}>
+                <div>
                   <span
                     style={{
                       display: "block",
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: 600,
                       color: "var(--text-secondary)",
-                      marginBottom: 6,
+                      marginBottom: 5,
+                      textAlign: "center",
                     }}
                   >
-                    Contactos recibidos
+                    Interesados
                   </span>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 6,
                     }}
                   >
                     <button
                       type="button"
                       className="stepper-btn"
                       aria-label="Restar contacto Finca Raíz"
-                      style={{ background: "#FFFFFF" }}
+                      style={{ background: "#FFFFFF", width: 38, height: 40 }}
                       onClick={() =>
                         updateForm((prev) => ({
                           ...prev,
@@ -1298,13 +1393,13 @@ export default function InformesPropietariosView({
                         }))
                       }
                     >
-                      <Minus size={16} />
+                      <Minus size={15} />
                     </button>
                     <span
                       style={{
-                        minWidth: 34,
+                        minWidth: 28,
                         textAlign: "center",
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: 800,
                         color: "var(--text-primary)",
                         fontVariantNumeric: "tabular-nums",
@@ -1316,7 +1411,7 @@ export default function InformesPropietariosView({
                       type="button"
                       className="stepper-btn"
                       aria-label="Sumar contacto Finca Raíz"
-                      style={{ background: "#FFFFFF" }}
+                      style={{ background: "#FFFFFF", width: 38, height: 40 }}
                       onClick={() =>
                         updateForm((prev) => ({
                           ...prev,
@@ -1326,16 +1421,28 @@ export default function InformesPropietariosView({
                         }))
                       }
                     >
-                      <Plus size={16} />
+                      <Plus size={15} />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Chips de suma rápida para móvil */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11.5, color: "var(--text-muted)", fontWeight: 600 }}>
-                  Suma rápida:
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Sumar vistas:
                 </span>
                 {[25, 50, 100].map((inc) => (
                   <button
@@ -1343,9 +1450,9 @@ export default function InformesPropietariosView({
                     type="button"
                     className="quick-chip"
                     style={{
-                      minHeight: 30,
-                      padding: "4px 10px",
-                      fontSize: 12,
+                      minHeight: 28,
+                      padding: "3px 9px",
+                      fontSize: 11.5,
                       fontVariantNumeric: "tabular-nums",
                     }}
                     onClick={() =>
@@ -1365,11 +1472,12 @@ export default function InformesPropietariosView({
                       updateForm((prev) => ({ ...prev, vistasFincaRaiz: 0 }))
                     }
                     style={{
-                      fontSize: 11.5,
-                      fontWeight: 600,
+                      fontSize: 11,
+                      fontWeight: 700,
                       color: "var(--text-muted)",
-                      padding: "4px 6px",
+                      padding: "3px 6px",
                       cursor: "pointer",
+                      marginLeft: "auto",
                     }}
                   >
                     Limpiar
@@ -1381,13 +1489,13 @@ export default function InformesPropietariosView({
             {/* Bloque Metrocuadrado */}
             <div
               style={{
-                padding: 14,
-                borderRadius: 14,
+                padding: 12,
+                borderRadius: 13,
                 background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 display: "flex",
                 flexDirection: "column",
-                gap: 12,
+                gap: 10,
               }}
             >
               <div
@@ -1395,13 +1503,12 @@ export default function InformesPropietariosView({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  gap: 8,
-                  flexWrap: "wrap",
+                  gap: 6,
                 }}
               >
                 <span
                   style={{
-                    fontSize: 14.5,
+                    fontSize: 14,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                   }}
@@ -1413,9 +1520,9 @@ export default function InformesPropietariosView({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 4,
-                    padding: "2px 8px",
+                    padding: "2px 7px",
                     borderRadius: 999,
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: 700,
                     background:
                       formState.contactosMetrocuadrado === null
@@ -1427,35 +1534,28 @@ export default function InformesPropietariosView({
                         : "var(--red)",
                   }}
                 >
-                  <Sparkles size={11} />
+                  <Sparkles size={10.5} />
                   <span>
                     {formState.contactosMetrocuadrado === null
                       ? "Auto Domus"
-                      : `Ajustado · Domus: ${autoMetrics.autoContactosM2}`}
+                      : `Domus: ${autoMetrics.autoContactosM2}`}
                   </span>
                 </span>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 12,
-                  alignItems: "flex-end",
-                }}
-              >
-                <div style={{ flex: "1 1 180px", minWidth: 0 }}>
+              <div className="report-portal-inputs-row">
+                <div>
                   <label
                     htmlFor="vistas-m2-input"
                     style={{
                       display: "block",
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: 600,
                       color: "var(--text-secondary)",
-                      marginBottom: 6,
+                      marginBottom: 5,
                     }}
                   >
-                    Vistas en Metrocuadrado
+                    Vistas al aviso
                   </label>
                   <input
                     id="vistas-m2-input"
@@ -1466,9 +1566,9 @@ export default function InformesPropietariosView({
                     placeholder="0"
                     style={{
                       fontSize: 17,
-                      fontWeight: 700,
-                      padding: "9px 12px",
-                      height: 42,
+                      fontWeight: 800,
+                      padding: "8px 11px",
+                      height: 40,
                       fontVariantNumeric: "tabular-nums",
                     }}
                     value={
@@ -1487,30 +1587,31 @@ export default function InformesPropietariosView({
                   />
                 </div>
 
-                <div style={{ flex: "0 0 auto" }}>
+                <div>
                   <span
                     style={{
                       display: "block",
-                      fontSize: 12,
+                      fontSize: 11.5,
                       fontWeight: 600,
                       color: "var(--text-secondary)",
-                      marginBottom: 6,
+                      marginBottom: 5,
+                      textAlign: "center",
                     }}
                   >
-                    Contactos recibidos
+                    Interesados
                   </span>
                   <div
                     style={{
                       display: "inline-flex",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 6,
                     }}
                   >
                     <button
                       type="button"
                       className="stepper-btn"
                       aria-label="Restar contacto Metrocuadrado"
-                      style={{ background: "#FFFFFF" }}
+                      style={{ background: "#FFFFFF", width: 38, height: 40 }}
                       onClick={() =>
                         updateForm((prev) => ({
                           ...prev,
@@ -1522,13 +1623,13 @@ export default function InformesPropietariosView({
                         }))
                       }
                     >
-                      <Minus size={16} />
+                      <Minus size={15} />
                     </button>
                     <span
                       style={{
-                        minWidth: 34,
+                        minWidth: 28,
                         textAlign: "center",
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: 800,
                         color: "var(--text-primary)",
                         fontVariantNumeric: "tabular-nums",
@@ -1540,7 +1641,7 @@ export default function InformesPropietariosView({
                       type="button"
                       className="stepper-btn"
                       aria-label="Sumar contacto Metrocuadrado"
-                      style={{ background: "#FFFFFF" }}
+                      style={{ background: "#FFFFFF", width: 38, height: 40 }}
                       onClick={() =>
                         updateForm((prev) => ({
                           ...prev,
@@ -1550,16 +1651,28 @@ export default function InformesPropietariosView({
                         }))
                       }
                     >
-                      <Plus size={16} />
+                      <Plus size={15} />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Chips de suma rápida para Metrocuadrado */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11.5, color: "var(--text-muted)", fontWeight: 600 }}>
-                  Suma rápida:
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: "var(--text-muted)",
+                    fontWeight: 600,
+                  }}
+                >
+                  Sumar vistas:
                 </span>
                 {[25, 50, 100].map((inc) => (
                   <button
@@ -1567,9 +1680,9 @@ export default function InformesPropietariosView({
                     type="button"
                     className="quick-chip"
                     style={{
-                      minHeight: 30,
-                      padding: "4px 10px",
-                      fontSize: 12,
+                      minHeight: 28,
+                      padding: "3px 9px",
+                      fontSize: 11.5,
                       fontVariantNumeric: "tabular-nums",
                     }}
                     onClick={() =>
@@ -1586,14 +1699,18 @@ export default function InformesPropietariosView({
                   <button
                     type="button"
                     onClick={() =>
-                      updateForm((prev) => ({ ...prev, vistasMetrocuadrado: 0 }))
+                      updateForm((prev) => ({
+                        ...prev,
+                        vistasMetrocuadrado: 0,
+                      }))
                     }
                     style={{
-                      fontSize: 11.5,
-                      fontWeight: 600,
+                      fontSize: 11,
+                      fontWeight: 700,
                       color: "var(--text-muted)",
-                      padding: "4px 6px",
+                      padding: "3px 6px",
                       cursor: "pointer",
+                      marginLeft: "auto",
                     }}
                   >
                     Limpiar
@@ -1605,39 +1722,37 @@ export default function InformesPropietariosView({
             {/* Bloque Otros portales y Red L2L */}
             <div
               style={{
-                padding: "12px 14px",
-                borderRadius: 14,
+                padding: "10px 12px",
+                borderRadius: 13,
                 background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 display: "flex",
-                flexWrap: "wrap",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12,
+                gap: 10,
               }}
             >
-              <div style={{ minWidth: 0, flex: "1 1 180px" }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <div
                   style={{
-                    fontSize: 13.5,
-                    fontWeight: 700,
+                    fontSize: 13,
+                    fontWeight: 800,
                     color: "var(--text-primary)",
                   }}
                 >
-                  Otros portales y Red L2L
+                  Red L2L y Ficha Digital
                 </div>
                 <div
                   style={{
-                    fontSize: 12,
+                    fontSize: 11.5,
                     color: "var(--text-muted)",
                     marginTop: 2,
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
+                    gap: 6,
                     flexWrap: "wrap",
                   }}
                 >
-                  <span>Proppit · Ciencuadras · Web L2L</span>
                   <span
                     style={{
                       display: "inline-flex",
@@ -1648,12 +1763,13 @@ export default function InformesPropietariosView({
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    <Eye size={12} />
+                    <Eye size={11.5} />
                     {autoMetrics.vistasFichaDigital}{" "}
                     {autoMetrics.vistasFichaDigital === 1
-                      ? "apertura de ficha"
-                      : "aperturas de ficha"}
+                      ? "apertura"
+                      : "aperturas"}
                   </span>
+                  <span>· Proppit / L2L</span>
                 </div>
               </div>
 
@@ -1661,14 +1777,15 @@ export default function InformesPropietariosView({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
+                  gap: 6,
+                  flexShrink: 0,
                 }}
               >
                 <button
                   type="button"
                   className="stepper-btn"
                   aria-label="Restar contacto otros portales"
-                  style={{ background: "#FFFFFF" }}
+                  style={{ background: "#FFFFFF", width: 36, height: 38 }}
                   onClick={() =>
                     updateForm((prev) => ({
                       ...prev,
@@ -1680,13 +1797,13 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Minus size={16} />
+                  <Minus size={14} />
                 </button>
                 <span
                   style={{
-                    minWidth: 32,
+                    minWidth: 26,
                     textAlign: "center",
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                     fontVariantNumeric: "tabular-nums",
@@ -1698,7 +1815,7 @@ export default function InformesPropietariosView({
                   type="button"
                   className="stepper-btn"
                   aria-label="Sumar contacto otros portales"
-                  style={{ background: "#FFFFFF" }}
+                  style={{ background: "#FFFFFF", width: 36, height: 38 }}
                   onClick={() =>
                     updateForm((prev) => ({
                       ...prev,
@@ -1708,7 +1825,7 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Plus size={16} />
+                  <Plus size={14} />
                 </button>
               </div>
             </div>
@@ -1718,10 +1835,10 @@ export default function InformesPropietariosView({
           <section
             className="card"
             style={{
-              padding: 18,
+              padding: 15,
               display: "flex",
               flexDirection: "column",
-              gap: 14,
+              gap: 12,
             }}
           >
             <div
@@ -1729,35 +1846,34 @@ export default function InformesPropietariosView({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap",
+                gap: 10,
               }}
             >
-              <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 8,
-                    fontSize: 16,
+                    gap: 7,
+                    fontSize: 15,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                   }}
                 >
-                  <CalendarCheck size={19} color="var(--red)" />
-                  <span>Citas y visitas al inmueble</span>
+                  <CalendarCheck size={18} color="var(--red)" />
+                  <span>Citas al inmueble</span>
                 </div>
                 <p
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 12,
                     color: "var(--text-secondary)",
-                    marginTop: 3,
-                    lineHeight: 1.35,
+                    marginTop: 2,
+                    lineHeight: 1.3,
                   }}
                 >
                   {autoMetrics.autoCitasWS > 0
-                    ? `${autoMetrics.autoCitasWS} detectadas en bitácora · Suma citas coordinadas por llamada`
-                    : "Visitas presenciales atendidas en el inmueble durante el mes"}
+                    ? `${autoMetrics.autoCitasWS} en bitácora · Suma citas por llamada`
+                    : "Visitas presenciales atendidas en el mes"}
                 </p>
               </div>
 
@@ -1765,14 +1881,15 @@ export default function InformesPropietariosView({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 10,
+                  gap: 8,
+                  flexShrink: 0,
                 }}
               >
                 <button
                   type="button"
                   className="stepper-btn"
                   aria-label="Restar cita realizada"
-                  style={{ width: 44, height: 44 }}
+                  style={{ width: 42, height: 42 }}
                   onClick={() =>
                     updateForm((prev) => ({
                       ...prev,
@@ -1783,13 +1900,13 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Minus size={18} />
+                  <Minus size={17} />
                 </button>
                 <span
                   style={{
-                    minWidth: 40,
+                    minWidth: 32,
                     textAlign: "center",
-                    fontSize: 22,
+                    fontSize: 21,
                     fontWeight: 800,
                     color: "var(--red)",
                     fontVariantNumeric: "tabular-nums",
@@ -1801,7 +1918,7 @@ export default function InformesPropietariosView({
                   type="button"
                   className="stepper-btn"
                   aria-label="Sumar cita realizada"
-                  style={{ width: 44, height: 44 }}
+                  style={{ width: 42, height: 42 }}
                   onClick={() =>
                     updateForm((prev) => ({
                       ...prev,
@@ -1810,45 +1927,43 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Plus size={18} />
+                  <Plus size={17} />
                 </button>
               </div>
             </div>
 
-            <div className="divider" style={{ margin: "2px 0" }} />
+            <div className="divider" style={{ margin: "0" }} />
 
-            {/* Fila compacta de seguimientos comerciales enviados */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 12,
-                flexWrap: "wrap",
+                gap: 10,
               }}
             >
-              <div style={{ flex: "1 1 190px", minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 6,
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: 700,
                     color: "var(--text-primary)",
                   }}
                 >
-                  <Send size={14} color="var(--text-secondary)" />
-                  <span>Seguimientos y fichas enviadas</span>
+                  <Send size={13.5} color="var(--text-secondary)" />
+                  <span>Seguimientos enviados</span>
                 </div>
                 <p
                   style={{
-                    fontSize: 12,
+                    fontSize: 11.5,
                     color: "var(--text-muted)",
-                    marginTop: 2,
+                    marginTop: 1,
                   }}
                 >
-                  Atenciones comerciales registradas por WhatsApp y teléfono
+                  Fichas y atenciones por WhatsApp / llamada
                 </p>
               </div>
 
@@ -1856,12 +1971,14 @@ export default function InformesPropietariosView({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 8,
+                  gap: 6,
+                  flexShrink: 0,
                 }}
               >
                 <button
                   type="button"
                   className="stepper-btn"
+                  style={{ width: 36, height: 38 }}
                   aria-label="Restar seguimiento enviado"
                   onClick={() =>
                     updateForm((prev) => ({
@@ -1874,13 +1991,13 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Minus size={15} />
+                  <Minus size={14} />
                 </button>
                 <span
                   style={{
-                    minWidth: 32,
+                    minWidth: 28,
                     textAlign: "center",
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: 800,
                     color: "var(--text-primary)",
                     fontVariantNumeric: "tabular-nums",
@@ -1891,6 +2008,7 @@ export default function InformesPropietariosView({
                 <button
                   type="button"
                   className="stepper-btn"
+                  style={{ width: 36, height: 38 }}
                   aria-label="Sumar seguimiento enviado"
                   onClick={() =>
                     updateForm((prev) => ({
@@ -1901,162 +2019,285 @@ export default function InformesPropietariosView({
                     }))
                   }
                 >
-                  <Plus size={15} />
+                  <Plus size={14} />
                 </button>
               </div>
             </div>
           </section>
 
-          {/* PASO 4: Concepto Comercial y Retroalimentación (Chips 1 toque + Textareas) */}
+          {/* PASO 4: Concepto Comercial Colapsable ("Modo rápido" sin scroll de cajas gigantes) */}
           <section
             className="card"
             style={{
-              padding: 18,
+              padding: 15,
               display: "flex",
               flexDirection: "column",
-              gap: 16,
+              gap: 12,
             }}
           >
-            <div>
-              <div
+            <button
+              type="button"
+              onClick={() => setConceptoExpanded((prev) => !prev)}
+              aria-expanded={conceptoExpanded}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 10,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <FileText size={17} color="var(--red)" />
+                  <span
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 800,
+                      color: "var(--text-primary)",
+                    }}
+                  >
+                    Concepto comercial
+                  </span>
+                  <span
+                    style={{
+                      padding: "2px 7px",
+                      borderRadius: 999,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      background: isConceptoEdited
+                        ? "rgba(196, 30, 58, 0.08)"
+                        : "rgba(22, 163, 74, 0.1)",
+                      color: isConceptoEdited ? "var(--red)" : "#15803D",
+                    }}
+                  >
+                    {isConceptoEdited ? "Personalizado" : "Listo · Auto"}
+                  </span>
+                </div>
+              </div>
+
+              <span
                 style={{
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
-                  gap: 7,
-                  fontSize: 16,
-                  fontWeight: 800,
-                  color: "var(--text-primary)",
-                  marginBottom: 4,
+                  gap: 4,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--red)",
+                  padding: "4px 9px",
+                  borderRadius: 8,
+                  background: "rgba(196, 30, 58, 0.06)",
+                  flexShrink: 0,
                 }}
               >
-                <FileText size={18} color="var(--red)" />
-                <span>Concepto comercial y retroalimentación</span>
-              </div>
-              <p
+                <span>{conceptoExpanded ? "Ocultar" : "Editar"}</span>
+                {conceptoExpanded ? (
+                  <ChevronUp size={14} />
+                ) : (
+                  <ChevronDown size={14} />
+                )}
+              </span>
+            </button>
+
+            {!conceptoExpanded ? (
+              <div
+                onClick={() => setConceptoExpanded(true)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setConceptoExpanded(true);
+                  }
+                }}
                 style={{
-                  fontSize: 13,
+                  padding: "10px 12px",
+                  borderRadius: 11,
+                  background: "var(--bg-base)",
+                  border: "1px solid var(--border)",
+                  fontSize: 12.5,
+                  lineHeight: 1.45,
                   color: "var(--text-secondary)",
-                  marginBottom: 10,
-                  lineHeight: 1.4,
+                  cursor: "pointer",
                 }}
               >
-                Toca las frases rápidas para armar las observaciones al propietario o edita el texto libremente:
-              </p>
-
+                <div
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
+                  {formState.observaciones || DEFAULT_OBSERVACION}
+                </div>
+                <div
+                  style={{
+                    marginTop: 5,
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "var(--red)",
+                  }}
+                >
+                  Toca para elegir frases rápidas o editar recomendación →
+                </div>
+              </div>
+            ) : (
               <div
                 style={{
                   display: "flex",
-                  flexWrap: "wrap",
-                  gap: 7,
-                  marginBottom: 10,
+                  flexDirection: "column",
+                  gap: 14,
+                  paddingTop: 2,
                 }}
               >
-                {OBSERVACION_CHIPS.map((chip) => {
-                  const isActive = formState.observaciones.includes(
-                    chip.sentence
-                  );
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => toggleObservacionChip(chip.sentence)}
-                      className={`quick-chip ${isActive ? "active" : ""}`}
-                      style={{ fontSize: 12, padding: "6px 11px", minHeight: 33 }}
-                    >
-                      {isActive && <Check size={13} />}
-                      <span>{chip.label}</span>
-                    </button>
-                  );
-                })}
+                <div>
+                  <p
+                    style={{
+                      fontSize: 12.5,
+                      color: "var(--text-secondary)",
+                      marginBottom: 8,
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    Toca frases rápidas para armar las observaciones al propietario:
+                  </p>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 9,
+                    }}
+                  >
+                    {OBSERVACION_CHIPS.map((chip) => {
+                      const isActive = formState.observaciones.includes(
+                        chip.sentence
+                      );
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => toggleObservacionChip(chip.sentence)}
+                          className={`quick-chip ${isActive ? "active" : ""}`}
+                          style={{
+                            fontSize: 11.5,
+                            padding: "5px 10px",
+                            minHeight: 31,
+                          }}
+                        >
+                          {isActive && <Check size={12} />}
+                          <span>{chip.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <label
+                    className="form-label"
+                    htmlFor="observaciones-textarea"
+                    style={{ fontSize: 11.5, marginBottom: 5 }}
+                  >
+                    Observaciones de visitas y mercado
+                  </label>
+                  <textarea
+                    id="observaciones-textarea"
+                    className="form-textarea"
+                    placeholder="Percepción de clientes, comentarios sobre precio o estado..."
+                    style={{
+                      minHeight: 96,
+                      fontSize: 14,
+                      lineHeight: 1.48,
+                      padding: "10px 12px",
+                    }}
+                    value={formState.observaciones}
+                    onChange={(e) =>
+                      updateForm((prev) => ({
+                        ...prev,
+                        observaciones: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="form-label"
+                    htmlFor="recomendacion-textarea"
+                    style={{ fontSize: 11.5, marginBottom: 7 }}
+                  >
+                    Recomendación comercial próximo mes
+                  </label>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 9,
+                    }}
+                  >
+                    {RECOMENDACION_CHIPS.map((chip) => {
+                      const isActive =
+                        formState.recomendacion.trim() === chip.sentence;
+                      return (
+                        <button
+                          key={chip.id}
+                          type="button"
+                          onClick={() => selectRecomendacionChip(chip.sentence)}
+                          className={`quick-chip ${isActive ? "active" : ""}`}
+                          style={{
+                            fontSize: 11.5,
+                            padding: "5px 10px",
+                            minHeight: 31,
+                          }}
+                        >
+                          {isActive && <Check size={12} />}
+                          <span>{chip.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <textarea
+                    id="recomendacion-textarea"
+                    className="form-textarea"
+                    placeholder="Sugerencia estratégica de L2L para el propietario..."
+                    style={{
+                      minHeight: 82,
+                      fontSize: 14,
+                      lineHeight: 1.48,
+                      padding: "10px 12px",
+                    }}
+                    value={formState.recomendacion}
+                    onChange={(e) =>
+                      updateForm((prev) => ({
+                        ...prev,
+                        recomendacion: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
               </div>
-
-              <label
-                className="form-label"
-                htmlFor="observaciones-textarea"
-                style={{ fontSize: 12, marginBottom: 6 }}
-              >
-                Observaciones de visitas y mercado
-              </label>
-              <textarea
-                id="observaciones-textarea"
-                className="form-textarea"
-                placeholder="Describe la percepción de los clientes, comentarios sobre precio, ubicación o estado..."
-                style={{
-                  minHeight: 112,
-                  fontSize: 14.5,
-                  lineHeight: 1.5,
-                  padding: "12px 14px",
-                }}
-                value={formState.observaciones}
-                onChange={(e) =>
-                  updateForm((prev) => ({
-                    ...prev,
-                    observaciones: e.target.value,
-                  }))
-                }
-              />
-            </div>
-
-            <div>
-              <label
-                className="form-label"
-                htmlFor="recomendacion-textarea"
-                style={{ fontSize: 12, marginBottom: 8 }}
-              >
-                Recomendación comercial para el próximo mes
-              </label>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 7,
-                  marginBottom: 10,
-                }}
-              >
-                {RECOMENDACION_CHIPS.map((chip) => {
-                  const isActive =
-                    formState.recomendacion.trim() === chip.sentence;
-                  return (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => selectRecomendacionChip(chip.sentence)}
-                      className={`quick-chip ${isActive ? "active" : ""}`}
-                      style={{ fontSize: 12, padding: "6px 11px", minHeight: 33 }}
-                    >
-                      {isActive && <Check size={13} />}
-                      <span>{chip.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <textarea
-                id="recomendacion-textarea"
-                className="form-textarea"
-                placeholder="Sugerencia estratégica de L2L para el propietario..."
-                style={{
-                  minHeight: 92,
-                  fontSize: 14.5,
-                  lineHeight: 1.5,
-                  padding: "12px 14px",
-                }}
-                value={formState.recomendacion}
-                onChange={(e) =>
-                  updateForm((prev) => ({
-                    ...prev,
-                    recomendacion: e.target.value,
-                  }))
-                }
-              />
-            </div>
+            )}
           </section>
         </div>
 
-        {/* COLUMNA DERECHA: Vista previa ejecutiva en vivo + Acciones 1 toque */}
+        {/* COLUMNA DERECHA: Vista previa ejecutiva en vivo + Acciones escritorio */}
         <div
-          className="report-preview-sticky"
+          className={`report-preview-sticky report-preview-col ${
+            mobileTab === "datos" ? "report-col-hidden-mobile" : ""
+          }`}
           style={{
             display: "flex",
             flexDirection: "column",
@@ -2064,12 +2305,11 @@ export default function InformesPropietariosView({
             minWidth: 0,
           }}
         >
-          {/* Barra de acciones (.no-print para no salir en el PDF A4) */}
+          {/* Barra de acciones solo escritorio (>= 980px; en móvil vive fija abajo al pulgar) */}
           <div
-            className="card no-print"
+            className="card no-print report-desktop-actions"
             style={{
               padding: 16,
-              display: "flex",
               flexDirection: "column",
               gap: 10,
             }}
@@ -2169,11 +2409,140 @@ export default function InformesPropietariosView({
             </div>
           </div>
 
-          {/* Hoja ejecutiva imprimible A4 (único elemento visible en @media print) */}
+          {/* Hoja ejecutiva (visible en pestaña Vista Previa móvil, escritorio y @media print A4) */}
           <OwnerReportSheet
             report={currentPayload}
             inmueble={selectedInmueble}
           />
+        </div>
+      </div>
+
+      {/* Barra fija al pulgar en móvil (< 980px): Resumen en vivo + Enviar WhatsApp + Link + PDF */}
+      <div className="report-mobile-actionbar no-print">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 7,
+            fontSize: 11.5,
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
+          <span
+            style={{
+              color: "var(--text-secondary)",
+              fontWeight: 600,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <strong style={{ color: "var(--text-primary)", fontWeight: 800 }}>
+              {liveTotalVistas.toLocaleString("es-CO")}
+            </strong>{" "}
+            vistas ·{" "}
+            <strong style={{ color: "var(--text-primary)", fontWeight: 800 }}>
+              {liveTotalContactos}
+            </strong>{" "}
+            contactos ·{" "}
+            <strong style={{ color: "var(--red)", fontWeight: 800 }}>
+              {effectiveCitas}
+            </strong>{" "}
+            {effectiveCitas === 1 ? "cita" : "citas"}
+          </span>
+
+          <button
+            type="button"
+            onClick={() =>
+              switchMobileTab(mobileTab === "datos" ? "preview" : "datos")
+            }
+            style={{
+              fontSize: 11.5,
+              fontWeight: 800,
+              color: "var(--red)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              cursor: "pointer",
+            }}
+          >
+            {mobileTab === "datos" ? "Ver previa →" : "← Editar datos"}
+          </button>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+          <button
+            type="button"
+            onClick={handleSendWhatsApp}
+            disabled={busyAction !== null}
+            className="btn-ws"
+            style={{
+              flex: 1,
+              minHeight: 45,
+              padding: "10px 12px",
+              fontSize: 14.5,
+              borderRadius: 11,
+              minWidth: 0,
+              opacity: busyAction === "ws" ? 0.75 : 1,
+            }}
+          >
+            <MessageCircle size={18} style={{ flexShrink: 0 }} />
+            <span
+              style={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {busyAction === "ws" ? "Generando..." : "Enviar WhatsApp"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyReportLink}
+            disabled={busyAction !== null}
+            className="btn-secondary"
+            aria-label="Copiar link del informe"
+            style={{
+              width: "auto",
+              minHeight: 45,
+              padding: "10px 11px",
+              fontSize: 13,
+              borderRadius: 11,
+              background: "var(--bg-base)",
+              flexShrink: 0,
+              gap: 5,
+            }}
+          >
+            {copiedLink ? (
+              <Check size={16} color="#16A34A" />
+            ) : (
+              <Copy size={16} />
+            )}
+            <span>{copiedLink ? "Listo" : "Link"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            className="btn-secondary"
+            aria-label="Guardar PDF"
+            style={{
+              width: "auto",
+              minHeight: 45,
+              padding: "10px 11px",
+              fontSize: 13,
+              borderRadius: 11,
+              background: "var(--bg-base)",
+              flexShrink: 0,
+              gap: 5,
+            }}
+          >
+            <Printer size={16} color="var(--red)" />
+            <span>PDF</span>
+          </button>
         </div>
       </div>
     </div>
