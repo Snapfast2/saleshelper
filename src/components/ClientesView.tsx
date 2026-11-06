@@ -1,9 +1,9 @@
 'use client';
 // src/components/ClientesView.tsx
-// Vista interactiva instantánea (0ms entre pestañas) con búsqueda diferida y chips de filtro rápido
+// Vista interactiva instantánea (0ms entre pestañas) con búsqueda diferida, chips rápidos y grilla B2B adaptable
 
 import { useState, useMemo, useDeferredValue } from "react";
-import { Search, X, Filter } from "lucide-react";
+import { Search, X, Users, SearchX, AlertTriangle, Clock } from "lucide-react";
 import type { Cliente, Inmueble } from "@/types";
 import { useUltimasInteracciones } from "@/hooks/useInteracciones";
 import InmuebleGroup from "@/components/InmuebleGroup";
@@ -15,6 +15,9 @@ interface ClientesViewProps {
   nuevos: Cliente[];
   seguimiento: Cliente[];
   inmuebles: Inmueble[];
+  warning?: string;
+  fromCache?: boolean;
+  fetchedAt?: string;
 }
 
 type QuickFilter = "todos" | "urgentes" | "sin-escribir";
@@ -24,6 +27,9 @@ export default function ClientesView({
   nuevos,
   seguimiento,
   inmuebles,
+  warning,
+  fromCache,
+  fetchedAt,
 }: ClientesViewProps) {
   const [activeTab, setActiveTab] = useState<"1" | "2">(initialStatus);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,10 +60,8 @@ export default function ClientesView({
         const parsedMs = new Date(c.fecha).getTime();
         const ageHours = Number.isNaN(parsedMs) ? 999 : (now - parsedMs) / 3_600_000;
         if (isNuevos) {
-          // En Nuevos: leads recientes (< 48h) que requieren primer contacto rápido
           if (ageHours > 48) return false;
         } else {
-          // En Seguimiento: seguimiento para hoy/vencido o negocios cerca de cierre (70%+)
           const segUrgente = c.diasSeguimiento !== undefined && c.diasSeguimiento <= 0;
           const altoAvance = (c.porcentaje ?? 0) >= 70;
           if (!segUrgente && !altoAvance && ageHours > 24) return false;
@@ -122,6 +126,11 @@ export default function ClientesView({
     }
   };
 
+  const limpiarFiltros = () => {
+    setSearchQuery("");
+    setQuickFilter("todos");
+  };
+
   const hasActiveSearchOrFilter = Boolean(deferredQuery || quickFilter !== "todos");
 
   return (
@@ -129,78 +138,176 @@ export default function ClientesView({
       <div className="header" style={{ paddingBottom: 12 }}>
         <div>
           <h1 className="header-title">Clientes CRM</h1>
-          <p className="header-sub">
+          <p className="header-sub" style={{ fontVariantNumeric: "tabular-nums" }}>
             {filteredClientes.length > 0
-              ? `${filteredClientes.length} contacto${filteredClientes.length !== 1 ? "s" : ""} · ${gruposOrdenados.length} grupo${gruposOrdenados.length !== 1 ? "s" : ""}`
-              : "Leads y contactos de portales inmobiliarios."}
+              ? `${filteredClientes.length} contacto${filteredClientes.length !== 1 ? "s" : ""} · ${gruposOrdenados.length} inmueble${gruposOrdenados.length !== 1 ? "s" : ""}`
+              : "Leads y contactos de portales inmobiliarios"}
           </p>
         </div>
         <RefreshCrmButton status={activeTab} />
       </div>
 
-      {/* Pestañas 0ms */}
-      <div style={{ padding: "0 20px 12px" }}>
-        <div className="tabs" style={{ padding: 0 }}>
+      {/* Aviso opcional si viene desde caché de respaldo o con advertencia */}
+      {warning && (
+        <div style={{ padding: "0 20px 12px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "10px 14px",
+              borderRadius: 12,
+              background: "rgba(217, 119, 6, 0.08)",
+              border: "1px solid rgba(217, 119, 6, 0.25)",
+              color: "#b45309",
+              fontSize: 13,
+              fontWeight: 600,
+            }}
+          >
+            <AlertTriangle size={16} color="#d97706" style={{ flexShrink: 0 }} />
+            <span>{warning}</span>
+          </div>
+        </div>
+      )}
+
+      {fromCache && fetchedAt && !warning && (
+        <div style={{ padding: "0 20px 10px" }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--text-muted)",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Clock size={13} />
+            <span>
+              Sincronizado{" "}
+              {new Date(fetchedAt).toLocaleTimeString("es-CO", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Barra sticky: Pestañas segmentadas 0ms + Buscador + Filtros rápidos */}
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 25,
+          background: "rgba(249, 250, 251, 0.94)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          padding: "8px 20px 12px",
+          marginBottom: 14,
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        {/* Control segmentado Nuevos / En seguimiento */}
+        <div
+          role="tablist"
+          aria-label="Etapas del CRM"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 4,
+            padding: 4,
+            borderRadius: 12,
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            marginBottom: 10,
+          }}
+        >
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "1"}
             onClick={() => handleTabChange("1")}
-            className={`tab-pill ${activeTab === "1" ? "active" : ""}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            style={{
+              minHeight: 38,
+              padding: "6px 10px",
+              borderRadius: 9,
+              border: "none",
+              background: activeTab === "1" ? "var(--red)" : "transparent",
+              color: activeTab === "1" ? "#FFFFFF" : "var(--text-secondary)",
+              fontSize: 14,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 7,
+              cursor: "pointer",
+              transition: "background 0.16s ease, color 0.16s ease",
+            }}
           >
             <span>Nuevos</span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: 800,
                 padding: "1px 7px",
                 borderRadius: 999,
+                fontVariantNumeric: "tabular-nums",
                 background: activeTab === "1" ? "rgba(255,255,255,0.22)" : "var(--bg-base)",
-                color: activeTab === "1" ? "#fff" : "var(--text-secondary)",
+                color: activeTab === "1" ? "#FFFFFF" : "var(--text-secondary)",
+                border: activeTab === "1" ? "none" : "1px solid var(--border)",
               }}
             >
               {nuevos.length}
             </span>
           </button>
+
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === "2"}
             onClick={() => handleTabChange("2")}
-            className={`tab-pill ${activeTab === "2" ? "active" : ""}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            style={{
+              minHeight: 38,
+              padding: "6px 10px",
+              borderRadius: 9,
+              border: "none",
+              background: activeTab === "2" ? "var(--red)" : "transparent",
+              color: activeTab === "2" ? "#FFFFFF" : "var(--text-secondary)",
+              fontSize: 14,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 7,
+              cursor: "pointer",
+              transition: "background 0.16s ease, color 0.16s ease",
+            }}
           >
-            <span>Seguimiento</span>
+            <span>En seguimiento</span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 11.5,
                 fontWeight: 800,
                 padding: "1px 7px",
                 borderRadius: 999,
+                fontVariantNumeric: "tabular-nums",
                 background: activeTab === "2" ? "rgba(255,255,255,0.22)" : "var(--bg-base)",
-                color: activeTab === "2" ? "#fff" : "var(--text-secondary)",
+                color: activeTab === "2" ? "#FFFFFF" : "var(--text-secondary)",
+                border: activeTab === "2" ? "none" : "1px solid var(--border)",
               }}
             >
               {seguimiento.length}
             </span>
           </button>
         </div>
-      </div>
 
-      {/* Buscador sticky + filtros rápidos */}
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 25,
-          background: "rgba(248, 249, 250, 0.94)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          padding: "8px 20px 12px",
-          marginBottom: 8,
-          borderBottom: "1px solid rgba(0,0,0,0.05)",
-        }}
-      >
+        {/* Buscador instantáneo con botón X de 1 toque */}
         <div style={{ position: "relative", marginBottom: 10 }}>
           <Search
-            size={18}
+            size={17}
             style={{
               position: "absolute",
               left: 14,
@@ -211,33 +318,34 @@ export default function ClientesView({
             }}
           />
           <input
-            type="search"
+            type="text"
+            inputMode="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar cliente, teléfono, barrio o cód..."
             className="form-input"
             style={{
-              paddingLeft: 42,
-              paddingRight: searchQuery ? 40 : 14,
-              fontSize: 16,
+              paddingLeft: 40,
+              paddingRight: searchQuery.length > 0 ? 42 : 14,
+              fontSize: 15.5,
               height: 44,
               background: "var(--bg-card)",
             }}
           />
-          {searchQuery && (
+          {searchQuery.length > 0 && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
               aria-label="Limpiar búsqueda"
               style={{
                 position: "absolute",
-                right: 8,
+                right: 6,
                 top: "50%",
                 transform: "translateY(-50%)",
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 borderRadius: "50%",
-                border: "none",
+                border: "1px solid var(--border)",
                 background: "var(--bg-base)",
                 color: "var(--text-secondary)",
                 display: "flex",
@@ -251,6 +359,7 @@ export default function ClientesView({
           )}
         </div>
 
+        {/* Chips de filtro rápido */}
         <div
           style={{
             display: "flex",
@@ -272,17 +381,13 @@ export default function ClientesView({
                 key={chip.id}
                 type="button"
                 onClick={() => setQuickFilter(chip.id)}
+                className={`quick-chip ${active ? "active" : ""}`}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  fontSize: 12,
+                  minHeight: 34,
+                  padding: "5px 12px",
+                  fontSize: 12.5,
                   fontWeight: 700,
                   whiteSpace: "nowrap",
-                  cursor: "pointer",
-                  border: active ? "1px solid var(--red)" : "1px solid var(--border)",
-                  background: active ? "var(--red-glow)" : "var(--bg-card)",
-                  color: active ? "var(--red)" : "var(--text-secondary)",
-                  transition: "all 0.15s ease",
                 }}
               >
                 {chip.label}
@@ -295,28 +400,49 @@ export default function ClientesView({
       {filteredClientes.length === 0 ? (
         <div style={{ padding: "0 20px" }}>
           <EmptyState
-            icon={hasActiveSearchOrFilter ? <Filter size={44} /> : undefined}
-            title={hasActiveSearchOrFilter ? "Sin coincidencias" : "No hay clientes"}
+            icon={
+              hasActiveSearchOrFilter ? (
+                <SearchX size={42} color="var(--text-muted)" />
+              ) : (
+                <Users size={42} color="var(--text-muted)" />
+              )
+            }
+            title={hasActiveSearchOrFilter ? "Sin coincidencias" : "No hay clientes en esta etapa"}
             description={
               hasActiveSearchOrFilter
-                ? "Prueba con otro nombre, código o cambia el filtro rápido."
-                : "No se encontraron contactos en esta categoría en este momento."
+                ? "Prueba con otro nombre, teléfono o código, o limpia el filtro activo."
+                : "No se encontraron contactos registrados en esta categoría por ahora."
             }
           />
+          {hasActiveSearchOrFilter && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: -24 }}>
+              <button
+                type="button"
+                onClick={limpiarFiltros}
+                className="btn-secondary"
+                style={{ width: "auto", minHeight: 42, padding: "8px 18px", fontSize: 14 }}
+              >
+                <X size={15} />
+                Limpiar filtros
+              </button>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="grid-1">
-          {gruposOrdenados.map(([codigo, grupoClientes]) => (
-            <InmuebleGroup
-              key={`${activeTab}-${codigo}`}
-              codigoRef={codigo}
-              inmueble={inmuebleMap.get(codigo)}
-              clientes={grupoClientes}
-              showSeguimiento={!isNuevos}
-              interacciones={interacciones}
-              forceExpand={hasActiveSearchOrFilter}
-            />
-          ))}
+        <div style={{ padding: "0 20px" }}>
+          <div className="crm-grid">
+            {gruposOrdenados.map(([codigo, grupoClientes]) => (
+              <InmuebleGroup
+                key={`${activeTab}-${codigo}`}
+                codigoRef={codigo}
+                inmueble={inmuebleMap.get(codigo)}
+                clientes={grupoClientes}
+                showSeguimiento={!isNuevos}
+                interacciones={interacciones}
+                forceExpand={hasActiveSearchOrFilter}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

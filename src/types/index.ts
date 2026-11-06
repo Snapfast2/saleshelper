@@ -57,3 +57,30 @@ export interface Cliente {
   diasSeguimiento?: number;
   porcentaje?: number;   // % de avance del negocio según Domus (2–100)
 }
+
+export interface AgenciaWorkspace {
+  id: string;
+  nombre: string;
+  razonSocial: string;
+  ciudad: string;
+  sitioWeb: string;
+  crmProveedor: string;
+  plan: string;
+}
+
+export interface BrokerTeamMember {
+  id: string;
+  domusProfileId: string;
+  nombreCompleto: string;
+  cargo: string;
+  zonaPrincipal: string;
+  foto?: string;
+  iniciales: string;
+  inmueblesActivos: number;
+  leadsMes: number;
+  seguimientosAlDiaPct: number;
+  tiempoRespuestaMin: number;
+  cierresTrimestre: number;
+  esCuentaActiva?: boolean;
+  esDemo: boolean;
+}

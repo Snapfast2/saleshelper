@@ -3,19 +3,24 @@
 
 import { useState, useMemo, useDeferredValue } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Filter, RefreshCw, X } from "lucide-react";
+import { toast } from "sonner";
+import { Search, RefreshCw, X, Building2 } from "lucide-react";
 import PropCard from "@/components/PropCard";
 import { useInmuebles } from "@/hooks/useInmuebles";
+import { useFichaViews } from "@/hooks/useFichaViews";
 import LoadingState from "@/components/LoadingState";
 import EmptyState from "@/components/EmptyState";
 
 export default function InmueblesPage() {
   const router = useRouter();
   const { inmuebles, isLoading, isOffline, mutate } = useInmuebles();
+  const { views } = useFichaViews();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [search, setSearch] = useState("");
-  const [filtroGestion, setFiltroGestion] = useState<"todos" | "venta" | "arriendo">("todos");
+  const [filtroGestion, setFiltroGestion] = useState<
+    "todos" | "venta" | "arriendo"
+  >("todos");
 
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
@@ -32,6 +37,7 @@ export default function InmueblesPage() {
           i.barrio.toLowerCase().includes(deferredSearch) ||
           i.ciudad.toLowerCase().includes(deferredSearch) ||
           i.tipo.toLowerCase().includes(deferredSearch) ||
+          (i.titulo || "").toLowerCase().includes(deferredSearch) ||
           String(i.id).toLowerCase().includes(deferredSearch) ||
           String(i.codigoDomus || "").toLowerCase().includes(deferredSearch)
       );
@@ -54,6 +60,9 @@ export default function InmueblesPage() {
         fetch("/api/inmuebles", { cache: "no-store" }).then((r) => r.json()),
         { revalidate: false }
       );
+      toast.success("Catálogo actualizado con éxito");
+    } catch {
+      toast.error("No se pudo actualizar el catálogo");
     } finally {
       setIsRefreshing(false);
     }
@@ -66,21 +75,27 @@ export default function InmueblesPage() {
       <div className="header" style={{ paddingBottom: 12 }}>
         <div>
           <h1 className="header-title">Catálogo L2L</h1>
-          <p className="header-sub">
-            {isLoading ? "Cargando..." : `${filtered.length} inmuebles encontrados`}
+          <p className="header-sub" style={{ fontVariantNumeric: "tabular-nums" }}>
+            {isLoading
+              ? "Cargando portafolio..."
+              : `${filtered.length} ${
+                  filtered.length === 1 ? "inmueble disponible" : "inmuebles disponibles"
+                }`}
           </p>
           {!isLoading && (
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "5px",
-                marginTop: "6px",
-                fontSize: "11px",
-                fontWeight: "600",
+                gap: 6,
+                marginTop: 6,
+                fontSize: 11.5,
+                fontWeight: 600,
                 padding: "3px 10px",
-                borderRadius: "20px",
-                background: isOffline ? "rgba(217,119,6,0.1)" : "rgba(22,163,74,0.1)",
+                borderRadius: 999,
+                background: isOffline
+                  ? "rgba(217, 119, 6, 0.1)"
+                  : "rgba(22, 163, 74, 0.1)",
                 color: isOffline ? "#D97706" : "#16a34a",
               }}
             >
@@ -97,6 +112,7 @@ export default function InmueblesPage() {
             </div>
           )}
         </div>
+
         <button
           type="button"
           onClick={forceRefresh}
@@ -104,9 +120,9 @@ export default function InmueblesPage() {
           title="Actualizar catálogo"
           aria-label="Actualizar catálogo"
           style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
+            width: 42,
+            height: 42,
+            borderRadius: 21,
             background: isRefreshing ? "var(--red)" : "var(--bg-card)",
             color: isRefreshing ? "#fff" : "var(--text-primary)",
             display: "flex",
@@ -126,13 +142,22 @@ export default function InmueblesPage() {
         </button>
       </div>
 
-      <div style={{ padding: "0 20px 16px" }}>
-        <div style={{ position: "relative", marginBottom: 12 }}>
+      {/* Barra de búsqueda rápida + Pestañas de gestión */}
+      <div
+        style={{
+          padding: "0 20px 18px",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 12,
+        }}
+      >
+        <div style={{ position: "relative", flex: "1 1 260px", minWidth: 0 }}>
           <Search
             size={18}
             style={{
               position: "absolute",
-              left: 16,
+              left: 15,
               top: "50%",
               transform: "translateY(-50%)",
               color: "var(--text-muted)",
@@ -142,11 +167,11 @@ export default function InmueblesPage() {
           <input
             type="search"
             className="form-input"
-            placeholder="Buscar por barrio, código o ciudad..."
+            placeholder="Filtrar por barrio, código o tipo..."
             style={{
-              paddingLeft: 44,
+              paddingLeft: 42,
               paddingRight: search ? 40 : 14,
-              fontSize: 16,
+              fontSize: 15.5,
             }}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -178,7 +203,7 @@ export default function InmueblesPage() {
           )}
         </div>
 
-        <div className="tabs" style={{ padding: 0 }}>
+        <div className="tabs" style={{ padding: 0, flexShrink: 0 }}>
           <button
             type="button"
             className={`tab-pill ${filtroGestion === "todos" ? "active" : ""}`}
@@ -191,37 +216,38 @@ export default function InmueblesPage() {
             className={`tab-pill ${filtroGestion === "venta" ? "active" : ""}`}
             onClick={() => setFiltroGestion("venta")}
           >
-            Ventas
+            En Venta
           </button>
           <button
             type="button"
             className={`tab-pill ${filtroGestion === "arriendo" ? "active" : ""}`}
             onClick={() => setFiltroGestion("arriendo")}
           >
-            Arriendos
+            En Arriendo
           </button>
         </div>
       </div>
 
-      <div className="grid-1">
-        {isLoading ? (
-          <LoadingState text="Cargando catálogo..." />
-        ) : filtered.length > 0 ? (
-          filtered.map((inmueble) => (
+      {isLoading ? (
+        <LoadingState text="Cargando catálogo..." />
+      ) : filtered.length > 0 ? (
+        <div className="catalog-grid">
+          {filtered.map((inm) => (
             <PropCard
-              key={inmueble.id}
-              inmueble={inmueble}
-              onClick={() => router.push(`/whatsapp?inmueble=${inmueble.id}`)}
+              key={inm.id}
+              inmueble={inm}
+              viewsCount={views[inm.id] ?? 0}
+              onClick={() => router.push(`/whatsapp?inmueble=${inm.id}`)}
             />
-          ))
-        ) : (
-          <EmptyState
-            icon={<Filter size={48} />}
-            title="No hay resultados"
-            description="Intenta cambiar los filtros o el término de búsqueda."
-          />
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState
+          icon={<Building2 size={46} />}
+          title="Sin inmuebles para este filtro"
+          description="Prueba ajustando el término de búsqueda o cambiando el tipo de gestión."
+        />
+      )}
     </div>
   );
 }

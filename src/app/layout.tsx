@@ -1,7 +1,9 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import DesktopSidebar from "@/components/DesktopSidebar";
 import PushAutoSubscribe from "@/components/PushAutoSubscribe";
 import "./globals.css";
 
@@ -14,8 +16,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SalesHelper",
-  description: "Herramienta de uso privado.",
+  title: "SalesHelper · L2L Bienes Raíces",
+  description: "Copiloto comercial inmobiliario para L2L Bienes Raíces.",
   manifest: "/manifest.json",
   robots: {
     index: false,
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "SalesHelper",
   },
 };
@@ -48,15 +50,27 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
           name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
+          content="default"
         />
       </head>
       <body>
         <div className="app-shell">
-          {children}
+          <DesktopSidebar />
+          <div className="app-main">{children}</div>
           <BottomNav />
           <PushAutoSubscribe />
         </div>
+        <Toaster
+          position="top-center"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              fontFamily: "var(--font-inter, 'Inter', system-ui, sans-serif)",
+              borderRadius: "14px",
+            },
+          }}
+        />
       </body>
     </html>
   );

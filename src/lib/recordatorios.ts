@@ -31,6 +31,7 @@ export function getRecordatorios(): Recordatorio[] {
 function guardarRecordatorios(recs: Recordatorio[]): void {
   if (!isBrowser()) return;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(recs));
+  window.dispatchEvent(new Event("sh-recordatorios-changed"));
 }
 
 export function addRecordatorio(data: Omit<Recordatorio, "id" | "creadoEn" | "completado">): Recordatorio {
@@ -51,6 +52,13 @@ export function addRecordatorio(data: Omit<Recordatorio, "id" | "creadoEn" | "co
 export function marcarCompletado(id: string): void {
   const recs = getRecordatorios().map((r) =>
     r.id === id ? { ...r, completado: true } : r
+  );
+  guardarRecordatorios(recs);
+}
+
+export function restaurarRecordatorio(id: string): void {
+  const recs = getRecordatorios().map((r) =>
+    r.id === id ? { ...r, completado: false } : r
   );
   guardarRecordatorios(recs);
 }

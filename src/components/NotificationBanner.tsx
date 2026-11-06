@@ -44,7 +44,7 @@ export default function NotificationBanner() {
           style={{ margin: "0 20px 12px", padding: "10px 14px", borderRadius: 12, background: "rgba(22,163,74,0.08)", border: "1px solid rgba(22,163,74,0.2)", display: "flex", gap: 8, alignItems: "center" }}
         >
           <Check size={15} color="#16a34a" />
-          <span style={{ fontSize: 14, color: "#16a34a", fontWeight: 600 }}>¡Notificaciones activadas! Revisa tu pantalla 🔔</span>
+          <span style={{ fontSize: 14, color: "#16a34a", fontWeight: 600 }}>Notificaciones activadas en este dispositivo</span>
         </motion.div>
       );
     }
@@ -72,8 +72,10 @@ export default function NotificationBanner() {
           position: "relative",
         }}>
           <button
+            type="button"
+            aria-label="Cerrar aviso de notificaciones"
             onClick={() => setDismissed(true)}
-            style={{ position: "absolute", top: 10, right: 10, background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--text-muted)" }}
+            style={{ position: "absolute", top: 8, right: 8, width: 34, height: 34, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}
           >
             <X size={16} />
           </button>
@@ -117,11 +119,15 @@ export function NotificationHeaderButton() {
 
   if (permissionState === "unsupported" || permissionState === "denied") return null;
 
+  const label = isSubscribed ? "Notificaciones activas" : "Activar notificaciones";
+
   return (
     <button
+      type="button"
       onClick={subscribe}
       disabled={isLoading || isSubscribed}
-      title={isSubscribed ? "Notificaciones activas" : "Activar notificaciones"}
+      title={label}
+      aria-label={label}
       style={{
         background: isSubscribed ? "rgba(22,163,74,0.1)" : "rgba(196,30,58,0.1)",
         border: "none",
@@ -179,8 +185,10 @@ export function TestNotifButton() {
 
   return (
     <button
+      type="button"
       onClick={handleTest}
       title="Enviar notificación de prueba"
+      aria-label="Enviar notificación de prueba"
       style={{
         background: sent
           ? "rgba(22,163,74,0.12)"

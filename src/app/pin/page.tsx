@@ -1,152 +1,347 @@
-"use client";
-import { useState, useRef } from "react";
+'use client';
+// src/app/pin/page.tsx
+
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OTPInput, REGEXP_ONLY_DIGITS } from "input-otp";
+import { AlertCircle, ArrowRight, Lock, ShieldCheck } from "lucide-react";
 
 export default function PinPage() {
-  const [pin, setPin] = useState<string[]>(["", "", "", ""]);
-  const [error, setError] = useState(false);
+  const [pin, setPin] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isLockedOut, setIsLockedOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const [shake, setShake] = useState(false);
-  const inputs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const otpRef = useRef<HTMLInputElement>(null);
+  const submittingRef = useRef(false);
   const router = useRouter();
 
-  async function submitPin(fullPin: string) {
+  async function submitPin(rawPin: string) {
+    const cleanPin = rawPin.replace(/\D/g, "").slice(0, 4);
+    if (cleanPin.length !== 4 || submittingRef.current) return;
+
+    submittingRef.current = true;
     setLoading(true);
-    setError(false);
+    setErrorMsg(null);
+
     try {
       const res = await fetch("/api/auth/pin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin: fullPin }),
+        body: JSON.stringify({ pin: cleanPin }),
       });
+
       if (res.ok) {
-        window.location.href = "/";
-      } else {
-        setError(true);
-        setShake(true);
-        setPin(["", "", "", ""]);
-        setTimeout(() => { setShake(false); inputs.current[0]?.focus(); }, 600);
+        router.replace("/");
+        router.refresh();
+        return;
       }
-    } finally {
+
+      let serverError = "";
+      try {
+        const payload = await res.json();
+        if (payload && typeof payload.error === "string") {
+          serverError = payload.error;
+        }
+      } catch {
+        // Respuesta sin JSON adicional
+      }
+
+      if (res.status === 429) {
+        setIsLockedOut(true);
+        setErrorMsg(
+          serverError ||
+            "Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar."
+        );
+      } else {
+        setIsLockedOut(false);
+        setErrorMsg(
+          serverError || "PIN incorrecto. Verifica tus 4 dígitos e intenta de nuevo."
+        );
+      }
+
+      setShake(true);
+      setPin("");
       setLoading(false);
+      submittingRef.current = false;
+
+      setTimeout(() => {
+        otpRef.current?.focus();
+      }, 30);
+      setTimeout(() => {
+        setShake(false);
+      }, 380);
+    } catch {
+      setErrorMsg("Error de conexión. Verifica tu red e intenta nuevamente.");
+      setShake(true);
+      setPin("");
+      setLoading(false);
+      submittingRef.current = false;
+
+      setTimeout(() => {
+        otpRef.current?.focus();
+      }, 30);
+      setTimeout(() => {
+        setShake(false);
+      }, 380);
     }
   }
 
-  function handleChange(value: string, index: number) {
-    if (!/^\d*$/.test(value)) return;
-    const next = [...pin];
-    next[index] = value.slice(-1);
-    setPin(next);
-    setError(false);
-    if (value && index < 3) {
-      inputs.current[index + 1]?.focus();
-    }
-    if (next.every(d => d !== "") && next.join("").length === 4) {
-      submitPin(next.join(""));
-    }
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent, index: number) {
-    if (e.key === "Backspace" && !pin[index] && index > 0) {
-      inputs.current[index - 1]?.focus();
+  function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (pin.length === 4 && !loading) {
+      void submitPin(pin);
+    } else {
+      otpRef.current?.focus();
     }
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      fontFamily: "'Inter', sans-serif",
-      padding: 24,
-    }}>
-      <div style={{
+    <main
+      style={{
+        minHeight: "100dvh",
+        backgroundColor: "var(--bg-base)",
+        backgroundImage:
+          "radial-gradient(circle at 50% 0%, rgba(196, 30, 58, 0.05) 0%, transparent 55%), linear-gradient(to right, rgba(229, 231, 235, 0.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(229, 231, 235, 0.45) 1px, transparent 1px)",
+        backgroundSize: "100% 100%, 32px 32px, 32px 32px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 32,
-        animation: shake ? "shake 0.5s ease" : "none",
-      }}>
-        {/* Logo */}
-        <div style={{
-          width: 72,
-          height: 72,
-          borderRadius: 20,
-          background: "linear-gradient(135deg, #C41E3A, #8b0000)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 37,
-          boxShadow: "0 8px 32px rgba(196,30,58,0.4)",
-        }}>
-          🏠
-        </div>
+        justifyContent: "center",
+        padding: "24px 20px",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 400,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 22,
+          padding: "32px 26px 26px",
+          boxShadow:
+            "0 12px 32px rgba(17, 24, 39, 0.05), 0 2px 6px rgba(17, 24, 39, 0.02)",
+        }}
+      >
+        {/* Co-branded Header */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            marginBottom: 26,
+          }}
+        >
+          <div
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: 14,
+              background: "var(--red)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "0 6px 18px rgba(196, 30, 58, 0.24)",
+              marginBottom: 14,
+            }}
+          >
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M4 20V9.5L12 4L20 9.5V20H14.5V14H9.5V20H4Z"
+                stroke="#FFFFFF"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12 4V10"
+                stroke="rgba(255,255,255,0.7)"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
 
-        {/* Título */}
-        <div style={{ textAlign: "center" }}>
-          <h1 style={{ fontSize: 25, fontWeight: 700, color: "#e2e8f0", margin: 0 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "4px 10px",
+              borderRadius: 999,
+              background: "var(--bg-base)",
+              border: "1px solid var(--border)",
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: "var(--text-secondary)",
+              marginBottom: 10,
+            }}
+          >
+            <Lock size={12} color="var(--red)" />
+            <span>L2L Bienes Raíces · Acceso Asesores</span>
+          </div>
+
+          <h1
+            style={{
+              fontSize: 24,
+              fontWeight: 800,
+              color: "var(--text-primary)",
+              letterSpacing: "-0.02em",
+              margin: 0,
+            }}
+          >
             SalesHelper
           </h1>
-          <p style={{ fontSize: 15, color: "#94a3b8", marginTop: 6 }}>
-            {loading ? "Verificando..." : "Ingresa tu PIN de acceso"}
+          <p
+            style={{
+              fontSize: 14.5,
+              color: "var(--text-secondary)",
+              marginTop: 6,
+              lineHeight: 1.45,
+            }}
+          >
+            {loading
+              ? "Verificando credenciales..."
+              : "Ingresa tu PIN comercial de 4 dígitos"}
           </p>
         </div>
 
-        {/* Inputs PIN */}
-        <div style={{ display: "flex", gap: 16 }}>
-          {[0, 1, 2, 3].map(i => (
-            <input
-              key={i}
-              ref={el => { inputs.current[i] = el; }}
-              type="password"
+        {/* OTP PIN Form */}
+        <form onSubmit={handleFormSubmit} noValidate>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 20,
+            }}
+          >
+            <OTPInput
+              ref={otpRef}
+              maxLength={4}
+              pattern={REGEXP_ONLY_DIGITS}
               inputMode="numeric"
-              maxLength={1}
-              value={pin[i]}
-              onChange={e => handleChange(e.target.value, i)}
-              onKeyDown={e => handleKeyDown(e, i)}
+              autoComplete="one-time-code"
+              autoFocus
               disabled={loading}
-              autoFocus={i === 0}
-              style={{
-                width: 56,
-                height: 64,
-                borderRadius: 14,
-                border: error
-                  ? "2px solid #f87171"
-                  : pin[i]
-                  ? "2px solid #C41E3A"
-                  : "2px solid rgba(255,255,255,0.12)",
-                background: "rgba(255,255,255,0.07)",
-                color: "#e2e8f0",
-                fontSize: 32,
-                textAlign: "center",
-                outline: "none",
-                transition: "border-color 0.2s, transform 0.1s",
-                transform: pin[i] ? "scale(1.05)" : "scale(1)",
-                backdropFilter: "blur(10px)",
-                cursor: loading ? "not-allowed" : "text",
+              value={pin}
+              onChange={(val) => {
+                setPin(val);
+                if (errorMsg) {
+                  setErrorMsg(null);
+                  setIsLockedOut(false);
+                }
               }}
+              onComplete={(val) => {
+                void submitPin(val);
+              }}
+              aria-label="PIN de acceso de 4 dígitos"
+              render={({ slots }) => (
+                <div className={`otp-slots ${shake ? "pin-shake" : ""}`}>
+                  {slots.map((slot, index) => {
+                    const classes = [
+                      "otp-slot",
+                      slot.isActive ? "otp-slot-active" : "",
+                      slot.char ? "otp-slot-filled" : "",
+                      errorMsg ? "otp-slot-error" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
+
+                    return (
+                      <div key={index} className={classes}>
+                        {slot.char ? (
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              fontSize: 28,
+                              lineHeight: 1,
+                              color: "var(--text-primary)",
+                            }}
+                          >
+                            {"\u2022"}
+                          </span>
+                        ) : null}
+                        {slot.hasFakeCaret && <div className="otp-caret" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             />
-          ))}
+          </div>
+
+          {/* Error Banner */}
+          {errorMsg && (
+            <div
+              role="alert"
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 9,
+                padding: "11px 13px",
+                marginBottom: 18,
+                borderRadius: 12,
+                background: isLockedOut ? "#FFFBEB" : "#FEF2F2",
+                border: isLockedOut
+                  ? "1px solid #FDE68A"
+                  : "1px solid #FECACA",
+                color: isLockedOut ? "#92400E" : "#B91C1C",
+                fontSize: 13,
+                fontWeight: 500,
+                lineHeight: 1.45,
+              }}
+            >
+              <AlertCircle
+                size={16}
+                style={{ flexShrink: 0, marginTop: 1 }}
+              />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Explicit Submit CTA */}
+          <button
+            type="submit"
+            disabled={loading || pin.length < 4}
+            className="btn-primary"
+            style={{
+              minHeight: 48,
+              fontSize: 15.5,
+              padding: "13px 18px",
+              opacity: loading || pin.length < 4 ? 0.55 : 1,
+              cursor: loading || pin.length < 4 ? "not-allowed" : "pointer",
+            }}
+          >
+            <span>{loading ? "Ingresando..." : "Ingresar al panel"}</span>
+            {!loading && <ArrowRight size={17} />}
+          </button>
+        </form>
+
+        {/* Subtle Security Note */}
+        <div
+          style={{
+            marginTop: 20,
+            paddingTop: 16,
+            borderTop: "1px solid var(--border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            color: "var(--text-muted)",
+            fontSize: 12,
+          }}
+        >
+          <ShieldCheck size={14} color="var(--text-muted)" />
+          <span>Sesión cifrada · Copiloto comercial L2L</span>
         </div>
-
-        {/* Error */}
-        {error && (
-          <p style={{ color: "#f87171", fontSize: 15, margin: 0 }}>
-            PIN incorrecto. Intenta de nuevo.
-          </p>
-        )}
       </div>
-
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          20%, 60% { transform: translateX(-8px); }
-          40%, 80% { transform: translateX(8px); }
-        }
-      `}</style>
-    </div>
+    </main>
   );
 }
