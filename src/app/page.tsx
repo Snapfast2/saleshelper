@@ -9,20 +9,20 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   Building2,
-  Users,
   Send,
   Share2,
   BookOpen,
   FileText,
   MessageCircle,
   Check,
-  CheckCircle2,
   ArrowRight,
   RefreshCw,
+  Search,
 } from "lucide-react";
 
 import L2LLogo from "@/components/L2LLogo";
 import PropCard from "@/components/PropCard";
+import PropertyPickerDrawer from "@/components/PropertyPickerDrawer";
 import EmptyState from "@/components/EmptyState";
 import NotificationBanner, {
   NotificationHeaderButton,
@@ -69,6 +69,7 @@ export default function Home() {
   const { views } = useFichaViews();
   const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
   const [saludo, setSaludo] = useState("Hola, Patricia");
+  const [fechaCorta, setFechaCorta] = useState("");
   const [avatarError, setAvatarError] = useState(false);
   const { isSubscribed, checkReminders } = usePushNotifications();
 
@@ -80,7 +81,8 @@ export default function Home() {
   } | null>(null);
 
   useEffect(() => {
-    const hora = new Date().getHours();
+    const ahora = new Date();
+    const hora = ahora.getHours();
     if (hora < 12) {
       setSaludo("Buenos días, Patricia");
     } else if (hora < 18) {
@@ -88,6 +90,15 @@ export default function Home() {
     } else {
       setSaludo("Buenas noches, Patricia");
     }
+
+    const rawFecha = new Intl.DateTimeFormat("es-CO", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    })
+      .format(ahora)
+      .replace(/\./g, "");
+    setFechaCorta(rawFecha.charAt(0).toUpperCase() + rawFecha.slice(1));
 
     const syncRecordatorios = () => {
       setRecordatorios(getRecordatoriosPendientes());
@@ -117,7 +128,9 @@ export default function Home() {
       body: JSON.stringify({ id: rec.id }),
     }).catch(() => {});
 
-    const primerNombre = capitalizarNombre(rec.nombre.trim().split(/\s+/)[0] || "cliente");
+    const primerNombre = capitalizarNombre(
+      rec.nombre.trim().split(/\s+/)[0] || "cliente"
+    );
     toast.success(`Seguimiento con ${primerNombre} completado`, {
       action: {
         label: "Deshacer",
@@ -133,139 +146,178 @@ export default function Home() {
   const arriendos = inmuebles.filter((i) => i.gestion === "arriendo");
   const ventasCount = ventas.length;
   const arriendosCount = arriendos.length;
-  const valorPortafolioVenta = ventas.reduce((acc, inm) => acc + (inm.precio || 0), 0);
-
-  const subtituloOperativo =
-    recordatorios.length > 0
-      ? recordatorios.length === 1
-        ? "Tienes 1 seguimiento listo para atender hoy"
-        : `Tienes ${recordatorios.length} seguimientos listos para atender hoy`
-      : "Tus seguimientos están al día · Revisa leads nuevos en CRM";
+  const valorPortafolioVenta = ventas.reduce(
+    (acc, inm) => acc + (inm.precio || 0),
+    0
+  );
 
   return (
     <div className="page">
-      {/* Barra Corporativa Móvil L2L (< 900px; en escritorio vive en DesktopSidebar) */}
-      <div className="mobile-brand-bar">
-        <L2LLogo height={34} />
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      {/* 1. Barra Ejecutiva Integrada Móvil (< 900px; en desktop vive en DesktopSidebar) */}
+      <div className="home-topbar">
+        <L2LLogo height={30} />
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            flexShrink: 0,
+          }}
+        >
           <Link
             href="/equipo"
             className="workspace-pill"
             style={{
-              minHeight: 36,
-              padding: "5px 11px",
+              minHeight: 34,
+              padding: "4px 10px",
               textDecoration: "none",
             }}
           >
-            <Building2 size={14} color="var(--red)" />
+            <Building2 size={13} color="var(--red)" />
             <span>Agencia</span>
           </Link>
+
           <NotificationHeaderButton />
+
+          <a
+            href={AGENTE_PATRICIA.urlPerfil}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Olga Patricia Vásquez · L2L Bienes Raíces"
+            style={{
+              position: "relative",
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "inline-flex",
+              textDecoration: "none",
+            }}
+          >
+            {!avatarError && AGENTE_PATRICIA.foto ? (
+              <Image
+                src={AGENTE_PATRICIA.foto}
+                alt="Olga Patricia Vásquez"
+                width={34}
+                height={34}
+                priority
+                onError={() => setAvatarError(true)}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                  border: "1.5px solid var(--border-red)",
+                }}
+              />
+            ) : (
+              <span
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "rgba(184, 15, 18, 0.1)",
+                  border: "1.5px solid var(--border-red)",
+                  color: "var(--red)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 11.5,
+                  fontWeight: 800,
+                }}
+              >
+                PV
+              </span>
+            )}
+            <span
+              aria-label="En línea"
+              style={{
+                position: "absolute",
+                bottom: -1,
+                right: -1,
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: "#16A34A",
+                border: "2px solid var(--bg-base)",
+              }}
+            />
+          </a>
         </div>
       </div>
 
-      {/* Top Workspace Bar */}
-      <div className="workspace-bar">
-        <a
-          href={AGENTE_PATRICIA.urlPerfil}
-          target="_blank"
-          rel="noopener noreferrer"
+      {/* 2. Saludo Ejecutivo de 1 línea + Fecha / Controles Desktop */}
+      <header className="home-greeting-row">
+        <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "baseline",
             gap: 10,
             minWidth: 0,
-            textDecoration: "none",
+            flexWrap: "wrap",
           }}
         >
-          {!avatarError && AGENTE_PATRICIA.foto ? (
-            <Image
-              src={AGENTE_PATRICIA.foto}
-              alt="Olga Patricia Vásquez"
-              width={38}
-              height={38}
-              priority
-              onError={() => setAvatarError(true)}
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "1.5px solid var(--border-red)",
-                flexShrink: 0,
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: "50%",
-                background: "rgba(184, 15, 18, 0.1)",
-                border: "1.5px solid var(--border-red)",
-                color: "var(--red)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                fontWeight: 800,
-                flexShrink: 0,
-              }}
-            >
-              PV
-            </div>
-          )}
-
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                color: "var(--text-primary)",
-                lineHeight: 1.2,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              Olga Patricia Vásquez
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: "var(--text-muted)",
-                lineHeight: 1.25,
-                marginTop: 2,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              L2L Bienes Raíces · Bogotá
-            </div>
-          </div>
-        </a>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div
-            className="desktop-only-inline"
-            style={{ alignItems: "center", gap: 8, flexShrink: 0 }}
+          <h1
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              letterSpacing: "-0.025em",
+              color: "var(--text-primary)",
+              lineHeight: 1.2,
+              margin: 0,
+            }}
           >
-            <Link
-              href="/equipo"
-              className="workspace-pill"
+            {saludo}
+          </h1>
+          {fechaCorta && (
+            <span
+              className="desktop-only-inline"
               style={{
-                minHeight: 38,
-                padding: "6px 12px",
-                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--text-muted)",
               }}
             >
-              <Building2 size={14} color="var(--red)" />
-              <span>Agencia</span>
-            </Link>
-            <NotificationHeaderButton />
-          </div>
+              · {fechaCorta}
+            </span>
+          )}
+        </div>
 
+        {/* Fecha corta en móvil */}
+        {fechaCorta && (
+          <span
+            className="mobile-only-inline"
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "var(--text-muted)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {fechaCorta}
+          </span>
+        )}
+
+        {/* Controles rápidos en escritorio */}
+        <div
+          className="desktop-only-inline"
+          style={{ alignItems: "center", gap: 8, flexShrink: 0 }}
+        >
+          <Link
+            href="/equipo"
+            className="workspace-pill"
+            style={{
+              minHeight: 34,
+              padding: "4px 11px",
+              textDecoration: "none",
+            }}
+          >
+            <Building2 size={13} color="var(--red)" />
+            <span>Agencia</span>
+          </Link>
+          <NotificationHeaderButton />
           <span
             style={{
               display: "inline-flex",
@@ -278,7 +330,6 @@ export default function Home() {
               fontSize: 11,
               fontWeight: 700,
               color: "#15803D",
-              flexShrink: 0,
             }}
           >
             <span
@@ -292,27 +343,12 @@ export default function Home() {
             <span>En línea</span>
           </span>
         </div>
-      </div>
-
-      {/* Greeting + Operational Status */}
-      <header className="header" style={{ paddingTop: 6, paddingBottom: 14 }}>
-        <div>
-          <h1
-            className="header-title"
-            style={{ fontSize: 26, letterSpacing: "-0.02em" }}
-          >
-            {saludo}
-          </h1>
-          <p className="header-sub" style={{ fontSize: 14.5, marginTop: 4 }}>
-            {subtituloOperativo}
-          </p>
-        </div>
       </header>
 
-      {/* Push Notifications Banner */}
+      {/* Banner compacto de notificaciones (solo si falta activar) */}
       <NotificationBanner />
 
-      {/* Typographic KPI Strip */}
+      {/* 3. Typographic KPI Strip */}
       <section className="kpi-strip" aria-label="Indicadores clave">
         <Link
           href="/inmuebles"
@@ -325,8 +361,8 @@ export default function Home() {
           </span>
           <span className="kpi-sub">
             {isLoading
-              ? "Sincronizando..."
-              : `${ventasCount} venta · ${arriendosCount} arriendo`}
+              ? "Sincronizando…"
+              : `${ventasCount} venta · ${arriendosCount} arr.`}
           </span>
         </Link>
 
@@ -345,7 +381,7 @@ export default function Home() {
             {recordatorios.length}
           </span>
           <span className="kpi-sub">
-            {recordatorios.length > 0 ? "Prioridad alta" : "Todo al día"}
+            {recordatorios.length > 0 ? "Prioridad alta" : "Al día · Ver CRM"}
           </span>
         </Link>
 
@@ -362,21 +398,72 @@ export default function Home() {
         </Link>
       </section>
 
-      {/* PRIMARY SECTION ABOVE THE FOLD — Cola de Seguimientos */}
-      {recordatorios.length > 0 ? (
-        <section style={{ marginBottom: 24 }}>
-          <div className="section-header">
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <h2 className="section-title" style={{ fontSize: 18 }}>
+      {/* 4. Buscador Instantáneo 1-Toque (abre CMDK nativo para enviar ficha al instante) */}
+      <div style={{ padding: "0 20px", marginBottom: 16 }}>
+        <PropertyPickerDrawer
+          inmuebles={inmuebles}
+          selected={null}
+          loading={isLoading}
+          views={views}
+          drawerTitle="Ir a inmueble · Enviar ficha"
+          onSelect={(inm) => router.push(`/whatsapp?inmueble=${inm.id}`)}
+          customTrigger={
+            <button type="button" className="home-search-trigger">
+              <span
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  minWidth: 0,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <Search
+                  size={15}
+                  color="var(--red)"
+                  style={{ flexShrink: 0 }}
+                />
+                <span
+                  style={{
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  Buscar inmueble por barrio o #código…
+                </span>
+              </span>
+              <span className="home-search-kbd">
+                {isLoading ? "…" : `${inmuebles.length} disp.`}
+              </span>
+            </button>
+          }
+        />
+      </div>
+
+      {/* 5. Cola de Seguimientos (solo aparece cuando hay pendientes reales) */}
+      {recordatorios.length > 0 && (
+        <section style={{ marginBottom: 18 }}>
+          <div
+            className="section-header"
+            style={{ padding: "0 20px 8px" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <h2
+                className="section-title"
+                style={{ fontSize: 15, letterSpacing: "-0.01em" }}
+              >
                 Cola de seguimientos
               </h2>
               <span
                 style={{
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: 700,
                   color: "#FFFFFF",
                   background: "var(--red)",
-                  padding: "2px 8px",
+                  padding: "1px 7px",
                   borderRadius: 999,
                   fontVariantNumeric: "tabular-nums",
                 }}
@@ -387,9 +474,9 @@ export default function Home() {
             <Link
               href="/clientes"
               className="section-link"
-              style={{ fontSize: 13.5, fontWeight: 600 }}
+              style={{ fontSize: 12.5, fontWeight: 600 }}
             >
-              Ver CRM
+              Ver CRM →
             </Link>
           </div>
 
@@ -398,7 +485,7 @@ export default function Home() {
               padding: "0 20px",
               display: "flex",
               flexDirection: "column",
-              gap: 10,
+              gap: 8,
             }}
           >
             {recordatorios.map((rec) => {
@@ -427,8 +514,8 @@ export default function Home() {
                     borderLeft: esVencido
                       ? "3px solid var(--red)"
                       : "3px solid #D97706",
-                    borderRadius: 14,
-                    padding: "14px 16px",
+                    borderRadius: 12,
+                    padding: "11px 13px",
                   }}
                 >
                   <div
@@ -436,8 +523,8 @@ export default function Home() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "flex-start",
-                      gap: 10,
-                      marginBottom: 12,
+                      gap: 8,
+                      marginBottom: 9,
                     }}
                   >
                     <div style={{ minWidth: 0, flex: 1 }}>
@@ -445,13 +532,13 @@ export default function Home() {
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 8,
+                          gap: 7,
                           flexWrap: "wrap",
                         }}
                       >
                         <span
                           style={{
-                            fontSize: 15.5,
+                            fontSize: 14.5,
                             fontWeight: 700,
                             color: "var(--text-primary)",
                           }}
@@ -460,9 +547,9 @@ export default function Home() {
                         </span>
                         <span
                           style={{
-                            fontSize: 11,
+                            fontSize: 10.5,
                             fontWeight: 700,
-                            padding: "2px 8px",
+                            padding: "1px 7px",
                             borderRadius: 6,
                             background: esVencido ? "#FEF2F2" : "#FFFBEB",
                             border: esVencido
@@ -481,28 +568,28 @@ export default function Home() {
                           alignItems: "center",
                           gap: 6,
                           flexWrap: "wrap",
-                          marginTop: 6,
+                          marginTop: 4,
                         }}
                       >
                         {rec.inmuebleInteres && (
                           <span
                             style={{
-                              fontSize: 11.5,
+                              fontSize: 11,
                               fontWeight: 600,
-                              padding: "2px 7px",
-                              borderRadius: 6,
+                              padding: "1px 6px",
+                              borderRadius: 5,
                               background: "var(--bg-base)",
                               border: "1px solid var(--border)",
                               color: "var(--text-secondary)",
                               fontVariantNumeric: "tabular-nums",
                             }}
                           >
-                            Ref #{rec.inmuebleInteres}
+                            #{rec.inmuebleInteres}
                           </span>
                         )}
                         <span
                           style={{
-                            fontSize: 13,
+                            fontSize: 12.5,
                             color: "var(--text-secondary)",
                           }}
                         >
@@ -538,13 +625,13 @@ export default function Home() {
                       className="btn-ws"
                       style={{
                         flex: 1,
-                        minHeight: 44,
-                        fontSize: 14,
-                        padding: "10px 14px",
-                        borderRadius: 12,
+                        minHeight: 38,
+                        fontSize: 13,
+                        padding: "7px 12px",
+                        borderRadius: 10,
                       }}
                     >
-                      <MessageCircle size={16} />
+                      <MessageCircle size={15} />
                       <span>Escribir a {primerNombre}</span>
                     </button>
 
@@ -552,23 +639,23 @@ export default function Home() {
                       type="button"
                       onClick={() => handleCompletarRecordatorio(rec)}
                       style={{
-                        minHeight: 44,
-                        padding: "0 14px",
-                        borderRadius: 12,
+                        minHeight: 38,
+                        padding: "0 12px",
+                        borderRadius: 10,
                         background: "var(--bg-base)",
                         border: "1px solid var(--border)",
                         color: "var(--text-secondary)",
-                        fontSize: 13.5,
+                        fontSize: 12.5,
                         fontWeight: 600,
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: 6,
+                        gap: 5,
                         cursor: "pointer",
                         whiteSpace: "nowrap",
                       }}
                     >
-                      <Check size={16} color="#16A34A" />
+                      <Check size={14} color="#16A34A" />
                       <span>Listo</span>
                     </button>
                   </div>
@@ -577,260 +664,158 @@ export default function Home() {
             })}
           </div>
         </section>
-      ) : (
-        <div style={{ padding: "0 20px", marginBottom: 22 }}>
-          <Link
-            href="/clientes"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-              minHeight: 48,
-              padding: "12px 16px",
-              background: "var(--bg-card)",
-              border: "1px solid var(--border)",
-              borderRadius: 14,
-              textDecoration: "none",
-            }}
-          >
-            <span
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                fontSize: 13.5,
-                fontWeight: 500,
-                color: "var(--text-secondary)",
-                minWidth: 0,
-              }}
-            >
-              <CheckCircle2
-                size={17}
-                color="#16A34A"
-                style={{ flexShrink: 0 }}
-              />
-              <span
-                style={{
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                Seguimientos al día · Revisa tus leads de Domus
-              </span>
-            </span>
-
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 13,
-                fontWeight: 700,
-                color: "var(--red)",
-                whiteSpace: "nowrap",
-                flexShrink: 0,
-              }}
-            >
-              <span>Ir a Clientes CRM</span>
-              <ArrowRight size={15} />
-            </span>
-          </Link>
-        </div>
       )}
 
-      {/* Herramientas Comerciales */}
+      {/* 6. Dock Ejecutivo Compacto 2x2 — Herramientas Comerciales */}
       <section aria-label="Herramientas comerciales">
-        <div className="section-header">
-          <h2 className="section-title" style={{ fontSize: 18 }}>
-            Herramientas comerciales
-          </h2>
-        </div>
-
-        {/* Acceso directo destacado: Informe Mensual a Propietarios */}
-        <div style={{ padding: "0 20px 12px" }}>
-          <Link
-            href="/informes"
-            className="card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              padding: "15px 16px",
-              border: "1px solid var(--border-red)",
-              background: "var(--bg-card)",
-              boxShadow: "0 4px 16px rgba(184, 15, 18, 0.05)",
-              textDecoration: "none",
-            }}
+        <div
+          className="section-header"
+          style={{ padding: "0 20px 8px" }}
+        >
+          <h2
+            className="section-title"
+            style={{ fontSize: 15, letterSpacing: "-0.01em" }}
           >
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                background: "rgba(184, 15, 18, 0.08)",
-                border: "1px solid rgba(184, 15, 18, 0.2)",
-                color: "var(--red)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
-              }}
-            >
-              <FileText size={21} />
-            </div>
-
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 15.5,
-                    fontWeight: 700,
-                    color: "var(--text-primary)",
-                    lineHeight: 1.25,
-                  }}
-                >
-                  Informe Mensual a Propietarios
-                </span>
-                <span
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 999,
-                    background: "var(--red)",
-                    color: "#FFFFFF",
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    lineHeight: 1.4,
-                  }}
-                >
-                  Nuevo
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: 13,
-                  color: "var(--text-secondary)",
-                  marginTop: 3,
-                  lineHeight: 1.35,
-                }}
-              >
-                Estadística de Finca Raíz, Metrocuadrado y citas lista para enviar en PDF o WhatsApp
-              </div>
-            </div>
-
-            <ArrowRight
-              size={18}
-              color="var(--red)"
-              style={{ flexShrink: 0 }}
-            />
+            Herramientas
+          </h2>
+          <Link
+            href="/clientes"
+            className="section-link"
+            style={{ fontSize: 12.5, fontWeight: 600 }}
+          >
+            Clientes CRM →
           </Link>
         </div>
 
         <div className="quick-actions">
           <Link
-            href="/clientes"
+            href="/informes"
             className="qa-btn"
-            style={{ textDecoration: "none", minHeight: 112 }}
+            style={{
+              textDecoration: "none",
+              borderColor: "rgba(184, 15, 18, 0.26)",
+              background:
+                "linear-gradient(180deg, rgba(184, 15, 18, 0.035) 0%, #FFFFFF 100%)",
+            }}
           >
             <div
               className="qa-icon"
               style={{
-                background: "rgba(184, 15, 18, 0.07)",
-                border: "1px solid rgba(184, 15, 18, 0.18)",
+                background: "rgba(184, 15, 18, 0.09)",
+                border: "1px solid rgba(184, 15, 18, 0.2)",
                 color: "var(--red)",
               }}
             >
-              <Users size={20} />
+              <FileText size={17} />
             </div>
-            <div>
-              <div className="qa-label">Clientes CRM</div>
-              <div className="qa-sub">Leads y seguimiento Domus</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                }}
+              >
+                <span className="qa-label">Informes</span>
+                <span
+                  style={{
+                    padding: "1px 5px",
+                    borderRadius: 999,
+                    background: "var(--red)",
+                    color: "#FFFFFF",
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.03em",
+                    lineHeight: 1.35,
+                    flexShrink: 0,
+                  }}
+                >
+                  Mes
+                </span>
+              </div>
+              <div className="qa-sub">Portales y citas</div>
             </div>
           </Link>
 
           <Link
             href="/whatsapp"
             className="qa-btn"
-            style={{ textDecoration: "none", minHeight: 112 }}
+            style={{ textDecoration: "none" }}
           >
             <div
               className="qa-icon"
               style={{
-                background: "#F9FAFB",
+                background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
-              <Send size={20} />
+              <Send size={17} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="qa-label">Enviar Ficha</div>
-              <div className="qa-sub">Mensaje listo para WhatsApp</div>
+              <div className="qa-sub">Por WhatsApp</div>
             </div>
           </Link>
 
           <Link
             href="/redes"
             className="qa-btn"
-            style={{ textDecoration: "none", minHeight: 112 }}
+            style={{ textDecoration: "none" }}
           >
             <div
               className="qa-icon"
               style={{
-                background: "#F9FAFB",
+                background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
-              <Share2 size={20} />
+              <Share2 size={17} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="qa-label">Publicar Post</div>
-              <div className="qa-sub">Copy para Instagram y Facebook</div>
+              <div className="qa-sub">IG y Facebook</div>
             </div>
           </Link>
 
           <Link
             href="/respuestas"
             className="qa-btn"
-            style={{ textDecoration: "none", minHeight: 112 }}
+            style={{ textDecoration: "none" }}
           >
             <div
               className="qa-icon"
               style={{
-                background: "#F9FAFB",
+                background: "var(--bg-base)",
                 border: "1px solid var(--border)",
                 color: "var(--text-primary)",
               }}
             >
-              <BookOpen size={20} />
+              <BookOpen size={17} />
             </div>
-            <div>
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div className="qa-label">Objeciones</div>
-              <div className="qa-sub">Respuestas rápidas a clientes</div>
+              <div className="qa-sub">Guiones rápidos</div>
             </div>
           </Link>
         </div>
       </section>
 
-      {/* Mis Inmuebles Recientes */}
+      {/* 7. Mis Inmuebles Recientes (ahora visible en el primer pantallazo) */}
       <section aria-label="Mis inmuebles recientes">
-        <div className="section-header">
-          <h2 className="section-title" style={{ fontSize: 18 }}>
-            Mis inmuebles recientes
+        <div
+          className="section-header"
+          style={{ padding: "0 20px 8px" }}
+        >
+          <h2
+            className="section-title"
+            style={{ fontSize: 15, letterSpacing: "-0.01em" }}
+          >
+            Inmuebles recientes
           </h2>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button
               type="button"
               onClick={() => mutate()}
@@ -838,31 +823,33 @@ export default function Home() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: 5,
-                minHeight: 36,
-                padding: "4px 8px",
-                fontSize: 13,
+                gap: 4,
+                minHeight: 30,
+                padding: "3px 7px",
+                fontSize: 12,
                 fontWeight: 600,
-                color: "var(--text-secondary)",
+                color: "var(--text-muted)",
                 background: "transparent",
                 border: "none",
                 cursor: "pointer",
               }}
             >
               <RefreshCw
-                size={14}
+                size={13}
                 style={{
                   animation: isLoading ? "spin 1s linear infinite" : "none",
                 }}
               />
-              <span>Actualizar</span>
+              <span>Sincronizar</span>
             </button>
             <Link
               href="/inmuebles"
               className="section-link"
-              style={{ fontSize: 13.5, fontWeight: 600 }}
+              style={{ fontSize: 12.5, fontWeight: 600 }}
             >
-              Ver todos
+              {!isLoading && inmuebles.length > 0
+                ? `Ver los ${inmuebles.length} →`
+                : "Ver todos →"}
             </Link>
           </div>
         </div>
@@ -874,41 +861,41 @@ export default function Home() {
                 key={idx}
                 className="card animate-pulse"
                 style={{
-                  width: 250,
+                  width: 220,
                   flexShrink: 0,
                   overflow: "hidden",
                 }}
               >
                 <div
                   style={{
-                    height: 140,
+                    height: 116,
                     background: "var(--bg-card-hover)",
                   }}
                 />
-                <div style={{ padding: 14 }}>
+                <div style={{ padding: "10px 12px" }}>
                   <div
                     style={{
                       width: "45%",
-                      height: 11,
-                      borderRadius: 6,
+                      height: 10,
+                      borderRadius: 5,
                       background: "var(--bg-card-hover)",
-                      marginBottom: 8,
+                      marginBottom: 6,
                     }}
                   />
                   <div
                     style={{
-                      width: "85%",
-                      height: 15,
-                      borderRadius: 6,
+                      width: "80%",
+                      height: 13,
+                      borderRadius: 5,
                       background: "var(--bg-card-hover)",
-                      marginBottom: 8,
+                      marginBottom: 7,
                     }}
                   />
                   <div
                     style={{
-                      width: "60%",
-                      height: 12,
-                      borderRadius: 6,
+                      width: "55%",
+                      height: 10,
+                      borderRadius: 5,
                       background: "var(--bg-card-hover)",
                     }}
                   />
@@ -918,7 +905,7 @@ export default function Home() {
           </div>
         ) : inmuebles.length > 0 ? (
           <div className="h-scroll">
-            {inmuebles.slice(0, 5).map((inmueble) => (
+            {inmuebles.slice(0, 6).map((inmueble) => (
               <PropCard
                 key={inmueble.id}
                 inmueble={inmueble}
@@ -931,25 +918,25 @@ export default function Home() {
               href="/inmuebles"
               className="card"
               style={{
-                width: 148,
+                width: 124,
                 flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 flexDirection: "column",
-                gap: 10,
+                gap: 8,
                 cursor: "pointer",
                 color: "var(--text-primary)",
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: 700,
                 textDecoration: "none",
-                padding: 16,
+                padding: 14,
               }}
             >
               <div
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 36,
+                  height: 36,
                   borderRadius: "50%",
                   background: "var(--bg-base)",
                   border: "1px solid var(--border)",
@@ -959,14 +946,14 @@ export default function Home() {
                   justifyContent: "center",
                 }}
               >
-                <ArrowRight size={18} />
+                <ArrowRight size={16} />
               </div>
               <span>Ver todos</span>
             </Link>
           </div>
         ) : (
           <EmptyState
-            icon={<Building2 size={44} />}
+            icon={<Building2 size={40} />}
             title="Sin inmuebles activos"
             description="No se encontraron inmuebles sincronizados en tu perfil de L2L."
           />

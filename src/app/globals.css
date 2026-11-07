@@ -261,40 +261,60 @@ img { max-width: 100%; display: block; }
   font-weight: 500;
 }
 
-/* ─── Quick Actions ───────────────────────────────────── */
+/* ─── Quick Actions (Compact Executive 2x2 Dock) ──────── */
 .quick-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 20px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  padding: 0 20px 18px;
 }
 .qa-btn {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 18px 16px;
+  border-radius: 12px;
+  padding: 10px 11px;
+  min-height: 58px;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: center;
   gap: 10px;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, transform 0.1s;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.1s ease;
+  min-width: 0;
 }
-.qa-btn:active { transform: scale(0.97); background: var(--bg-card-hover); }
+.qa-btn:hover { border-color: var(--border-hover); }
+.qa-btn:active { transform: scale(0.98); background: var(--bg-card-hover); }
 .qa-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .qa-icon.ws { background: rgba(37, 211, 102, 0.15); color: #25D366; }
 .qa-icon.cat { background: rgba(184, 15, 18, 0.15); color: var(--red); }
 .qa-icon.social { background: rgba(99, 102, 241, 0.15); color: #818CF8; }
 .qa-icon.perfil { background: rgba(251, 191, 36, 0.15); color: #FBB724; }
-.qa-label { font-size: 15px; font-weight: 600; color: var(--text-primary); line-height: 1.3; }
-.qa-sub { font-size: 13px; color: var(--text-secondary); }
+.qa-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qa-sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.25;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ─── Agent Hero (Glassmorphism) ──────────────────────── */
 .agent-hero {
@@ -721,36 +741,41 @@ img { max-width: 100%; display: block; }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
-  margin: 0 20px 22px;
+  margin: 0 20px 10px;
   background: var(--border);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 13px;
   overflow: hidden;
 }
 .kpi-cell {
   background: var(--bg-card);
-  padding: 12px 10px;
+  padding: 10px 10px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
+  transition: background 0.15s ease;
+}
+.kpi-cell:active {
+  background: var(--bg-card-hover);
 }
 @media (min-width: 520px) {
   .kpi-cell {
-    padding: 14px 14px;
+    padding: 12px 14px;
+    gap: 3px;
   }
 }
 .kpi-label {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .kpi-value {
-  font-size: clamp(17px, 4.6vw, 22px);
+  font-size: clamp(17px, 4.5vw, 21px);
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.15;
@@ -761,10 +786,13 @@ img { max-width: 100%; display: block; }
   text-overflow: ellipsis;
 }
 .kpi-sub {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ─── Workspace Header Bar ────────────────────────────── */
@@ -1481,22 +1509,72 @@ img { max-width: 100%; display: block; }
   }
 }
 
-/* ─── L2L Corporate Mobile Top Bar (< 900px) ──────────── */
+/* ─── Compact Executive Home Cockpit ──────────────────── */
+.home-topbar,
 .mobile-brand-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  padding: 12px 20px 6px;
+}
+.home-greeting-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
-  padding: 14px 20px 2px;
+  padding: 4px 20px 10px;
+}
+.home-search-trigger {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease;
+}
+.home-search-trigger:hover {
+  border-color: var(--border-red);
+}
+.home-search-trigger:active {
+  background: var(--bg-card-hover);
+}
+.home-search-kbd {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .desktop-only-inline {
   display: none;
 }
+.mobile-only-inline {
+  display: inline-flex;
+}
 @media (min-width: 900px) {
-  .mobile-brand-bar {
+  .home-topbar,
+  .mobile-brand-bar,
+  .mobile-only-inline {
     display: none !important;
   }
   .desktop-only-inline {
     display: flex;
+  }
+  .home-greeting-row {
+    align-items: center;
+    padding: 2px 20px 14px;
   }
 }

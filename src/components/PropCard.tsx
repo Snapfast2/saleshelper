@@ -64,7 +64,8 @@ const PropCard = memo(function PropCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        width: compact ? 240 : "100%",
+        width: compact ? 220 : "100%",
+        flexShrink: compact ? 0 : undefined,
         overflow: "hidden",
         transition: "border-color 0.18s ease, box-shadow 0.18s ease",
         borderColor: hovered ? "var(--border-red)" : undefined,
@@ -77,12 +78,19 @@ const PropCard = memo(function PropCard({
         <ImageCarousel
           images={uniqueImages}
           alt={inmueble.titulo}
-          height={compact ? 140 : 185}
+          height={compact ? 116 : 185}
           compact={compact}
         />
 
         {/* Badge Venta/Arriendo (Top Left) */}
-        <span className={`prop-card-badge ${inmueble.gestion}`}>
+        <span
+          className={`prop-card-badge ${inmueble.gestion}`}
+          style={
+            compact
+              ? { top: 8, left: 8, padding: "2px 8px", fontSize: 10.5 }
+              : undefined
+          }
+        >
           {inmueble.gestion === "venta" ? "Venta" : "Arriendo"}
         </span>
 
@@ -91,12 +99,12 @@ const PropCard = memo(function PropCard({
           <div
             style={{
               position: "absolute",
-              top: 10,
-              right: 10,
+              top: compact ? 8 : 10,
+              right: compact ? 8 : 10,
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-end",
-              gap: 6,
+              gap: 5,
               pointerEvents: "none",
               zIndex: 4,
             }}
@@ -106,22 +114,22 @@ const PropCard = memo(function PropCard({
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: 5,
-                  padding: "4px 9px",
+                  gap: 4,
+                  padding: compact ? "2px 7px" : "4px 9px",
                   borderRadius: 999,
                   background: "rgba(17, 24, 39, 0.74)",
                   backdropFilter: "blur(10px)",
                   WebkitBackdropFilter: "blur(10px)",
                   border: "1px solid rgba(255, 255, 255, 0.22)",
                   color: "#fff",
-                  fontSize: 12,
+                  fontSize: compact ? 11 : 12,
                   fontWeight: 700,
                   fontVariantNumeric: "tabular-nums",
                   lineHeight: 1.2,
                 }}
               >
-                <Eye size={13} />
-                {safeViews} {safeViews === 1 ? "vista" : "vistas"}
+                <Eye size={compact ? 11 : 13} />
+                {safeViews} {compact ? "" : safeViews === 1 ? "vista" : "vistas"}
               </span>
             )}
 
@@ -131,18 +139,18 @@ const PropCard = memo(function PropCard({
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 4,
-                  padding: "3px 9px",
+                  padding: compact ? "2px 7px" : "3px 9px",
                   borderRadius: 999,
                   backgroundColor: "rgba(245, 158, 11, 0.92)",
                   backdropFilter: "blur(8px)",
                   color: "#fff",
-                  fontSize: 11.5,
+                  fontSize: compact ? 10.5 : 11.5,
                   fontWeight: 700,
                   textTransform: "uppercase",
                   letterSpacing: "0.03em",
                 }}
               >
-                <Clock size={12} />
+                <Clock size={compact ? 11 : 12} />
                 En Proceso
               </span>
             )}
@@ -151,51 +159,113 @@ const PropCard = memo(function PropCard({
 
         <span
           className="prop-card-price"
-          style={{ fontVariantNumeric: "tabular-nums" }}
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            ...(compact
+              ? {
+                  bottom: 8,
+                  right: 8,
+                  padding: "3px 8px",
+                  fontSize: 13,
+                  borderRadius: 7,
+                }
+              : {}),
+          }}
         >
           {formatPrecio(inmueble.precio)}
         </span>
       </div>
 
       {/* Body */}
-      <div className="prop-card-body">
+      <div
+        className="prop-card-body"
+        style={compact ? { padding: "10px 12px 11px" } : undefined}
+      >
         <div
           className="prop-card-tipo"
-          style={{ fontVariantNumeric: "tabular-nums" }}
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            ...(compact
+              ? {
+                  fontSize: 11,
+                  marginBottom: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }
+              : {}),
+          }}
         >
-          {inmueble.tipo} • Cód: {inmueble.codigoDomus || inmueble.id}
+          {inmueble.tipo} • #{inmueble.codigoDomus || inmueble.id}
         </div>
-        <div className="prop-card-titulo">{inmueble.barrio}</div>
-        <div className="prop-card-ciudad">
-          <MapPin size={12} />
+        <div
+          className="prop-card-titulo"
+          style={
+            compact
+              ? {
+                  fontSize: 14.5,
+                  marginBottom: 2,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }
+              : undefined
+          }
+        >
+          {inmueble.barrio}
+        </div>
+        <div
+          className="prop-card-ciudad"
+          style={
+            compact
+              ? { fontSize: 12, marginBottom: 7 }
+              : undefined
+          }
+        >
+          <MapPin size={11} />
           {inmueble.ciudad}
         </div>
 
         <div
           className="prop-card-stats"
-          style={{ fontVariantNumeric: "tabular-nums" }}
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            ...(compact ? { gap: 10 } : {}),
+          }}
         >
           {inmueble.habitaciones > 0 && (
-            <div className="prop-stat">
-              <BedDouble size={14} />
+            <div
+              className="prop-stat"
+              style={compact ? { fontSize: 12.5 } : undefined}
+            >
+              <BedDouble size={13} />
               {inmueble.habitaciones}
             </div>
           )}
           {inmueble.banos > 0 && (
-            <div className="prop-stat">
-              <Bath size={14} />
+            <div
+              className="prop-stat"
+              style={compact ? { fontSize: 12.5 } : undefined}
+            >
+              <Bath size={13} />
               {inmueble.banos}
             </div>
           )}
           {inmueble.garajes > 0 && (
-            <div className="prop-stat">
-              <Car size={14} />
+            <div
+              className="prop-stat"
+              style={compact ? { fontSize: 12.5 } : undefined}
+            >
+              <Car size={13} />
               {inmueble.garajes}
             </div>
           )}
           {inmueble.areaTotal > 0 && (
-            <div className="prop-stat">
-              <Maximize2 size={14} />
+            <div
+              className="prop-stat"
+              style={compact ? { fontSize: 12.5 } : undefined}
+            >
+              <Maximize2 size={13} />
               {inmueble.areaTotal}m²
             </div>
           )}

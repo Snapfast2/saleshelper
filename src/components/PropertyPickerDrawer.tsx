@@ -20,6 +20,8 @@ export interface PropertyPickerDrawerProps {
   onSelect: (inm: Inmueble) => void;
   loading?: boolean;
   views?: Record<string, number>;
+  customTrigger?: React.ReactNode;
+  drawerTitle?: string;
 }
 
 function formatCOP(valor: number): string {
@@ -32,11 +34,13 @@ export default function PropertyPickerDrawer({
   onSelect,
   loading = false,
   views,
+  customTrigger,
+  drawerTitle = "Seleccionar inmueble",
 }: PropertyPickerDrawerProps) {
   const [open, setOpen] = useState(false);
   const [failedImgs, setFailedImgs] = useState<Record<string, boolean>>({});
 
-  if (loading) {
+  if (loading && !customTrigger) {
     return (
       <div
         className="card"
@@ -92,182 +96,186 @@ export default function PropertyPickerDrawer({
   return (
     <Drawer.Root open={open} onOpenChange={setOpen} repositionInputs={false}>
       <Drawer.Trigger asChild>
-        <button
-          type="button"
-          style={{
-            width: "100%",
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-            padding: "12px 14px",
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            textAlign: "left",
-            cursor: "pointer",
-            transition: "border-color 0.18s ease, background 0.18s ease",
-          }}
-        >
-          {/* Miniatura 56x56 */}
-          {selected && selectedImgValid ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={selected.imagen}
-              alt={selected.titulo}
-              onError={() =>
-                setFailedImgs((prev) => ({ ...prev, [selected.imagen]: true }))
-              }
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 10,
-                objectFit: "cover",
-                flexShrink: 0,
-                border: "1px solid var(--border)",
-                background: "var(--bg-card-hover)",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: 10,
-                background: "var(--bg-base)",
-                border: "1px solid var(--border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--text-muted)",
-                flexShrink: 0,
-              }}
-            >
-              <Building2 size={22} />
-            </div>
-          )}
-
-          {/* Información del inmueble seleccionado */}
-          {selected ? (
-            <div style={{ flex: 1, minWidth: 0 }}>
+        {customTrigger ? (
+          customTrigger
+        ) : (
+          <button
+            type="button"
+            style={{
+              width: "100%",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              padding: "12px 14px",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              textAlign: "left",
+              cursor: "pointer",
+              transition: "border-color 0.18s ease, background 0.18s ease",
+            }}
+          >
+            {/* Miniatura 56x56 */}
+            {selected && selectedImgValid ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={selected.imagen}
+                alt={selected.titulo}
+                onError={() =>
+                  setFailedImgs((prev) => ({ ...prev, [selected.imagen]: true }))
+                }
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 10,
+                  objectFit: "cover",
+                  flexShrink: 0,
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-card-hover)",
+                }}
+              />
+            ) : (
               <div
                 style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 10,
+                  background: "var(--bg-base)",
+                  border: "1px solid var(--border)",
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  flexWrap: "wrap",
-                  marginBottom: 3,
+                  justifyContent: "center",
+                  color: "var(--text-muted)",
+                  flexShrink: 0,
                 }}
               >
-                <span
+                <Building2 size={22} />
+              </div>
+            )}
+
+            {/* Información del inmueble seleccionado */}
+            {selected ? (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
                   style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                    padding: "2px 7px",
-                    borderRadius: 999,
-                    background:
-                      selected.gestion === "venta"
-                        ? "rgba(184, 15, 18, 0.1)"
-                        : "rgba(22, 163, 74, 0.12)",
-                    color:
-                      selected.gestion === "venta" ? "var(--red)" : "#16a34a",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexWrap: "wrap",
+                    marginBottom: 3,
                   }}
                 >
-                  {selected.gestion === "venta" ? "Venta" : "Arriendo"}
-                </span>
-                <span
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "var(--text-muted)",
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  Ref #{selectedRef}
-                </span>
-                {selectedViews > 0 && (
                   <span
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 3,
-                      fontSize: 11.5,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.04em",
+                      padding: "2px 7px",
+                      borderRadius: 999,
+                      background:
+                        selected.gestion === "venta"
+                          ? "rgba(184, 15, 18, 0.1)"
+                          : "rgba(22, 163, 74, 0.12)",
+                      color:
+                        selected.gestion === "venta" ? "var(--red)" : "#16a34a",
+                    }}
+                  >
+                    {selected.gestion === "venta" ? "Venta" : "Arriendo"}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 12,
                       fontWeight: 600,
-                      color: "var(--text-secondary)",
+                      color: "var(--text-muted)",
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    <Eye size={12} color="var(--red)" />
-                    {selectedViews}
+                    Ref #{selectedRef}
                   </span>
-                )}
-              </div>
+                  {selectedViews > 0 && (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        color: "var(--text-secondary)",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      <Eye size={12} color="var(--red)" />
+                      {selectedViews}
+                    </span>
+                  )}
+                </div>
 
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "var(--text-primary)",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  lineHeight: 1.25,
-                }}
-              >
-                {selected.tipo} · {selected.barrio}
-              </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    lineHeight: 1.25,
+                  }}
+                >
+                  {selected.tipo} · {selected.barrio}
+                </div>
 
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: 800,
-                  color: "var(--red)",
-                  fontVariantNumeric: "tabular-nums",
-                  marginTop: 2,
-                }}
-              >
-                {formatCOP(selected.precio)}
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "var(--red)",
+                    fontVariantNumeric: "tabular-nums",
+                    marginTop: 2,
+                  }}
+                >
+                  {formatCOP(selected.precio)}
+                </div>
               </div>
+            ) : (
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  Seleccionar inmueble...
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
+                  Busca por barrio, código Domus o precio
+                </div>
+              </div>
+            )}
+
+            {/* Acción Cambiar */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                padding: "7px 11px",
+                borderRadius: 10,
+                background: "var(--bg-base)",
+                border: "1px solid var(--border)",
+                color: "var(--text-secondary)",
+                fontSize: 12.5,
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              <Search size={14} color="var(--red)" />
+              <span>Cambiar</span>
+              <ChevronsUpDown size={14} color="var(--text-muted)" />
             </div>
-          ) : (
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
-                  color: "var(--text-primary)",
-                }}
-              >
-                Seleccionar inmueble...
-              </div>
-              <div style={{ fontSize: 13, color: "var(--text-muted)" }}>
-                Busca por barrio, código Domus o precio
-              </div>
-            </div>
-          )}
-
-          {/* Acción Cambiar */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "7px 11px",
-              borderRadius: 10,
-              background: "var(--bg-base)",
-              border: "1px solid var(--border)",
-              color: "var(--text-secondary)",
-              fontSize: 12.5,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}
-          >
-            <Search size={14} color="var(--red)" />
-            <span>Cambiar</span>
-            <ChevronsUpDown size={14} color="var(--text-muted)" />
-          </div>
-        </button>
+          </button>
+        )}
       </Drawer.Trigger>
 
       <Drawer.Portal>
@@ -294,7 +302,7 @@ export default function PropertyPickerDrawer({
                   color: "var(--text-primary)",
                 }}
               >
-                Seleccionar inmueble
+                {drawerTitle}
               </Drawer.Title>
               <div
                 style={{
